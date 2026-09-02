@@ -1,0 +1,74 @@
+import { CHAIN, LINKS, PONS, RESERVE_TAKE_PCT, TOKEN } from '../config'
+import { stagger } from '../useReveal'
+import { Zebra } from '../art/Zebra'
+
+const FACTS = [
+  { n: `${RESERVE_TAKE_PCT.toFixed(2)}%`, l: 'of every trade becomes ZEC' },
+  { n: '1:1', l: `${TOKEN.wrapper} backed by native ZEC` },
+  { n: '100%', l: 'of the reserve address is public' },
+  { n: `#${CHAIN.id}`, l: `${CHAIN.name} · ${CHAIN.stack}` },
+]
+
+export function Hero() {
+  return (
+    <section className="band hero" id="top">
+      <div className="stripes" />
+      <div className="noise" />
+
+      <div className="wrap hero-in">
+        <div className="hero-copy">
+          <p className="eyebrow" data-reveal>
+            {CHAIN.name} · launched on {PONS.launchpad}
+          </p>
+
+          <h1 className="display" data-reveal style={stagger(1)}>
+            The first wrapped
+            <br />
+            Zcash on
+            <br />
+            <span className="green">Robinhood Chain.</span>
+          </h1>
+
+          <p className="lede hero-lede" data-reveal style={stagger(2)}>
+            Robinhood Chain has tokenized equities. It has stablecoins. It does not have
+            privacy. <strong>${TOKEN.symbol}</strong> is building {TOKEN.wrapper} — real Zcash,
+            bought on the open market, held in a public reserve, minted 1:1 — and it pays for
+            it with a slice of every single trade.
+          </p>
+
+          <div className="hero-btns" data-reveal style={stagger(3)}>
+            <a className="btn btn-primary" href={LINKS.pons} target="_blank" rel="noreferrer">
+              Buy ${TOKEN.symbol} on Pons
+            </a>
+            <a className="btn btn-ghost" href="#foundry">
+              See how the Foundry works
+            </a>
+          </div>
+
+          <p className="hero-note mono" data-reveal style={stagger(4)}>
+            No presale. No team allocation. The fee stream does the work.
+          </p>
+        </div>
+
+        <div className="hero-art" data-reveal="scale" style={stagger(2)}>
+          <div className="hero-glow" />
+          <img src="/img/zeal-sit.png" alt="Zeal, the Zcash mascot, holding a ZEC coin" />
+          <div className="hero-crew">
+            <Zebra pose="carry" delay={0.2} style={{ width: 62 }} />
+            <Zebra pose="haul" delay={0.9} style={{ width: 56 }} />
+            <Zebra pose="cheer" delay={0.5} style={{ width: 58 }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="wrap hero-facts">
+        {FACTS.map((f, i) => (
+          <div key={f.l} data-reveal style={stagger(i, 110)}>
+            <div className="stat-n">{f.n}</div>
+            <div className="stat-l">{f.l}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
