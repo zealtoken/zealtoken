@@ -60,6 +60,18 @@ export const TOKEN = {
   reserveAddress: null as string | null,
 }
 
+/**
+ * Deployed contract addresses on Robinhood Chain.
+ * Filled in from contracts/deployments/rhMainnet.json after deploying.
+ */
+export const CONTRACTS = {
+  /** Immutable fee splitter. No owner, no admin, no upgrade path. */
+  foundry: null as string | null,
+  /** The wrapper. Supply is capped by the attested reserve. */
+  zzec: null as string | null,
+  explorer: 'https://robinhoodchain.blockscout.com',
+}
+
 export const LINKS = {
   x: 'https://x.com/ZealTheMascot',
   telegram: '#',
