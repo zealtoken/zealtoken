@@ -1,4 +1,5 @@
 import { Foundry } from '../art/Foundry'
+import { EngravingScene } from '../art/EngravingScene'
 import { Zebra } from '../art/Zebra'
 import {
   CHAIN,
@@ -130,6 +131,17 @@ export function Mechanism() {
       {/* ---------------- the foundry ---------------- */}
       <section className="band band-tint" id="foundry">
         <div className="stripes" />
+
+        <EngravingScene
+          srcSmall="/video/foundry-1024.mp4"
+          srcLarge="/video/foundry-1600.mp4"
+          poster="/video/foundry-poster.webp"
+          posterSmall="/video/foundry-poster-sm.webp"
+          alt="An engraved view of the Zeal Foundry: zebra crews working a refinery, ZEC coins riding conveyors out of the smelter, and a freight train hauling them to the reserve."
+          caption="The Foundry · Plate I"
+          focus="center 56%"
+        />
+
         <div className="wrap">
           <div className="sec-head">
             <p className="eyebrow" data-reveal>
