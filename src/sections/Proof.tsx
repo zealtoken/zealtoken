@@ -1,6 +1,5 @@
 import { CHAIN, CONTRACTS, PONS, TOKEN } from '../config'
 import { stagger } from '../useReveal'
-import { Zebra } from '../art/Zebra'
 
 const CHECKS = [
   {
@@ -102,10 +101,6 @@ export function Proof() {
                 the mint: burn {TOKEN.wrapper} on {CHAIN.name}, receive native ZEC to a Zcash
                 address you control, shield it if you want to. The reserve exists to be drawn on.
               </p>
-            </div>
-            <div className="redeem-art">
-              <Zebra pose="lever" delay={0} style={{ width: 104 }} />
-              <Zebra pose="haul" delay={0.5} flip style={{ width: 92 }} />
             </div>
           </div>
         </div>

@@ -1,6 +1,5 @@
 import { CHAIN, LINKS, PONS, RESERVE_TAKE_PCT, TOKEN } from '../config'
 import { stagger } from '../useReveal'
-import { Zebra } from '../art/Zebra'
 
 const FACTS = [
   { n: `${RESERVE_TAKE_PCT.toFixed(2)}%`, l: 'of every trade becomes ZEC' },
@@ -53,11 +52,6 @@ export function Hero() {
         <div className="hero-art" data-reveal="scale" style={stagger(2)}>
           <div className="hero-glow" />
           <img src="/img/zeal-sit.png" alt="Zeal, the Zcash mascot, holding a ZEC coin" />
-          <div className="hero-crew">
-            <Zebra pose="carry" delay={0.2} style={{ width: 62 }} />
-            <Zebra pose="haul" delay={0.9} style={{ width: 56 }} />
-            <Zebra pose="cheer" delay={0.5} style={{ width: 58 }} />
-          </div>
         </div>
       </div>
 

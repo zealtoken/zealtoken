@@ -21,6 +21,14 @@ type Props = {
   caption?: string
   /** CSS object-position, for choosing what survives the crop. */
   focus?: string
+  /**
+   * 'band'  — full-bleed, cropped to a cinematic strip.
+   * 'plate' — contained and shown whole, for frames with baked-in labels that
+   *           must not be cropped away.
+   */
+  variant?: 'band' | 'plate'
+  /** Native aspect ratio, e.g. '1920 / 1088'. Only used by 'plate'. */
+  ratio?: string
 }
 
 export function EngravingScene({
@@ -31,6 +39,8 @@ export function EngravingScene({
   alt,
   caption,
   focus = 'center 58%',
+  variant = 'band',
+  ratio,
 }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
@@ -88,7 +98,14 @@ export function EngravingScene({
   }, [shouldLoad])
 
   return (
-    <figure className="scene" ref={hostRef} style={{ ['--focus' as string]: focus }}>
+    <figure
+      className={`scene scene-${variant}`}
+      ref={hostRef}
+      style={{
+        ['--focus' as string]: focus,
+        ...(ratio ? { ['--ratio' as string]: ratio } : null),
+      }}
+    >
       <img
         className="scene-still"
         src={posterSmall ?? poster}
@@ -96,7 +113,7 @@ export function EngravingScene({
         sizes="100vw"
         alt={alt}
         width={1600}
-        height={684}
+        height={900}
         loading="lazy"
         decoding="async"
       />

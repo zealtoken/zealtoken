@@ -1,6 +1,4 @@
-import { Foundry } from '../art/Foundry'
 import { EngravingScene } from '../art/EngravingScene'
-import { Zebra } from '../art/Zebra'
 import {
   CHAIN,
   FOUNDRY_TAKE_PCT,
@@ -157,8 +155,17 @@ export function Mechanism() {
           </div>
         </div>
 
-        <div className="foundry-stage" data-reveal="scale">
-          <Foundry />
+        <div className="wrap">
+          <EngravingScene
+            variant="plate"
+            ratio="1920 / 1088"
+            srcSmall="/video/line-1100.mp4"
+            srcLarge="/video/line-1600.mp4"
+            poster="/video/line-poster.webp"
+            posterSmall="/video/line-poster-sm.webp"
+            alt="The Foundry line, station by station: 01 Intake, every trade pays in. 02 Split, fixed allocation of 60% ZEC reserve, 25% zZEC liquidity, 15% operations. 03 Smelt, fees become real ZEC via NEAR Intents. 04 Reserve, public and auditable. 05 Mint, zZEC issued 1:1 and backed."
+            caption="The Foundry · Plate II — the line"
+          />
         </div>
 
         <div className="wrap">
@@ -177,13 +184,8 @@ export function Mechanism() {
 
       {/* ---------------- the math ---------------- */}
       <section className="band band-tint band-tight" id="math">
-        <div className="wrap split money-split">
+        <div className="wrap-narrow">
           <Money />
-          <div className="money-art" data-reveal="scale" style={stagger(2)}>
-            <Zebra pose="hammer" delay={0} style={{ width: 118 }} />
-            <Zebra pose="carry" delay={0.6} hat="#0C0D0E" style={{ width: 104 }} />
-            <Zebra pose="inspect" delay={0.3} style={{ width: 96 }} />
-          </div>
         </div>
       </section>
     </>

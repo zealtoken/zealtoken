@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/config.ts","./src/main.tsx","./src/usereveal.ts","./src/art/engravingscene.tsx","./src/art/foundry.tsx","./src/art/zebra.tsx","./src/sections/close.tsx","./src/sections/hero.tsx","./src/sections/mechanism.tsx","./src/sections/nav.tsx","./src/sections/proof.tsx"],"version":"5.9.3"}
+{"root":["./src/app.tsx","./src/config.ts","./src/main.tsx","./src/usereveal.ts","./src/art/engravingscene.tsx","./src/sections/close.tsx","./src/sections/hero.tsx","./src/sections/mechanism.tsx","./src/sections/nav.tsx","./src/sections/proof.tsx"],"version":"5.9.3"}

@@ -24,7 +24,7 @@ export function Nav() {
     <header className={`nav ${stuck ? 'is-stuck' : ''}`}>
       <div className="nav-in">
         <a className="brand" href="#top" aria-label="Zeal — home">
-          <img src="/img/zeal-mark.png" alt="" width={34} height={34} />
+          <img src="/img/zeal-mark.png" alt="" width={44} height={44} />
           <span>ZEAL</span>
         </a>
 

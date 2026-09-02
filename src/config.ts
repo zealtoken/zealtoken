@@ -22,7 +22,16 @@ export const PONS = {
   weth: '0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73',
 } as const
 
-/** How the creator share is split once it reaches the Foundry contract. */
+/**
+ * How the creator share is split once it reaches the Foundry contract.
+ *
+ * WARNING: these three numbers are ALSO baked into the artwork —
+ * public/video/line-*.mp4 shows "ZEC Reserve 60% / zZEC Liquidity 25% /
+ * Operations 15%" as engraved text, and they are constructor arguments to
+ * ZealFoundry, which is immutable once deployed. Changing them here silently
+ * puts the site, the plate and the contract out of sync. Re-render the video
+ * and redeploy the contract, or don't change them.
+ */
 export const SPLIT = [
   {
     key: 'reserve',
