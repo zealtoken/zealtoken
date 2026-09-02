@@ -64,10 +64,6 @@ const FAQ = [
     q: `Is ${TOKEN.wrapper} private?`,
     a: `Not on ${CHAIN.name}. It is a transparent ERC-20 there, like everything else on an EVM chain. It gives you ZEC price exposure and onchain utility. Actual shielding happens on Zcash, after you redeem.`,
   },
-  {
-    q: `What happened to the Solana $${TOKEN.symbol}?`,
-    a: `That chapter is closed. This is a fresh launch on ${CHAIN.name} with a mechanism behind it instead of a mascot alone.`,
-  },
 ]
 
 function Faq() {
@@ -75,7 +71,7 @@ function Faq() {
   return (
     <ul className="faq">
       {FAQ.map((f, i) => (
-        <li key={f.q} className={open === i ? 'is-open' : ''} data-reveal style={stagger(i, 60)}>
+        <li key={f.q} data-open={open === i} data-reveal style={stagger(i, 60)}>
           <button onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
             <span>{f.q}</span>
             <i aria-hidden="true" />

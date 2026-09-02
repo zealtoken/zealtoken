@@ -82,6 +82,16 @@ export const CONTRACTS = {
   explorer: 'https://robinhoodchain.blockscout.com',
 }
 
+/**
+ * Assumptions for the Furnace calculator. Modelled on the Pons pool structure
+ * $ZEAL itself uses, on the basis that zZEC launches the same way and its
+ * creator fees are redirected to the Furnace. Both are editable on the page.
+ */
+export const ZZEC_MARKET = {
+  poolFeePct: 1.0,
+  furnaceSharePct: 70,
+} as const
+
 /** The burn. */
 export const FURNACE = {
   burnAddress: '0x000000000000000000000000000000000000dEaD',
