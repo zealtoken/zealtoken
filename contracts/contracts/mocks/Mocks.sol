@@ -43,3 +43,29 @@ contract RejectingSink {
         revert("nope");
     }
 }
+
+import {ISwapRouter} from "../ZealFurnace.sol";
+
+/// @dev A V3-shaped router that pays out `rate` ZEAL per unit in, and honours
+///      amountOutMinimum by reverting, exactly like the real one.
+contract MockRouter is ISwapRouter {
+    MockERC20 public immutable zealOut;
+    uint256 public rate; // out per in, in whole units
+
+    constructor(MockERC20 zeal_, uint256 rate_) {
+        zealOut = zeal_;
+        rate = rate_;
+    }
+
+    function setRate(uint256 r) external {
+        rate = r;
+    }
+
+    function exactInput(ExactInputParams calldata p) external payable returns (uint256 amountOut) {
+        address tokenIn = address(bytes20(p.path[:20]));
+        MockERC20(tokenIn).transferFrom(msg.sender, address(this), p.amountIn);
+        amountOut = p.amountIn * rate;
+        require(amountOut >= p.amountOutMinimum, "Too little received");
+        zealOut.mint(p.recipient, amountOut);
+    }
+}

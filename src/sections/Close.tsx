@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CHAIN, LINKS, PONS, RESERVE_TAKE_PCT, TOKEN } from '../config'
+import { CHAIN, FURNACE, LINKS, PONS, RESERVE_TAKE_PCT, TOKEN } from '../config'
 import { stagger } from '../useReveal'
 
 const PHASES = [
@@ -19,7 +19,7 @@ const PHASES = [
     p: 'Phase 02',
     t: `${TOKEN.wrapper} mints`,
     s: 'planned',
-    d: `The wrapper contract deploys on ${CHAIN.name} with supply capped at the attested reserve. Initial ${TOKEN.wrapper} liquidity is seeded from the liquidity slice.`,
+    d: `The wrapper and the Furnace deploy together on ${CHAIN.name}. ${TOKEN.wrapper} supply is capped at the attested reserve. Its liquidity is seeded from the liquidity slice, and that position’s fees are pointed at the Furnace, so the first ${TOKEN.wrapper} trade is the first $${TOKEN.symbol} burn.`,
   },
   {
     p: 'Phase 03',
@@ -53,8 +53,12 @@ const FAQ = [
     a: `In v1: a published multisig, a transparent address anyone can watch, and the fact that the whole point of the project evaporates the moment the balance moves wrong. That is a real trust assumption and we name it plainly in "What this is, and what it isn’t". Phase 04 exists to remove it.`,
   },
   {
+    q: `Does $${TOKEN.symbol} get burned?`,
+    a: `Yes, and by a contract, not a promise. Fees from the ${TOKEN.wrapper} liquidity the Foundry seeds are swapped for $${TOKEN.symbol} and sent to ${FURNACE.burnShort}. The Furnace has no other outbound path: no withdraw, no rescue, no owner access to the balance. Burns depend on ${TOKEN.wrapper} volume, so they start small and grow with the wrapper.`,
+  },
+  {
     q: `Does holding $${TOKEN.symbol} give me a claim on the ZEC?`,
-    a: `No. $${TOKEN.symbol} funds the reserve; it does not own it. If you want ZEC exposure, that is what ${TOKEN.wrapper} is for once it mints. Keeping those two things separate is deliberate.`,
+    a: `No. $${TOKEN.symbol} funds the reserve; it does not own it. If you want ZEC exposure, that is what ${TOKEN.wrapper} is for once it mints. What $${TOKEN.symbol} holders get is a supply that shrinks every time the wrapper is used. Keeping those two things separate is deliberate.`,
   },
   {
     q: `Is ${TOKEN.wrapper} private?`,
@@ -151,7 +155,7 @@ export function Close() {
             on the chain.
           </h2>
           <p className="lede" data-reveal style={stagger(1)}>
-            Every trade lays another brick. The crew is already on the floor.
+            Every ${TOKEN.symbol} trade builds the reserve. Every {TOKEN.wrapper} trade burns ${TOKEN.symbol}.
           </p>
           <div className="hero-btns" data-reveal style={stagger(2)}>
             <a className="btn btn-primary" href={LINKS.pons} target="_blank" rel="noreferrer">
@@ -174,6 +178,7 @@ export function Close() {
             </a>
             <nav className="foot-links">
               <a href="#foundry">The Foundry</a>
+              <a href="#furnace">The Furnace</a>
               <a href="#proof">Proof</a>
               <a href="#limits">Disclosures</a>
               <a href="#phases">Roadmap</a>

@@ -1,13 +1,13 @@
 # Zeal contracts
 
-Two contracts on Robinhood Chain (chain `4663`).
+Three contracts on Robinhood Chain (chain `4663`).
 
 > Naming collision warning: the toolchain here is Hardhat, not Foundry. "The
 > Foundry" in this repo always means `ZealFoundry.sol`, the fee splitter.
 
 ```bash
 npm install
-npm test            # 40 tests
+npm test            # 59 tests
 npm run build       # hardhat compile
 ```
 
@@ -70,6 +70,33 @@ relationship with no scaling anywhere.
 Attestations are deliberately allowed to report a reserve *below* current supply.
 Blocking that would only prevent honest reporting of a bad state; the contract
 emits `CoverageBreach` instead so the failure is loud, public and indexable.
+
+## ZealFurnace.sol, the burn
+
+Takes the trading fees earned by the zZEC liquidity the Foundry seeds, swaps
+them for $ZEAL, and sends the $ZEAL to `0x…dEaD`.
+
+**It has one door.** The only outbound transfer the contract can make is $ZEAL
+to the burn address. No withdraw, no rescue, no sweep, no owner path to the
+balance. The test suite pins the full ABI, so adding anything means re-arguing
+that property in a diff.
+
+| | |
+|---|---|
+| `ignite(tokenIn, amountIn, minOut, path)` | igniter role. Swaps via a V3-style router, recipient is always the Furnace, path must start at `tokenIn` and end at $ZEAL. Burns everything held afterwards |
+| `burn()` | permissionless. Sends all held $ZEAL to `0x…dEaD` |
+| igniter rotation | 48h timelock, same shape as zZEC's roles |
+
+Why `ignite` is gated: a swap needs a minimum output and a sane path, and a
+contract cannot judge either alone. A hostile igniter's worst case is a bad
+fill *into a burn*. It cannot extract tokens. That is the property the site
+claims, and the test named "a hostile igniter still cannot extract anything"
+is what backs it.
+
+**Router assumption.** The Furnace calls Uniswap V3 `SwapRouter.exactInput`
+(the original signature, with `deadline`). SwapRouter02 dropped that field and
+will revert. Verify the router ABI on testnet before mainnet; the address is a
+constructor argument and immutable.
 
 ## Deploying
 
