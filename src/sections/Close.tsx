@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { CHAIN, LINKS, PONS, RESERVE_TAKE_PCT, TOKEN } from '../config'
 import { stagger } from '../useReveal'
-import { Zebra } from '../art/Zebra'
 
 const PHASES = [
   {
@@ -137,9 +136,6 @@ export function Close() {
               <br />
               hard ones.
             </h2>
-            <div className="faq-art" data-reveal="scale" style={stagger(2)}>
-              <Zebra pose="inspect" delay={0} style={{ width: 116 }} />
-            </div>
           </div>
           <Faq />
         </div>
@@ -149,7 +145,7 @@ export function Close() {
       <section className="band band-ink band-cta">
         <div className="stripes" />
         <div className="wrap-narrow cta-in">
-          <Zebra pose="cheer" delay={0} style={{ width: 128 }} className="cta-zeb" />
+          <img className="cta-mark" src="/img/zeal-mark.png" alt="" width={96} height={96} />
           <h2 className="display" data-reveal>
             Put Zcash
             <br />
@@ -174,7 +170,7 @@ export function Close() {
         <div className="wrap">
           <div className="foot-top">
             <a className="brand" href="#top">
-              <img src="/img/zeal-mark.png" alt="" width={34} height={34} />
+              <img src="/img/zeal-mark.png" alt="" width={38} height={38} />
               <span>ZEAL</span>
             </a>
             <nav className="foot-links">
