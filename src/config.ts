@@ -7,10 +7,9 @@ export const CHAIN = {
   name: 'Robinhood Chain',
   id: 4663,
   settles: 'Ethereum',
-  stack: 'Arbitrum Orbit',
 } as const
 
-/** Pons launchpad economics — fixed by the protocol, not by us. */
+/** Pons launchpad economics. Fixed by the protocol, not by us. */
 export const PONS = {
   poolFeePct: 1.0, // 1% fee on every trade
   creatorSharePct: 70, // creator keeps 70% of that fee
@@ -25,7 +24,7 @@ export const PONS = {
 /**
  * How the creator share is split once it reaches the Foundry contract.
  *
- * WARNING: these three numbers are ALSO baked into the artwork —
+ * WARNING: these three numbers are ALSO baked into the artwork.
  * public/video/line-*.mp4 shows "ZEC Reserve 60% / zZEC Liquidity 25% /
  * Operations 15%" as engraved text, and they are constructor arguments to
  * ZealFoundry, which is immutable once deployed. Changing them here silently
@@ -87,7 +86,7 @@ export const LINKS = {
   pons: 'https://www.ponsfamily.com',
   zcash: 'https://z.cash',
   nearIntents: 'https://near-intents.org',
-  robinhoodChain: 'https://blog.arbitrum.io/robinhood-chain-mainnet/',
+  robinhoodChain: 'https://robinhood.com/us/en/support/articles/robinhood-chain-mainnet/',
 }
 
 export const RESERVE_PLACEHOLDER = {

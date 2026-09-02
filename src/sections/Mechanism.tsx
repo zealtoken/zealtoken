@@ -19,19 +19,19 @@ const STEPS = [
   {
     n: '02',
     t: 'Redirect',
-    d: 'That creator share does not land in a founder wallet. Pons lets the fee recipient be a contract, so it points at the Foundry — which has no owner, no admin and no upgrade path, and can only do the things below.',
+    d: 'That creator share does not land in a founder wallet. Pons lets the fee recipient be a contract, so it points at the Foundry, a contract with no owner, no admin and no upgrade path. It can only do the things below.',
     k: 'feeRedirects(token)',
   },
   {
     n: '03',
     t: 'Split',
-    d: 'The Foundry splits everything that arrives on a fixed schedule. The percentages are immutable constructor arguments — not a setting, not a blog post. Rounding remainders go to the reserve.',
+    d: 'The Foundry splits everything that arrives on a fixed schedule. The percentages are immutable constructor arguments. Not a setting, not a blog post. Rounding remainders go to the reserve.',
     k: SPLIT.map((s) => `${s.pct}`).join(' / '),
   },
   {
     n: '04',
     t: 'Smelt',
-    d: 'The reserve share is swapped out of WETH into native ZEC through NEAR Intents — the same rail Zcash’s own Zashi wallet uses. Real coins, on the real Zcash chain.',
+    d: 'The reserve share is swapped out of WETH into native ZEC through NEAR Intents, the same rail Zcash’s own Zashi wallet uses. Real coins, on the real Zcash chain.',
     k: 'WETH → native ZEC',
   },
   {
@@ -109,9 +109,9 @@ export function Mechanism() {
           </div>
           <div>
             <p className="lede" data-reveal style={stagger(2)}>
-              {CHAIN.name} went live on {CHAIN.stack}, settling to {CHAIN.settles}, built for
-              tokenized equities, stablecoins and real-world assets. It is an EVM chain full of
-              things you can own in the open.
+              {CHAIN.name} was built for tokenized equities, stablecoins and real-world assets,
+              settling to {CHAIN.settles}. It is an EVM chain full of things you can own in the
+              open.
             </p>
             <p data-reveal style={stagger(3)}>
               What it does not have is the oldest serious privacy asset in crypto. Zcash lives on
@@ -119,7 +119,7 @@ export function Mechanism() {
               that. Today you can hold a tokenized stock on Robinhood Chain. You cannot hold ZEC.
             </p>
             <p data-reveal style={stagger(4)}>
-              <strong>Zeal is the crew that closes that gap</strong> — and the mechanism that pays
+              <strong>Zeal is the crew that closes that gap</strong>, and the mechanism that pays
               for the closing.
             </p>
           </div>
@@ -127,17 +127,16 @@ export function Mechanism() {
       </section>
 
       {/* ---------------- the foundry ---------------- */}
-      <section className="band band-tint" id="foundry">
-        <div className="stripes" />
-
+      <section className="band foundry" id="foundry">
         <EngravingScene
           srcSmall="/video/foundry-1024.mp4"
           srcLarge="/video/foundry-1600.mp4"
           poster="/video/foundry-poster.webp"
           posterSmall="/video/foundry-poster-sm.webp"
+          ratio="2208 / 944"
+          width={1600}
+          height={684}
           alt="An engraved view of the Zeal Foundry: zebra crews working a refinery, ZEC coins riding conveyors out of the smelter, and a freight train hauling them to the reserve."
-          caption="The Foundry · Plate I"
-          focus="center 56%"
         />
 
         <div className="wrap">
@@ -150,23 +149,21 @@ export function Mechanism() {
             </h2>
             <p className="lede" data-reveal style={stagger(2)}>
               Every trade pays a fee. Pons hands us {PONS.creatorSharePct}% of it. We do not keep
-              it — we spend it on Zcash, in public, on a schedule nobody can quietly change.
+              it. We spend it on Zcash, in public, on a schedule nobody can quietly change.
             </p>
           </div>
         </div>
 
-        <div className="wrap">
-          <EngravingScene
-            variant="plate"
-            ratio="1920 / 1088"
-            srcSmall="/video/line-1100.mp4"
-            srcLarge="/video/line-1600.mp4"
-            poster="/video/line-poster.webp"
-            posterSmall="/video/line-poster-sm.webp"
-            alt="The Foundry line, station by station: 01 Intake, every trade pays in. 02 Split, fixed allocation of 60% ZEC reserve, 25% zZEC liquidity, 15% operations. 03 Smelt, fees become real ZEC via NEAR Intents. 04 Reserve, public and auditable. 05 Mint, zZEC issued 1:1 and backed."
-            caption="The Foundry · Plate II — the line"
-          />
-        </div>
+        <EngravingScene
+          srcSmall="/video/line-1100.mp4"
+          srcLarge="/video/line-1600.mp4"
+          poster="/video/line-poster.webp"
+          posterSmall="/video/line-poster-sm.webp"
+          ratio="1920 / 1088"
+          width={1600}
+          height={906}
+          alt="The Foundry line, station by station: 01 Intake, every trade pays in. 02 Split, fixed allocation of 60% ZEC reserve, 25% zZEC liquidity, 15% operations. 03 Smelt, fees become real ZEC via NEAR Intents. 04 Reserve, public and auditable. 05 Mint, zZEC issued 1:1 and backed."
+        />
 
         <div className="wrap">
           <div className="steps">
@@ -183,7 +180,7 @@ export function Mechanism() {
       </section>
 
       {/* ---------------- the math ---------------- */}
-      <section className="band band-tint band-tight" id="math">
+      <section className="band band-tight" id="math">
         <div className="wrap-narrow">
           <Money />
         </div>
