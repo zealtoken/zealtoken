@@ -4,6 +4,7 @@ import { LINKS, TOKEN } from '../config'
 const ITEMS = [
   { href: '#gap', label: 'The Gap' },
   { href: '#foundry', label: 'The Foundry' },
+  { href: '#furnace', label: 'The Furnace' },
   { href: '#proof', label: 'Proof' },
   { href: '#phases', label: 'Roadmap' },
   { href: '#faq', label: 'FAQ' },

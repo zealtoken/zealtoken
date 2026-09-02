@@ -42,7 +42,7 @@ export const SPLIT = [
     key: 'liquidity',
     pct: 25,
     label: 'zZEC Liquidity',
-    note: 'Paired into the zZEC market on Robinhood Chain so the wrapper is actually tradeable.',
+    note: 'Paired into the zZEC market on Robinhood Chain. The fees that position earns feed the Furnace.',
   },
   {
     key: 'ops',
@@ -77,8 +77,17 @@ export const CONTRACTS = {
   foundry: null as string | null,
   /** The wrapper. Supply is capped by the attested reserve. */
   zzec: null as string | null,
+  /** zZEC fees in, burned $ZEAL out. No other exit. */
+  furnace: null as string | null,
   explorer: 'https://robinhoodchain.blockscout.com',
 }
+
+/** The burn. */
+export const FURNACE = {
+  burnAddress: '0x000000000000000000000000000000000000dEaD',
+  burnShort: '0x000…dEaD',
+  roleTimelockHours: 48,
+} as const
 
 export const LINKS = {
   x: 'https://x.com/ZealTheMascot',

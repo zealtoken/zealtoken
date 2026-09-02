@@ -726,3 +726,36 @@ p:last-child { margin-bottom: 0; }
   margin-bottom: clamp(48px, 6vw, 88px);
 }
 .foundry .steps { margin-top: clamp(56px, 7vw, 112px); }
+
+/* ============================================================
+   Furnace summary
+   ============================================================ */
+
+.furnace-sum {
+  margin-top: clamp(40px, 5vw, 64px);
+  border: 1px solid var(--line);
+}
+.furnace-sum-row {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 24px;
+  align-items: start;
+  padding: 22px 26px;
+  border-bottom: 1px solid var(--line);
+}
+.furnace-sum-row .mono { color: var(--fg-faint); letter-spacing: 0.2em; padding-top: 4px; }
+.furnace-sum-row p { margin: 0; font-size: 16px; line-height: 1.6; }
+.furnace-sum-out { background: rgba(0, 200, 5, 0.06); }
+.furnace-sum-out .mono { color: var(--green); }
+.furnace-sum-out p { color: var(--fg); }
+.furnace-sum-addr {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 24px;
+  padding: 18px 26px;
+  background: var(--bg-2);
+}
+.furnace-sum-addr .mono { color: var(--fg-faint); letter-spacing: 0.2em; padding-top: 2px; }
+@media (max-width: 620px) {
+  .furnace-sum-row, .furnace-sum-addr { grid-template-columns: 1fr; gap: 8px; }
+}

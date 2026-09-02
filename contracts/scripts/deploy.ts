@@ -41,6 +41,10 @@ async function main() {
   const minter = requiredAddress('ZZEC_MINTER')
   const maxAttestationAge = Number(process.env.MAX_ATTESTATION_AGE ?? 36 * 3600)
 
+  const zealToken = requiredAddress('ZEAL_TOKEN')
+  const swapRouter = requiredAddress('SWAP_ROUTER')
+  const igniter = requiredAddress('FURNACE_IGNITER')
+
   // These are the mistakes that are unrecoverable, so check them loudly.
   if (new Set([reserveSink, liquiditySink, opsSink]).size !== 3) {
     throw new Error('The three sinks must be distinct addresses.')
@@ -67,7 +71,11 @@ async function main() {
   console.log(`ZEC reserve  ${zecReserveAddress}`)
   console.log(`zZEC owner   ${owner}`)
   console.log(`  attestor   ${attestor}`)
-  console.log(`  minter     ${minter}\n`)
+  console.log(`  minter     ${minter}`)
+  console.log(`Furnace`)
+  console.log(`  $ZEAL      ${zealToken}   << immutable`)
+  console.log(`  router     ${swapRouter}   << immutable; must expose V3 exactInput WITH deadline`)
+  console.log(`  igniter    ${igniter}\n`)
 
   const Foundry = await ethers.getContractFactory('ZealFoundry')
   const foundry = await Foundry.deploy(
@@ -86,14 +94,20 @@ async function main() {
   const zzec = await ZZEC.deploy(zecReserveAddress, owner, attestor, minter, maxAttestationAge)
   await zzec.waitForDeployment()
   const zzecAddress = await zzec.getAddress()
-  console.log(`ZZEC         ${zzecAddress}\n`)
+  console.log(`ZZEC         ${zzecAddress}`)
+
+  const Furnace = await ethers.getContractFactory('ZealFurnace')
+  const furnace = await Furnace.deploy(zealToken, swapRouter, owner, igniter)
+  await furnace.waitForDeployment()
+  const furnaceAddress = await furnace.getAddress()
+  console.log(`ZealFurnace  ${furnaceAddress}\n`)
 
   const record = {
     network: network.name,
     chainId: Number(net.chainId),
     deployedAt: new Date().toISOString(),
     deployer: deployer.address,
-    contracts: { ZealFoundry: foundryAddress, ZZEC: zzecAddress },
+    contracts: { ZealFoundry: foundryAddress, ZZEC: zzecAddress, ZealFurnace: furnaceAddress },
     foundry: {
       split: {
         reserveBps: Number(SPLIT.reserve),
@@ -105,6 +119,7 @@ async function main() {
       opsSink,
     },
     zzec: { zecReserveAddress, owner, attestor, minter, maxAttestationAge },
+    furnace: { zealToken, swapRouter, owner, igniter },
   }
 
   mkdirSync(join(__dirname, '..', 'deployments'), { recursive: true })
@@ -114,7 +129,9 @@ async function main() {
 
   console.log(`\nNext:`)
   console.log(`  1. Point the Pons fee redirect for $ZEAL at ${foundryAddress}`)
-  console.log(`  2. Paste both addresses into src/config.ts on the website`)
+  console.log(`  2. Paste all three addresses into src/config.ts on the website`)
+  console.log(`     (CONTRACTS.foundry, CONTRACTS.zzec, CONTRACTS.furnace)`)
+  console.log(`  2b. Point the zZEC LP position's fee collection at ${furnaceAddress}`)
   console.log(`  3. Verify on https://robinhoodchain.blockscout.com`)
   console.log(`  4. Post the first attestation before any mint — minting reverts without one\n`)
 }

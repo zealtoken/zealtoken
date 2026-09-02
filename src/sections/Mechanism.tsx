@@ -142,7 +142,7 @@ export function Mechanism() {
         <div className="wrap">
           <div className="sec-head">
             <p className="eyebrow" data-reveal>
-              The mechanism
+              The first loop
             </p>
             <h2 className="h2" data-reveal style={stagger(1)}>
               The Foundry.

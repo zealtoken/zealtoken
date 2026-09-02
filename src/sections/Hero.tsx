@@ -5,7 +5,7 @@ const FACTS = [
   { n: `${RESERVE_TAKE_PCT.toFixed(2)}%`, l: 'of every trade becomes ZEC' },
   { n: '1:1', l: `${TOKEN.wrapper} backed by native ZEC` },
   { n: '100%', l: 'of the reserve address is public' },
-  { n: `${PONS.creatorSharePct}%`, l: 'of every fee routed to the Foundry' },
+  { n: '0', l: 'ways to withdraw from the Furnace' },
 ]
 
 export function Hero() {
@@ -28,8 +28,9 @@ export function Hero() {
           <p className="lede hero-lede" data-reveal style={stagger(2)}>
             Robinhood Chain has tokenized equities. It has stablecoins. It does not have
             privacy. <strong>${TOKEN.symbol}</strong> is building {TOKEN.wrapper}: real Zcash,
-            bought on the open market, held in a public reserve, minted 1:1. A slice of every
-            trade pays for it.
+            bought on the open market, held in a public reserve, minted 1:1. Every{' '}
+            ${TOKEN.symbol} trade funds the reserve. Every {TOKEN.wrapper} trade buys{' '}
+            ${TOKEN.symbol} and burns it.
           </p>
 
           <div className="hero-btns" data-reveal style={stagger(3)}>

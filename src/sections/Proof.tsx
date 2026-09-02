@@ -1,4 +1,4 @@
-import { CHAIN, CONTRACTS, PONS, TOKEN } from '../config'
+import { CHAIN, CONTRACTS, FURNACE, PONS, TOKEN } from '../config'
 import { stagger } from '../useReveal'
 
 const CHECKS = [
@@ -32,6 +32,11 @@ const CHECKS = [
     d: 'Attestor and minter are separate roles, rotating either takes a 48-hour timelock, and the reserve address has no setter. Minting is pausable; redemption is not, and never will be.',
     v: CONTRACTS.zzec ?? 'deployed at mint',
   },
+  {
+    t: 'The Furnace contract',
+    d: `No withdraw, no rescue, no sweep, no owner path to the balance. The only address it can send $${TOKEN.symbol} to is ${FURNACE.burnShort}. Lifetime burns are a public counter, totalZealBurned(), and every burn is an event.`,
+    v: CONTRACTS.furnace ?? `deployed with ${TOKEN.wrapper}`,
+  },
 ]
 
 const LIMITS = [
@@ -46,6 +51,14 @@ const LIMITS = [
   {
     t: `$${TOKEN.symbol} is a memecoin with a job.`,
     d: 'It is not equity, not a security, not a claim on the reserve, and holding it does not entitle you to ZEC. It funds the machine. The machine is the point.',
+  },
+  {
+    t: 'Burns scale with the wrapper, not with hype.',
+    d: `The Furnace is fed by ${TOKEN.wrapper} trading fees, not by $${TOKEN.symbol} trading fees. Early on, ${TOKEN.wrapper} volume will be small and so will the burns. We publish the counter. We do not publish projections.`,
+  },
+  {
+    t: 'The swap needs a price-aware caller.',
+    d: `ignite() is a role, because a swap needs a minimum output and a sane path, and a contract cannot judge either alone. A bad igniter can get a bad fill; it cannot get the tokens, because the swap recipient is always the Furnace and the Furnace only sends to the burn address. Rotating the role takes ${FURNACE.roleTimelockHours} hours. burn() itself needs no trust and no role.`,
   },
   {
     t: 'The reserve only goes one way.',
@@ -68,7 +81,7 @@ export function Proof() {
               <span className="green">Check us.</span>
             </h2>
             <p className="lede" data-reveal style={stagger(2)}>
-              Six things make this falsifiable. If any of them stops lining up, you will see it
+              Seven things make this falsifiable. If any of them stops lining up, you will see it
               before we say anything.
             </p>
           </div>
@@ -114,17 +127,19 @@ export function Proof() {
               Why it compounds
             </p>
             <h2 className="h2" data-reveal style={stagger(1)}>
-              The loop.
+              Two loops.
+              <br />
+              One direction.
             </h2>
           </div>
           <ol className="loop">
             {[
-              [`$${TOKEN.symbol} trades`, 'Volume happens. Fees are collected automatically by the pool.'],
-              ['The Foundry fills', `${PONS.creatorSharePct}% of every fee arrives without anyone pressing a button.`],
+              [`$${TOKEN.symbol} trades`, `${PONS.creatorSharePct}% of every fee reaches the Foundry without anyone pressing a button.`],
               ['ZEC is bought', 'The reserve grows. It is never sold back.'],
-              [`${TOKEN.wrapper} deepens`, `More reserve and more paired liquidity means a market people can actually use.`],
-              ['Utility arrives', `${CHAIN.name} gets a privacy asset it did not have yesterday.`],
-              ['More reason to trade', 'Which starts the loop again, one notch bigger.'],
+              [`${TOKEN.wrapper} mints`, `One per ZEC held, paired into liquidity on ${CHAIN.name}. A privacy asset the chain did not have yesterday.`],
+              [`${TOKEN.wrapper} trades`, 'The wrapper gets used. The pool it trades in pays fees.'],
+              [`$${TOKEN.symbol} burns`, `The Furnace swaps those fees for $${TOKEN.symbol} and sends it to ${FURNACE.burnShort}.`],
+              ['Supply tightens', `Same demand, fewer tokens. Which starts both loops again, one notch bigger.`],
             ].map(([t, d], i) => (
               <li key={t} data-reveal style={stagger(i, 80)}>
                 <span className="loop-n mono">{String(i + 1).padStart(2, '0')}</span>
