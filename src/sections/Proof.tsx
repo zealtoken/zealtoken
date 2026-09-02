@@ -1,4 +1,4 @@
-import { CHAIN, PONS, TOKEN } from '../config'
+import { CHAIN, CONTRACTS, PONS, TOKEN } from '../config'
 import { stagger } from '../useReveal'
 import { Zebra } from '../art/Zebra'
 
@@ -23,12 +23,22 @@ const CHECKS = [
     d: `The Pons locker records where each token's creator fees go. Ours points at the Foundry contract. You can read it from the locker without trusting a screenshot.`,
     v: PONS.lockerContract,
   },
+  {
+    t: 'The Foundry contract',
+    d: 'Has no owner, no admin, no pause and no upgrade path. The split and all three destinations are immutable constructor arguments, so nothing — not a key, not us — can send the reserve share anywhere else. Routing is permissionless: anyone can push the queue.',
+    v: CONTRACTS.foundry ?? 'deployed at launch',
+  },
+  {
+    t: `The ${TOKEN.wrapper} contract`,
+    d: 'Attestor and minter are separate roles, rotating either takes a 48-hour timelock, and the reserve address has no setter. Minting is pausable; redemption is not, and never will be.',
+    v: CONTRACTS.zzec ?? 'deployed at mint',
+  },
 ]
 
 const LIMITS = [
   {
     t: `${TOKEN.wrapper} v1 is reserve-backed, not trustless.`,
-    d: 'The reserve sits in a multisig. Signers and threshold are published before the first mint. That is a real trust assumption and we are not going to dress it up as something else.',
+    d: 'The contracts guarantee the split, the supply cap and the exit. They cannot guarantee that the attested number matches the real Zcash balance — a human posts that, and the buy-and-bridge leg happens off-chain because Zcash is not an EVM chain. The reserve sits in a multisig whose signers and threshold are published before the first mint. That is a real trust assumption and we are not going to dress it up as something else.',
   },
   {
     t: `${TOKEN.wrapper} gives you exposure, not shielding.`,
@@ -40,7 +50,7 @@ const LIMITS = [
   },
   {
     t: 'The reserve only goes one way.',
-    d: 'ZEC bought by the Foundry is not sold to pay for anything. The operations slice exists precisely so nobody ever has a reason to raid the vault.',
+    d: 'The reserve share cannot be redirected, because the destination is burned into the Foundry contract at deployment and there is no function that changes it. Rounding dust goes to the reserve rather than to operations. The operations slice exists precisely so nobody ever has a reason to raid the vault.',
   },
 ]
 

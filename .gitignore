@@ -3,3 +3,10 @@ dist
 .DS_Store
 .vercel
 *.local
+
+# contracts
+contracts/node_modules
+contracts/artifacts
+contracts/cache
+contracts/typechain-types
+contracts/.env

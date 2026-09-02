@@ -20,13 +20,13 @@ const STEPS = [
   {
     n: '02',
     t: 'Redirect',
-    d: 'That creator share does not land in a founder wallet. Pons lets the fee recipient be a contract, so it is pointed at the Foundry — a contract that can only do the things below.',
+    d: 'That creator share does not land in a founder wallet. Pons lets the fee recipient be a contract, so it points at the Foundry — which has no owner, no admin and no upgrade path, and can only do the things below.',
     k: 'feeRedirects(token)',
   },
   {
     n: '03',
     t: 'Split',
-    d: 'The Foundry splits everything that arrives on a fixed schedule. The split is set in the contract, not in a blog post.',
+    d: 'The Foundry splits everything that arrives on a fixed schedule. The percentages are immutable constructor arguments — not a setting, not a blog post. Rounding remainders go to the reserve.',
     k: SPLIT.map((s) => `${s.pct}`).join(' / '),
   },
   {
