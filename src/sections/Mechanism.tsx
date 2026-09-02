@@ -1,12 +1,6 @@
 import { EngravingScene } from '../art/EngravingScene'
-import {
-  CHAIN,
-  FOUNDRY_TAKE_PCT,
-  PONS,
-  RESERVE_TAKE_PCT,
-  SPLIT,
-  TOKEN,
-} from '../config'
+import { FoundryCalc } from './Calculators'
+import { CHAIN, FOUNDRY_TAKE_PCT, PONS, SPLIT, TOKEN } from '../config'
 import { stagger } from '../useReveal'
 
 const STEPS = [
@@ -47,49 +41,6 @@ const STEPS = [
     k: `1 ZEC = 1 ${TOKEN.wrapper}`,
   },
 ]
-
-function Money() {
-  const vol = 1_000_000
-  const rows = SPLIT.map((s) => ({
-    label: s.label,
-    note: s.note,
-    pct: s.pct,
-    usd: (vol * PONS.poolFeePct * PONS.creatorSharePct * s.pct) / 1_000_000,
-  }))
-  return (
-    <div className="money" data-reveal>
-      <div className="money-head">
-        <span className="mono">WORKED EXAMPLE</span>
-        <h3 className="h3">
-          For every <span className="green">$1,000,000</span> traded
-        </h3>
-      </div>
-      <div className="money-rows">
-        <div className="money-row money-row-top">
-          <span>Pool fee at {PONS.poolFeePct.toFixed(2)}%</span>
-          <span className="mono">$10,000</span>
-        </div>
-        <div className="money-row money-row-top">
-          <span>Creator share ({PONS.creatorSharePct}%) → the Foundry</span>
-          <span className="mono">${(vol * FOUNDRY_TAKE_PCT / 100).toLocaleString()}</span>
-        </div>
-        {rows.map((r, i) => (
-          <div className="money-row" key={r.label} style={stagger(i)}>
-            <span>
-              <em className="green">{r.pct}%</em> {r.label}
-              <small>{r.note}</small>
-            </span>
-            <span className="mono">${r.usd.toLocaleString()}</span>
-          </div>
-        ))}
-      </div>
-      <p className="money-foot">
-        <strong className="green">{RESERVE_TAKE_PCT.toFixed(2)}%</strong> of all volume, forever,
-        converts into Zcash that the project holds and publishes. It never converts back.
-      </p>
-    </div>
-  )
-}
 
 export function Mechanism() {
   return (
@@ -182,7 +133,7 @@ export function Mechanism() {
       {/* ---------------- the math ---------------- */}
       <section className="band band-tight" id="math">
         <div className="wrap-narrow">
-          <Money />
+          <FoundryCalc />
         </div>
       </section>
     </>
