@@ -5,15 +5,12 @@ const FACTS = [
   { n: `${RESERVE_TAKE_PCT.toFixed(2)}%`, l: 'of every trade becomes ZEC' },
   { n: '1:1', l: `${TOKEN.wrapper} backed by native ZEC` },
   { n: '100%', l: 'of the reserve address is public' },
-  { n: `#${CHAIN.id}`, l: `${CHAIN.name} · ${CHAIN.stack}` },
+  { n: `${PONS.creatorSharePct}%`, l: 'of every fee routed to the Foundry' },
 ]
 
 export function Hero() {
   return (
     <section className="band hero" id="top">
-      <div className="stripes" />
-      <div className="noise" />
-
       <div className="wrap hero-in">
         <div className="hero-copy">
           <p className="eyebrow" data-reveal>
@@ -30,9 +27,9 @@ export function Hero() {
 
           <p className="lede hero-lede" data-reveal style={stagger(2)}>
             Robinhood Chain has tokenized equities. It has stablecoins. It does not have
-            privacy. <strong>${TOKEN.symbol}</strong> is building {TOKEN.wrapper} — real Zcash,
-            bought on the open market, held in a public reserve, minted 1:1 — and it pays for
-            it with a slice of every single trade.
+            privacy. <strong>${TOKEN.symbol}</strong> is building {TOKEN.wrapper}: real Zcash,
+            bought on the open market, held in a public reserve, minted 1:1. A slice of every
+            trade pays for it.
           </p>
 
           <div className="hero-btns" data-reveal style={stagger(3)}>
@@ -50,7 +47,6 @@ export function Hero() {
         </div>
 
         <div className="hero-art" data-reveal="scale" style={stagger(2)}>
-          <div className="hero-glow" />
           <img src="/img/zeal-sit.png" alt="Zeal, the Zcash mascot, holding a ZEC coin" />
         </div>
       </div>

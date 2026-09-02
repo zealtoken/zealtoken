@@ -31,18 +31,18 @@ const PHASES = [
     p: 'Phase 04',
     t: 'Hand off custody',
     s: 'the goal',
-    d: 'Move backing from a multisig to trust-minimized custody as the tooling lands — red·bridge (Zcash Community Grants + Avalanche Foundation) or an equivalent MPC design. The endgame is a reserve we cannot touch either.',
+    d: 'Move backing from a multisig to trust-minimized custody as the tooling lands: red·bridge (Zcash Community Grants + Avalanche Foundation) or an equivalent MPC design. The endgame is a reserve we cannot touch either.',
   },
 ]
 
 const FAQ = [
   {
     q: `Where does the money to buy ZEC actually come from?`,
-    a: `Trading fees on $${TOKEN.symbol} itself. Pons charges ${PONS.poolFeePct.toFixed(2)}% on every trade and sends ${PONS.creatorSharePct}% of that to the token's designated fee recipient. Ours is a contract, not a person. ${RESERVE_TAKE_PCT.toFixed(2)}% of all volume ends up as Zcash in the reserve.`,
+    a: `Trading fees on $${TOKEN.symbol} itself. Pons charges ${PONS.poolFeePct.toFixed(2)}% on every trade and sends ${PONS.creatorSharePct}% of that to the token’s designated fee recipient. Ours is a contract, not a person. ${RESERVE_TAKE_PCT.toFixed(2)}% of all volume ends up as Zcash in the reserve.`,
   },
   {
     q: `Is this a tax token? Am I paying extra?`,
-    a: `No extra tax on top. The ${PONS.poolFeePct.toFixed(2)}% is the standard Pons pool fee that every token on the launchpad pays. The difference is where the creator half goes: most projects route it to a founder's wallet, and we route it to a machine that buys Zcash.`,
+    a: `No extra tax on top. The ${PONS.poolFeePct.toFixed(2)}% is the standard Pons pool fee that every token on the launchpad pays. The difference is where the creator half goes: most projects route it to a founder’s wallet, and we route it to a machine that buys Zcash.`,
   },
   {
     q: `Why not just bridge ZEC directly?`,
@@ -50,7 +50,7 @@ const FAQ = [
   },
   {
     q: `What stops you from running off with the reserve?`,
-    a: `In v1: a published multisig, a transparent address anyone can watch, and the fact that the whole point of the project evaporates the moment the balance moves wrong. That is a real trust assumption and we name it plainly in "What this is, and what it isn't". Phase 04 exists to remove it.`,
+    a: `In v1: a published multisig, a transparent address anyone can watch, and the fact that the whole point of the project evaporates the moment the balance moves wrong. That is a real trust assumption and we name it plainly in "What this is, and what it isn’t". Phase 04 exists to remove it.`,
   },
   {
     q: `Does holding $${TOKEN.symbol} give me a claim on the ZEC?`,
@@ -58,7 +58,7 @@ const FAQ = [
   },
   {
     q: `Is ${TOKEN.wrapper} private?`,
-    a: `Not on ${CHAIN.name} — it is a transparent ERC-20 there, like everything else on an EVM chain. It gives you ZEC price exposure and onchain utility. Actual shielding happens on Zcash, after you redeem.`,
+    a: `Not on ${CHAIN.name}. It is a transparent ERC-20 there, like everything else on an EVM chain. It gives you ZEC price exposure and onchain utility. Actual shielding happens on Zcash, after you redeem.`,
   },
   {
     q: `What happened to the Solana $${TOKEN.symbol}?`,
@@ -143,7 +143,6 @@ export function Close() {
 
       {/* ---------------- cta ---------------- */}
       <section className="band band-ink band-cta">
-        <div className="stripes" />
         <div className="wrap-narrow cta-in">
           <img className="cta-mark" src="/img/zeal-mark.png" alt="" width={96} height={96} />
           <h2 className="display" data-reveal>
@@ -186,7 +185,7 @@ export function Close() {
           <hr className="rule" />
           <div className="foot-meta">
             <p className="mono">
-              {CHAIN.name} · chain id {CHAIN.id} · {CHAIN.stack}, settling to {CHAIN.settles}
+              {CHAIN.name} · chain id {CHAIN.id} · settles to {CHAIN.settles}
             </p>
             <p className="foot-legal">
               ${TOKEN.symbol} is a community token with no intrinsic value and no expectation of

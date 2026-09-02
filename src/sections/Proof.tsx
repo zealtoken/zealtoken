@@ -4,7 +4,7 @@ import { stagger } from '../useReveal'
 const CHECKS = [
   {
     t: 'The reserve address',
-    d: 'A Zcash transparent address, published here. Transparent on purpose — a shielded reserve would be unauditable, which is the opposite of what a wrapper needs.',
+    d: 'A Zcash transparent address, published here. Transparent on purpose. A shielded reserve would be unauditable, which is the opposite of what a wrapper needs.',
     v: TOKEN.reserveAddress ?? 'published at reserve open',
   },
   {
@@ -19,12 +19,12 @@ const CHECKS = [
   },
   {
     t: 'The fee redirect',
-    d: `The Pons locker records where each token's creator fees go. Ours points at the Foundry contract. You can read it from the locker without trusting a screenshot.`,
+    d: `The Pons locker records where each token’s creator fees go. Ours points at the Foundry contract. You can read it from the locker without trusting a screenshot.`,
     v: PONS.lockerContract,
   },
   {
     t: 'The Foundry contract',
-    d: 'Has no owner, no admin, no pause and no upgrade path. The split and all three destinations are immutable constructor arguments, so nothing — not a key, not us — can send the reserve share anywhere else. Routing is permissionless: anyone can push the queue.',
+    d: 'Has no owner, no admin, no pause and no upgrade path. The split and all three destinations are immutable constructor arguments, so nothing, not a key and not us, can send the reserve share anywhere else. Routing is permissionless: anyone can push the queue.',
     v: CONTRACTS.foundry ?? 'deployed at launch',
   },
   {
@@ -37,11 +37,11 @@ const CHECKS = [
 const LIMITS = [
   {
     t: `${TOKEN.wrapper} v1 is reserve-backed, not trustless.`,
-    d: 'The contracts guarantee the split, the supply cap and the exit. They cannot guarantee that the attested number matches the real Zcash balance — a human posts that, and the buy-and-bridge leg happens off-chain because Zcash is not an EVM chain. The reserve sits in a multisig whose signers and threshold are published before the first mint. That is a real trust assumption and we are not going to dress it up as something else.',
+    d: 'The contracts guarantee the split, the supply cap and the exit. They cannot guarantee that the attested number matches the real Zcash balance. A human posts that, and the buy-and-bridge leg happens off-chain because Zcash is not an EVM chain. The reserve sits in a multisig whose signers and threshold are published before the first mint. That is a real trust assumption and we are not going to dress it up as something else.',
   },
   {
     t: `${TOKEN.wrapper} gives you exposure, not shielding.`,
-    d: `On ${CHAIN.name} it is an ordinary transparent ERC-20 — every transfer is visible, like every other token on that chain. Privacy is what you get when you redeem to native ZEC and shield it there.`,
+    d: `On ${CHAIN.name} it is an ordinary transparent ERC-20. Every transfer is visible, like every other token on that chain. Privacy is what you get when you redeem to native ZEC and shield it there.`,
   },
   {
     t: `$${TOKEN.symbol} is a memecoin with a job.`,
@@ -68,8 +68,8 @@ export function Proof() {
               <span className="green">Check us.</span>
             </h2>
             <p className="lede" data-reveal style={stagger(2)}>
-              Four numbers make this whole thing falsifiable. If any of them stops lining up, you
-              will be able to see it before we say anything.
+              Six things make this falsifiable. If any of them stops lining up, you will see it
+              before we say anything.
             </p>
           </div>
 
