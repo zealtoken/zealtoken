@@ -57,7 +57,7 @@ export function Furnace() {
           alt="The Furnace line, station by station: 01 Trade, the wrapper gets used. 02 Collect, fees in WETH and zZEC flow to the Furnace. 03 Ignite, fees swapped to $ZEAL with a minimum output. 04 Burn, $ZEAL sent through one door to 0x…dEaD. 05 Supply, less $ZEAL exists."
         />
 
-        <div className="steps">
+        <div className="steps steps-4">
           {STEPS.map((s, i) => (
             <article className="step" key={s.n} data-reveal style={stagger(i, 80)}>
               <div className="step-n mono">{s.n}</div>
