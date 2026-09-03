@@ -32,7 +32,7 @@ export const PONS = {
  * How the creator share is split once it reaches the Foundry contract.
  *
  * WARNING: these three numbers are ALSO baked into the artwork.
- * public/video/line-*.mp4 shows "ZEC Reserve 60% / zZEC Liquidity 25% /
+ * public/video/foundry-line-*.mp4 shows "ZEC Reserve 60% / zZEC Liquidity 25% /
  * Operations 15%" as engraved text, and they are constructor arguments to
  * ZealFoundry, which is immutable once deployed. Changing them here silently
  * puts the site, the plate and the contract out of sync. Re-render the video

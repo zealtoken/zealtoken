@@ -1,4 +1,5 @@
 import { CONTRACTS, FURNACE, TOKEN } from '../config'
+import { EngravingScene } from '../art/EngravingScene'
 import { stagger } from '../useReveal'
 
 const STEPS = [
@@ -30,7 +31,7 @@ const STEPS = [
 
 export function Furnace() {
   return (
-    <section className="band band-ink" id="furnace">
+    <section className="band band-tint furnace" id="furnace">
       <div className="wrap">
         <div className="sec-head">
           <p className="eyebrow" data-reveal>
@@ -44,6 +45,17 @@ export function Furnace() {
             burned ${TOKEN.symbol}. It has one door.
           </p>
         </div>
+
+        <EngravingScene
+          srcSmall="/video/furnace-line-1100.mp4"
+          srcLarge="/video/furnace-line-1600.mp4"
+          poster="/video/furnace-line-poster.webp"
+          posterSmall="/video/furnace-line-poster-sm.webp"
+          ratio="1920 / 1088"
+          width={1600}
+          height={906}
+          alt="The Furnace line, station by station: 01 Trade, the wrapper gets used. 02 Collect, fees in WETH and zZEC flow to the Furnace. 03 Ignite, fees swapped to $ZEAL with a minimum output. 04 Burn, $ZEAL sent through one door to 0x…dEaD. 05 Supply, less $ZEAL exists."
+        />
 
         <div className="steps">
           {STEPS.map((s, i) => (
