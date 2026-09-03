@@ -1,5 +1,7 @@
 # $ZEAL · the first wrapped Zcash on Robinhood Chain
 
+[![ci](https://github.com/zealtoken/zealtoken/actions/workflows/ci.yml/badge.svg)](https://github.com/zealtoken/zealtoken/actions/workflows/ci.yml)
+
 $ZEAL is a memecoin with a job. Its creator fees on [Pons](https://www.ponsfamily.com/0x9fA1C5E90A11294F83A9F135b81ad1b537A5FFdC)
 fund a public Zcash reserve, and that reserve backs **zZEC**, a 1:1 wrapped ZEC
 on Robinhood Chain (chain 4663). Fees from zZEC trading buy $ZEAL and burn it.

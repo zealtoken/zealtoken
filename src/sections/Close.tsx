@@ -57,7 +57,7 @@ const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 03', t: 'ZealTapV2 deployed and verified. It can sweep its own pool and migrate itself, so fee routing never depends on anyone else again. Still one exit: the Foundry.', href: PONS_V2.tap ? src(PONS_V2.tap) : undefined, label: 'source' },
   { d: 'Sep 03', t: `${TOKEN.wrapper} contract written and tested. 65 tests across the system, CI on every push.`, href: LINKS.repo ? `${LINKS.repo}/blob/main/contracts/contracts/ZZEC.sol` : undefined, label: 'ZZEC.sol' },
   { d: 'Sep 03', t: 'Reserve operator built: attest, mint, redemption watcher, ETH → ZEC sweep over Relay and NEAR Intents.', href: LINKS.repo ? `${LINKS.repo}/tree/main/ops` : undefined, label: 'ops/' },
-  { d: 'Sep 03', t: 'Source publishing under a project org, not a person.', href: LINKS.repo ?? undefined, label: 'github' },
+  { d: 'Sep 03', t: 'Everything public: contracts, tests, operator, site.', href: LINKS.repo ?? undefined, label: 'github' },
   { d: 'next', t: `Reserve address published. ${TOKEN.wrapper} deploys and verifies at supply zero. First attestation.` },
 ]
 
