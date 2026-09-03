@@ -99,6 +99,19 @@ export const ZZEC_MARKET = {
   furnaceSharePct: 70,
 } as const
 
+/**
+ * Pons V2 plumbing for $ZEAL. Creator fees are credited to the recipient
+ * inside the escrow and only paid out on claim(); the Tap is the recipient
+ * that can claim and forward into the Foundry.
+ */
+export const PONS_V2 = {
+  factory: '0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e',
+  escrow: '0xd3AFEB2a57f70eF218Aa82451c51B2fb0416Ac9e',
+  curve: '0x3C9D54Ed43Fa8558BD468975243eA10effFBe1fc',
+  /** Set once deployed; until Pons points the recipient here, fees credit to the Foundry key. */
+  tap: null as string | null,
+} as const
+
 /** The burn. */
 export const FURNACE = {
   burnAddress: '0x000000000000000000000000000000000000dEaD',
