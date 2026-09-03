@@ -19,6 +19,7 @@ export const SEL = {
   lastAttestationAt: '0x8e353f4c', // lastAttestationAt()
   totalZealBurned: '0xa0024092', // totalZealBurned()
   burnCount: '0x524773ce', // burnCount()
+  balanceOf: '0x70a08231', // balanceOf(address), ERC-20
 } as const
 
 export const MAX_UINT = (1n << 256n) - 1n

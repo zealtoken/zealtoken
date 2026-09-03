@@ -13,6 +13,7 @@ import { MAX_UINT, SEL, readBatch, units, view, type Call } from '../lib/chain'
  */
 
 type Snapshot = {
+  pending: number
   feesRouted: number
   toReserve: number
   zecHeld: number
@@ -24,6 +25,7 @@ type Snapshot = {
 }
 
 const ZERO: Snapshot = {
+  pending: 0,
   feesRouted: 0,
   toReserve: 0,
   zecHeld: 0,
@@ -45,6 +47,9 @@ async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
   }
 
   if (CONTRACTS.foundry) {
+    // WETH sitting in the Foundry, collected but not yet split. This is the
+    // number that moves the moment fees arrive, before anyone calls route().
+    push('pending', view(PONS.weth, SEL.balanceOf, CONTRACTS.foundry))
     push('feesRouted', view(CONTRACTS.foundry, SEL.totalRouted, PONS.weth))
     push('toReserve', view(CONTRACTS.foundry, SEL.totalToReserve, PONS.weth))
   }
@@ -65,6 +70,7 @@ async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
   const cov = get('coverage')
 
   return {
+    pending: units(get('pending'), 18),
     feesRouted: units(get('feesRouted'), 18),
     toReserve: units(get('toReserve'), 18),
     zecHeld: units(get('zecHeld'), 8),
@@ -201,6 +207,13 @@ export function Ledger() {
         <div className="lg-col">
           <div className="lg-grp mono">LOOP 01 · THE FOUNDRY</div>
           <div className="lg-grid">
+            <Stat
+              value={snap.pending}
+              unit="ETH"
+              label="in the Foundry"
+              frac={4}
+              hint={snap.pending > 0 ? 'awaiting route()' : 'awaiting fees'}
+            />
             <Stat value={snap.feesRouted} unit="ETH" label="fees routed" frac={4} />
             <Stat value={snap.toReserve} unit="ETH" label="to the reserve" frac={4} />
             <Stat value={snap.zecHeld} unit="ZEC" label="ZEC held" frac={2} hint="attested" />
