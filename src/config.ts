@@ -109,7 +109,7 @@ export const PONS_V2 = {
   escrow: '0xd3AFEB2a57f70eF218Aa82451c51B2fb0416Ac9e',
   curve: '0x3C9D54Ed43Fa8558BD468975243eA10effFBe1fc',
   /** Set once deployed; until Pons points the recipient here, fees credit to the Foundry key. */
-  tap: null as string | null,
+  tap: '0xA0dAE8fe24BDfb2331A1D581dC47bE61c565E655' as string | null,
 } as const
 
 /** The burn. */
