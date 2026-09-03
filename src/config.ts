@@ -108,7 +108,7 @@ export const FURNACE = {
 
 export const LINKS = {
   x: 'https://x.com/ZealTheMascot',
-  telegram: '#',
+  telegram: 'https://t.me/ZcashMascot',
   pons: 'https://www.ponsfamily.com',
   zcash: 'https://z.cash',
   nearIntents: 'https://near-intents.org',
@@ -121,3 +121,15 @@ export const RESERVE_PLACEHOLDER = {
   zzecSupply: 0,
   coverage: 1,
 }
+
+/** Where the name comes from: the Zcash Foundation's own mascot post at Zcon1. */
+export const LORE = {
+  tweetUrl: 'https://x.com/ZcashFoundation/status/1142379905809883136',
+  author: 'Zcash Foundation',
+  handle: '@ZcashFoundation',
+  date: 'June 22, 2019',
+  event: 'Zcon1',
+  text: "The Foundation's mascot is a zeal, a group of zebras. In the future, when many people are running Zebra nodes, that will be a zeal!",
+  credit: 'Pun courtesy of @kaplannie',
+  image: '/img/lore-zcon1.jpg',
+} as const
