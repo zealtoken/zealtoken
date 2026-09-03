@@ -180,7 +180,7 @@ export function Ledger() {
       <div className="lg-head">
         <span className="lg-title mono">
           <span className={`dot ${status === 'error' ? 'dot-err' : ''}`} />
-          {contractsLive ? 'LIVE LEDGER' : 'LIVE LEDGER · CONTRACTS DEPLOY AT LAUNCH'}
+          {contractsLive ? 'LIVE LEDGER' : 'LIVE LEDGER · READING CHAIN'}
         </span>
         <span className="lg-meta mono">
           {status === 'ok' && (
@@ -216,7 +216,7 @@ export function Ledger() {
           </div>
           <div className="lg-note mono">
             {contractsLive
-              ? 'every number reads from the contracts · nothing here is editable'
+              ? 'read from the contracts every 15s · nothing here is editable'
               : 'counters start at trade one · block number is live now'}
           </div>
         </div>

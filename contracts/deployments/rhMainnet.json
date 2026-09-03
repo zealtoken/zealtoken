@@ -1,0 +1,23 @@
+{
+  "network": "rhMainnet",
+  "chainId": 4663,
+  "deployedAt": "2026-09-03T14:17:17.655Z",
+  "deployer": "0x1C083F2f85aCadae452C7512C45cD7c8a3ddbF03",
+  "contracts": {
+    "ZealFoundry": "0xa1C1Fb281cCC47C587565a01700bF61a03D885a6",
+    "ZZEC": null,
+    "ZealFurnace": null
+  },
+  "foundry": {
+    "split": {
+      "reserveBps": 6000,
+      "liquidityBps": 2500,
+      "opsBps": 1500
+    },
+    "reserveSink": "0x6812378cd609A771a02d3aC03cF0DA0299a5eA58",
+    "liquiditySink": "0xf8D7F2Cc63565B7aCbE7B2FbF85098a1FE74E055",
+    "opsSink": "0x259811B5dc3427a44edFD0C009B2151c5d2D24d3"
+  },
+  "zzec": null,
+  "furnace": null
+}

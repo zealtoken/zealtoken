@@ -80,8 +80,8 @@ export const TOKEN = {
  * Filled in from contracts/deployments/rhMainnet.json after deploying.
  */
 export const CONTRACTS = {
-  /** Immutable fee splitter. No owner, no admin, no upgrade path. */
-  foundry: null as string | null,
+  /** Immutable fee splitter. No owner, no admin, no upgrade path. Live since 2026-09-03. */
+  foundry: '0xa1C1Fb281cCC47C587565a01700bF61a03D885a6' as string | null,
   /** The wrapper. Supply is capped by the attested reserve. */
   zzec: null as string | null,
   /** zZEC fees in, burned $ZEAL out. No other exit. */
