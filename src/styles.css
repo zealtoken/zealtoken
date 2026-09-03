@@ -436,8 +436,27 @@ p:last-child { margin-bottom: 0; }
     linear-gradient(90deg, rgba(247,247,244,0.97) 0%, rgba(247,247,244,0.95) 42%, rgba(247,247,244,0.62) 66%, rgba(247,247,244,0.22) 100%),
     linear-gradient(180deg, rgba(247,247,244,0.9) 0%, rgba(247,247,244,0) 22%, rgba(247,247,244,0) 70%, rgba(247,247,244,0.85) 100%);
 }
+/* Small screens: the scene stops being a backdrop and becomes a panoramic
+   strip between the buttons and the ledger. Copy sits on plain paper; the
+   video shows nearly its whole frame instead of a zoomed-in corner. */
 @media (max-width: 980px) {
-  .hero-wash { background: linear-gradient(180deg, rgba(247,247,244,0.96) 0%, rgba(247,247,244,0.9) 55%, rgba(247,247,244,0.6) 100%); }
+  .hero { display: flex; flex-direction: column; padding-bottom: 0; }
+  .hero .hero-in { order: 1; }
+  .hero-bg {
+    order: 2;
+    position: relative;
+    inset: auto;
+    width: 100vw;
+    margin-inline: calc(50% - 50vw);
+    height: 54vw;
+    margin-top: 34px;
+  }
+  .hero-bg-still, .hero-bg-video { object-position: center 45%; }
+  .hero-wash {
+    background:
+      linear-gradient(180deg, rgba(247,247,244,1) 0%, rgba(247,247,244,0) 26%, rgba(247,247,244,0) 78%, rgba(247,247,244,1) 100%);
+  }
+  .hero .hero-ledger { order: 3; margin-top: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .hero-bg-video { display: none; } }
 .hero-in {
