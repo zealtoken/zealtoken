@@ -966,11 +966,14 @@ p:last-child { margin-bottom: 0; }
 }
 .tweet-head { display: flex; align-items: center; gap: 14px; }
 .tweet-avatar {
-  width: 46px; height: 46px; border-radius: 50%;
-  display: grid; place-items: center;
-  background: var(--ink); color: var(--green-bright);
-  font-weight: 800; font-size: 20px; letter-spacing: -0.02em;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
   flex: none;
+  display: block;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--line);
 }
 .tweet-who { display: flex; flex-direction: column; line-height: 1.2; }
 .tweet-who strong { font-size: 16px; }

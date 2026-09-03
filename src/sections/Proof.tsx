@@ -97,7 +97,7 @@ export function Proof() {
       </section>
 
       {/* ---------------- honest limits ---------------- */}
-      <section className="band" id="limits">
+      <section className="band band-tint" id="limits">
         <div className="wrap">
           <div className="sec-head">
             <p className="eyebrow" data-reveal>
