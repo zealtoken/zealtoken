@@ -27,8 +27,30 @@ export function zzec(signer?: ethers.Signer) {
 }
 
 /** A role key from the environment. Attestor and minter are separate on purpose. */
-export function roleSigner(envName: 'ATTESTOR_KEY' | 'MINTER_KEY'): ethers.Wallet {
-  const k = process.env[envName]
-  if (!k) throw new Error(`Missing ${envName}`)
-  return new ethers.Wallet(k, provider)
+export const KEYS_DIR = new URL('../.keys/', import.meta.url).pathname
+export const keyPath = (role: 'attestor' | 'minter') => `${KEYS_DIR}${role}.json`
+
+/**
+ * Unlock a role key. Order: encrypted keystore in ops/.keys (passphrase from
+ * ATTESTOR_PASS / MINTER_PASS or an interactive prompt), else a raw *_KEY env
+ * for hosts that inject secrets themselves.
+ */
+export async function roleSigner(role: 'attestor' | 'minter'): Promise<ethers.Wallet> {
+  const { existsSync, readFileSync } = await import('node:fs')
+  const file = keyPath(role)
+  const envKey = process.env[role === 'attestor' ? 'ATTESTOR_KEY' : 'MINTER_KEY']
+  if (existsSync(file)) {
+    let pass = process.env[role === 'attestor' ? 'ATTESTOR_PASS' : 'MINTER_PASS']
+    if (!pass) {
+      const { createInterface } = await import('node:readline')
+      pass = await new Promise<string>((res) => {
+        const rl = createInterface({ input: process.stdin, output: process.stdout })
+        rl.question(`passphrase for ${role} key: `, (a) => { rl.close(); res(a) })
+      })
+    }
+    const w = await ethers.Wallet.fromEncryptedJson(readFileSync(file, 'utf8'), pass)
+    return new ethers.Wallet(w.privateKey, provider)
+  }
+  if (envKey) return new ethers.Wallet(envKey, provider)
+  throw new Error(`no ${role} key: run npm run keys:create (or set ${role.toUpperCase()}_KEY)`)
 }
