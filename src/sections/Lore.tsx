@@ -6,7 +6,7 @@ import { stagger } from '../useReveal'
  */
 export function Lore() {
   return (
-    <section className="band band-tint" id="lore">
+    <section className="band" id="lore">
       <div className="wrap split lore-split">
         <div>
           <p className="eyebrow" data-reveal>
@@ -33,7 +33,7 @@ export function Lore() {
           aria-label={`Open the original post by ${LORE.handle} on X`}
         >
           <div className="tweet-head">
-            <span className="tweet-avatar" aria-hidden="true">Z</span>
+            <img className="tweet-avatar" src="/img/zcash-foundation.jpg" alt="" width={44} height={44} loading="lazy" decoding="async" />
             <span className="tweet-who">
               <strong>{LORE.author}</strong>
               <span className="mono">{LORE.handle}</span>
