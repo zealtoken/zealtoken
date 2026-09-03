@@ -4,3 +4,5 @@ cache
 typechain-types
 .env
 deployments/*.local.json
+.env.*
+!.env.example

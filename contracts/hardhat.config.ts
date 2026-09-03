@@ -1,3 +1,4 @@
+import 'dotenv/config' // loads contracts/.env so the deployer key never has to be pasted anywhere
 import type { HardhatUserConfig } from 'hardhat/config'
 import '@nomicfoundation/hardhat-toolbox'
 
