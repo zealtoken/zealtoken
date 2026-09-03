@@ -10,3 +10,6 @@ contracts/artifacts
 contracts/cache
 contracts/typechain-types
 contracts/.env
+ops/node_modules
+ops/redemptions.json
+ops/.env
