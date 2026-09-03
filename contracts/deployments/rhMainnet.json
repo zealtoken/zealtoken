@@ -6,7 +6,8 @@
   "contracts": {
     "ZealFoundry": "0xa1C1Fb281cCC47C587565a01700bF61a03D885a6",
     "ZZEC": null,
-    "ZealFurnace": null
+    "ZealFurnace": null,
+    "ZealTap": "0xA0dAE8fe24BDfb2331A1D581dC47bE61c565E655"
   },
   "foundry": {
     "split": {
@@ -19,5 +20,10 @@
     "opsSink": "0x259811B5dc3427a44edFD0C009B2151c5d2D24d3"
   },
   "zzec": null,
-  "furnace": null
+  "furnace": null,
+  "tap": {
+    "escrow": "0xd3AFEB2a57f70eF218Aa82451c51B2fb0416Ac9e",
+    "foundry": "0xa1C1Fb281cCC47C587565a01700bF61a03D885a6",
+    "deployedAt": "2026-09-03T16:17:37.525Z"
+  }
 }
