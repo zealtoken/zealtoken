@@ -10,7 +10,8 @@
     "key:create": "hardhat run scripts/key.ts --network hardhat",
     "preflight": "hardhat run scripts/preflight.ts --network rhMainnet",
     "launch": "DEPLOY_ONLY=foundry hardhat run scripts/deploy.ts --network rhMainnet",
-    "verify:launch": "hardhat run scripts/verify-launch.ts --network rhMainnet"
+    "verify:launch": "hardhat run scripts/verify-launch.ts --network rhMainnet",
+    "redirect": "hardhat run scripts/set-redirect.ts --network rhMainnet"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
