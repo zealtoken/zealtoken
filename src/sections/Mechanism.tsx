@@ -74,16 +74,6 @@ export function Mechanism() {
 
       {/* ---------------- the foundry ---------------- */}
       <section className="band foundry" id="foundry">
-        <EngravingScene
-          srcSmall="/video/foundry-1024.mp4"
-          srcLarge="/video/foundry-1600.mp4"
-          poster="/video/foundry-poster.webp"
-          posterSmall="/video/foundry-poster-sm.webp"
-          ratio="2208 / 944"
-          width={1600}
-          height={684}
-          alt="An engraved view of the Zeal Foundry: zebra crews working a refinery, ZEC coins riding conveyors out of the smelter, and a freight train hauling them to the reserve."
-        />
 
         <div className="wrap">
           <div className="sec-head">
@@ -101,13 +91,13 @@ export function Mechanism() {
         </div>
 
         <EngravingScene
-          srcSmall="/video/line-1100.mp4"
-          srcLarge="/video/line-1600.mp4"
-          poster="/video/line-poster.webp"
-          posterSmall="/video/line-poster-sm.webp"
-          ratio="1920 / 1088"
+          srcSmall="/video/foundry-line-1100.mp4"
+          srcLarge="/video/foundry-line-1600.mp4"
+          poster="/video/foundry-line-poster.webp"
+          posterSmall="/video/foundry-line-poster-sm.webp"
+          ratio="1728 / 1152"
           width={1600}
-          height={906}
+          height={1067}
           alt="The Foundry line, station by station: 01 Intake, every trade pays in. 02 Split, fixed allocation of 60% ZEC reserve, 25% zZEC liquidity, 15% operations. 03 Smelt, fees become real ZEC via NEAR Intents. 04 Reserve, public and auditable. 05 Mint, zZEC issued 1:1 and backed."
         />
 

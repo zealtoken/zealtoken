@@ -709,12 +709,9 @@ p:last-child { margin-bottom: 0; }
    Foundry section rhythm
    ============================================================ */
 
-.foundry { padding-top: 0; }
-.foundry .sec-head {
-  margin-top: clamp(64px, 8vw, 120px);
-  margin-bottom: clamp(48px, 6vw, 88px);
-}
-.foundry .steps { margin-top: clamp(56px, 7vw, 112px); }
+.foundry .steps,
+.furnace .steps { margin-top: clamp(56px, 7vw, 112px); }
+.furnace .furnace-sum { background: var(--bg); }
 
 /* ============================================================
    Furnace summary
