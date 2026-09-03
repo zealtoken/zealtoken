@@ -14,7 +14,8 @@
     "redirect": "hardhat run scripts/set-redirect.ts --network rhMainnet",
     "tap": "hardhat run scripts/deploy-tap.ts --network rhMainnet",
     "preflight:zzec": "hardhat run scripts/preflight-zzec.ts --network rhMainnet",
-    "zzec": "hardhat run scripts/deploy-zzec.ts --network rhMainnet"
+    "zzec": "hardhat run scripts/deploy-zzec.ts --network rhMainnet",
+    "tap2": "hardhat run scripts/deploy-tap2.ts --network rhMainnet"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
