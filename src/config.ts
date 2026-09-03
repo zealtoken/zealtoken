@@ -120,6 +120,7 @@ export const FURNACE = {
 } as const
 
 export const LINKS = {
+  repo: 'https://github.com/zealtoken/zealtoken',
   x: 'https://x.com/ZealTheMascot',
   telegram: 'https://t.me/ZcashMascot',
   pons: 'https://www.ponsfamily.com/0x9fA1C5E90A11294F83A9F135b81ad1b537A5FFdC',
