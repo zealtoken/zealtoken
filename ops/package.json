@@ -1,0 +1,23 @@
+{
+  "name": "zeal-reserve-ops",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "The operator behind zZEC: turns routed ETH into native ZEC, attests the reserve, mints against it, and honours redemptions.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "status": "tsx src/status.ts",
+    "attest": "tsx src/attest.ts",
+    "mint": "tsx src/mint.ts",
+    "redeem:watch": "tsx src/redeem-watch.ts",
+    "sweep": "tsx src/sweep.ts"
+  },
+  "dependencies": {
+    "ethers": "^6.13.4"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "@types/node": "^22.10.2"
+  }
+}
