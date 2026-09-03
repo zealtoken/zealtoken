@@ -18,5 +18,6 @@ git filter-branch -f --env-filter '
 if git log --all --format='%an %ae %cn %ce' | grep -qi "zeal\|ops@"; then echo "rewrite failed, aborting"; exit 3; fi
 if git grep -qi "zeal\|zealtoken" -- . ':!package-lock.json' ; then echo "personal identifier still in tree, aborting"; git grep -il "zeal" -- . ':!package-lock.json'; exit 4; fi
 git remote add anon "$REMOTE"
+export GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -i $HOME/.ssh/zeal_deploy -o IdentitiesOnly=yes}"
 git push -f anon main
 echo "mirror pushed to $REMOTE with all authors rewritten"
