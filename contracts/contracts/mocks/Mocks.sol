@@ -98,3 +98,46 @@ contract MockV2FeeEscrow is IV2FeeEscrow {
         MockERC20(token).transfer(msg.sender, amount);
     }
 }
+
+/// @dev Pons V2MemeHook stand-in: pending fees credited to the escrow on sweep; creator-gated like the real one.
+contract MockMemeHook {
+    error NotFeeSweepOperator();
+    MockV2FeeEscrow public immutable escrow;
+    address public operator;
+    mapping(bytes32 => address) public creator;
+    mapping(bytes32 => uint256) public pending;
+
+    constructor(MockV2FeeEscrow escrow_, address operator_) { escrow = escrow_; operator = operator_; }
+    function register(bytes32 poolId, address creator_) external { creator[poolId] = creator_; }
+    function setCreatorFeeRecipient(bytes32 poolId, address newRecipient) external { creator[poolId] = newRecipient; }
+    function accrue(bytes32 poolId) external payable { pending[poolId] += msg.value; }
+    function sweepPoolFees(bytes32 poolId, uint256, uint256) external {
+        if (msg.sender != operator && msg.sender != creator[poolId]) revert NotFeeSweepOperator();
+        uint256 amt = pending[poolId];
+        pending[poolId] = 0;
+        escrow.credit{value: amt}(creator[poolId]);
+    }
+}
+
+/// @dev Pons V2 launch factory stand-in: recipient transfer only by the current recipient.
+contract MockPonsFactory {
+    error NotCreatorFeeRecipient();
+    MockMemeHook public immutable hook;
+    mapping(address => address) public creatorFeeRecipient;
+    mapping(address => bytes32) public poolOf;
+    mapping(address => bool) public buybackEnabled;
+
+    constructor(MockMemeHook hook_) { hook = hook_; }
+    function register(address token, bytes32 poolId, address recipient) external {
+        creatorFeeRecipient[token] = recipient; poolOf[token] = poolId; hook.register(poolId, recipient);
+    }
+    function transferCreatorFeeRecipient(address token, address newRecipient) external {
+        if (msg.sender != creatorFeeRecipient[token]) revert NotCreatorFeeRecipient();
+        creatorFeeRecipient[token] = newRecipient;
+        hook.setCreatorFeeRecipient(poolOf[token], newRecipient);
+    }
+    function setBuybackEnabled(address token, bool enabled) external {
+        if (msg.sender != creatorFeeRecipient[token]) revert NotCreatorFeeRecipient();
+        buybackEnabled[token] = enabled;
+    }
+}
