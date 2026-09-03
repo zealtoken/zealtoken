@@ -1,5 +1,6 @@
 import { FURNACE, TOKEN } from '../config'
 import { EngravingScene } from '../art/EngravingScene'
+import { StationStrip } from '../art/StationStrip'
 import { stagger } from '../useReveal'
 
 const STEPS = [
@@ -51,11 +52,12 @@ export function Furnace() {
           srcLarge="/video/furnace-line-1600.mp4"
           poster="/video/furnace-line-poster.webp"
           posterSmall="/video/furnace-line-poster-sm.webp"
-          ratio="1920 / 1088"
+          ratio="1920 / 848"
           width={1600}
-          height={906}
+          height={706}
           alt="The Furnace line, station by station: 01 Trade, the wrapper gets used. 02 Collect, fees in WETH and zZEC flow to the Furnace. 03 Ignite, fees swapped to $ZEAL with a minimum output. 04 Burn, $ZEAL sent through one door to 0x…dEaD. 05 Supply, less $ZEAL exists."
         />
+        <StationStrip which="furnace" />
 
         <div className="steps steps-4">
           {STEPS.map((s, i) => (

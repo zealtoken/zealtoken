@@ -133,3 +133,21 @@ export const LORE = {
   credit: 'Pun courtesy of @kaplannie',
   image: '/img/lore-zcon1.jpg',
 } as const
+
+/** The five stations under each plate. Rendered by StationStrip so both plates read identically. */
+export const STATIONS = {
+  foundry: [
+    { n: '01', t: 'Intake', s: 'every trade pays in' },
+    { n: '02', t: 'Split', s: 'fixed allocation' },
+    { n: '03', t: 'Smelt', s: 'fees become real ZEC' },
+    { n: '04', t: 'Reserve', s: 'public, auditable' },
+    { n: '05', t: 'Mint', s: '1:1, backed' },
+  ],
+  furnace: [
+    { n: '01', t: 'Trade', s: 'the wrapper gets used' },
+    { n: '02', t: 'Collect', s: 'fees in WETH + zZEC' },
+    { n: '03', t: 'Ignite', s: 'swap → $ZEAL' },
+    { n: '04', t: 'Burn', s: '→ 0x…dEaD' },
+    { n: '05', t: 'Supply', s: 'less $ZEAL exists' },
+  ],
+} as const
