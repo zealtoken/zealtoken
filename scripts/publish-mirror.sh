@@ -18,13 +18,12 @@ TMP="$(mktemp -d)"
 git clone -q --no-local "$SRC" "$TMP/mirror"
 cd "$TMP/mirror"
 git remote remove origin
-ARGS=(--force --path .tooling --invert-paths
-      --mailmap /dev/stdin
-      --replace-message <(printf 'regex:(?m)^Co-Authored-By:.*\\n?==>\n'))
+# mailmap: every existing identity becomes the project identity
+git log --all --format='%an <%ae>%n%cn <%ce>' | sort -u | sed 's/^/Zeal <dev@zealtoken.com> /' > "$TMP/mailmap"
+printf 'regex:(?m)^Co-Authored-By:.*\n?==>\n' > "$TMP/msgmap"
+ARGS=(--force --path .tooling --invert-paths --mailmap "$TMP/mailmap" --replace-message "$TMP/msgmap")
 [ -n "${REPLACEMENTS:-}" ] && ARGS+=(--replace-text "$REPLACEMENTS")
-printf 'Zeal <dev@zealtoken.com> <%s>\n' "$(git log --all --format='%ae' | sort -u | tr '\n' ' ')" >/dev/null
-# mailmap: map every existing identity to the project identity
-git log --all --format='%an <%ae>%n%cn <%ce>' | sort -u | sed 's/^/Zeal <dev@zealtoken.com> /' | git filter-repo "${ARGS[@]}"
+git filter-repo "${ARGS[@]}"
 if git log --all --format='%an %ae %cn %ce' | grep -vq '^Zeal dev@zealtoken.com Zeal dev@zealtoken.com$'; then echo "author rewrite failed"; exit 3; fi
 if git log --all --format='%B' | grep -qi 'co-authored-by'; then echo "trailer strip failed"; exit 3; fi
 if git log --all --name-only --format= | grep -q '^\.tooling/'; then echo ".tooling still in history"; exit 3; fi
