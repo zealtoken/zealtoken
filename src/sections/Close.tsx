@@ -1,5 +1,15 @@
 import { useState } from 'react'
-import { CHAIN, LINKS, PONS, RESERVE_TAKE_PCT, TOKEN } from '../config'
+import { CHAIN, LINKS, PONS, RESERVE_TAKE_PCT, SPLIT, TOKEN } from '../config'
+
+// One $100 trade, walked to the cent. Everything derives from config.
+const FEE_PER_100 = PONS.poolFeePct
+const FOUNDRY_PER_100 = (FEE_PER_100 * PONS.creatorSharePct) / 100
+const PONS_KEEP_PER_100 = FEE_PER_100 - FOUNDRY_PER_100
+const SPLIT_PER_100 = SPLIT.map((x) => (FOUNDRY_PER_100 * x.pct) / 100)
+const SPLIT_TAKE_PCT = SPLIT.map((x) => (PONS.poolFeePct * PONS.creatorSharePct * x.pct) / 10_000)
+const PONS_TAKE_PCT = (PONS.poolFeePct * (100 - PONS.creatorSharePct)) / 100
+const money = (n: number) => `$${n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}`
+const pct = (n: number) => `${n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}%`
 import { stagger } from '../useReveal'
 
 const PHASES = [
@@ -37,8 +47,8 @@ const PHASES = [
 
 const FAQ = [
   {
-    q: `Where does the money to buy ZEC come from?`,
-    a: `$${TOKEN.symbol} trading fees. Pons takes ${PONS.poolFeePct.toFixed(2)}% per trade and sends ${PONS.creatorSharePct}% of it to the Foundry. ${RESERVE_TAKE_PCT.toFixed(2)}% of all volume becomes Zcash in the reserve.`,
+    q: `Where does the money to buy ZEC come from, and where does the rest go?`,
+    a: `From $${TOKEN.symbol} trading fees, and every cent is accounted for. Take a $100 trade. Pons charges a ${money(FEE_PER_100)} pool fee. Pons keeps ${money(PONS_KEEP_PER_100)} of that for running the launchpad. The other ${money(FOUNDRY_PER_100)} goes to the Foundry, which splits it three ways: ${money(SPLIT_PER_100[0])} buys Zcash for the reserve, ${money(SPLIT_PER_100[1])} seeds ${TOKEN.wrapper} liquidity (whose fees feed the Furnace), and ${money(SPLIT_PER_100[2])} covers audits, attestation and infrastructure. So of every dollar traded: ${pct(RESERVE_TAKE_PCT)} becomes Zcash, ${pct(SPLIT_TAKE_PCT[1])} becomes ${TOKEN.wrapper} liquidity, ${pct(SPLIT_TAKE_PCT[2])} runs the operation, and ${pct(PONS_TAKE_PCT)} is Pons’s fee. Nothing goes to a founder wallet.`,
   },
   {
     q: `Is this a tax token?`,
