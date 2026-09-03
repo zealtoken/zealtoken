@@ -45,8 +45,8 @@ const FAQ = [
     a: `No extra tax on top. The ${PONS.poolFeePct.toFixed(2)}% is the standard Pons pool fee that every token on the launchpad pays. The difference is where the creator half goes: most projects route it to a founder’s wallet, and we route it to a machine that buys Zcash.`,
   },
   {
-    q: `Why not just bridge ZEC directly?`,
-    a: `Because a bridge needs liquidity on both sides before it is useful, and nobody was going to supply it for a chain with zero ZEC presence. The Foundry bootstraps that reserve from trading activity instead of asking for it. Once the reserve is deep enough, better custody designs become available to us.`,
+    q: `Why not build a real bridge?`,
+    a: `Because Zcash is not an EVM chain, and a real bridge means proving Zcash's state on ${CHAIN.name}: a light client that verifies Zcash block headers and shielded-pool proofs inside an EVM contract. That is a multi-year cryptography project. It is exactly what red·bridge (Zcash Community Grants and the Avalanche Foundation) exists to build, and it is on our roadmap to adopt the moment it ships. The networks that move ZEC today, NEAR Intents, Maya and THORChain, are not lock-and-mint bridges either: they are validator-bonded vaults that let you swap native ZEC for other assets. So the honest options for wrapped ZEC on this chain right now are a reserve with public attestation, or nothing. We picked the reserve, made every part of it checkable, and wrote the hand-off to trust-minimized custody into Phase 04. There is a second reason: a bridge to a chain holding zero ZEC is a door into an empty room. By the time better custody exists, the Foundry will already have filled the room.`,
   },
   {
     q: `What stops you from running off with the reserve?`,
