@@ -105,9 +105,22 @@ on a missing or malformed one rather than guessing — most of these are immutab
 after deployment.
 
 ```bash
-npm run deploy:testnet    # do this first, always
+# Phase 00 (launch day): the Foundry only. Needs RESERVE_SINK, LIQUIDITY_SINK, OPS_SINK, DEPLOYER_KEY.
+DEPLOY_ONLY=foundry npm run deploy:mainnet
+
+# Phase 02: everything. Needs the full .env.
 npm run deploy:mainnet
 ```
+
+Then, once $ZEAL exists on Pons, prove the fee stream is actually pointed at
+the Foundry before announcing anything:
+
+```bash
+FOUNDRY=0x... ZEAL_TOKEN=0x... npx hardhat run scripts/verify-launch.ts --network rhMainnet
+```
+
+It reads the Foundry's immutables and the Pons locker's `feeRedirects($ZEAL)`,
+and exits non-zero if the redirect is anywhere but the Foundry.
 
 The script hard-fails if the three sinks aren't distinct, if the attestor equals
 the minter, or if the Zcash reserve address isn't transparent (`t1`/`t3`).

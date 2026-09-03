@@ -27,6 +27,8 @@ function requiredAddress(name: string): string {
   return ethers.getAddress(v)
 }
 
+const ONLY = (process.env.DEPLOY_ONLY ?? 'all').toLowerCase() // 'foundry' for Phase 00
+
 async function main() {
   const [deployer] = await ethers.getSigners()
   const net = await ethers.provider.getNetwork()
@@ -35,26 +37,27 @@ async function main() {
   const liquiditySink = requiredAddress('LIQUIDITY_SINK')
   const opsSink = requiredAddress('OPS_SINK')
 
-  const zecReserveAddress = required('ZEC_RESERVE_ADDRESS')
-  const owner = requiredAddress('ZZEC_OWNER')
-  const attestor = requiredAddress('ZZEC_ATTESTOR')
-  const minter = requiredAddress('ZZEC_MINTER')
+  const phase2 = ONLY === 'all'
+  const zecReserveAddress = phase2 ? required('ZEC_RESERVE_ADDRESS') : ''
+  const owner = phase2 ? requiredAddress('ZZEC_OWNER') : ethers.ZeroAddress
+  const attestor = phase2 ? requiredAddress('ZZEC_ATTESTOR') : ethers.ZeroAddress
+  const minter = phase2 ? requiredAddress('ZZEC_MINTER') : ethers.ZeroAddress
   const maxAttestationAge = Number(process.env.MAX_ATTESTATION_AGE ?? 36 * 3600)
 
-  const zealToken = requiredAddress('ZEAL_TOKEN')
-  const swapRouter = requiredAddress('SWAP_ROUTER')
-  const igniter = requiredAddress('FURNACE_IGNITER')
+  const zealToken = phase2 ? requiredAddress('ZEAL_TOKEN') : ethers.ZeroAddress
+  const swapRouter = phase2 ? requiredAddress('SWAP_ROUTER') : ethers.ZeroAddress
+  const igniter = phase2 ? requiredAddress('FURNACE_IGNITER') : ethers.ZeroAddress
 
   // These are the mistakes that are unrecoverable, so check them loudly.
   if (new Set([reserveSink, liquiditySink, opsSink]).size !== 3) {
     throw new Error('The three sinks must be distinct addresses.')
   }
-  if (attestor === minter) {
+  if (phase2 && attestor === minter) {
     throw new Error(
       'ZZEC_ATTESTOR and ZZEC_MINTER must differ — separating them is the whole point of the role split.',
     )
   }
-  if (!/^t[13]/.test(zecReserveAddress)) {
+  if (phase2 && !/^t[13]/.test(zecReserveAddress)) {
     throw new Error(
       `ZEC_RESERVE_ADDRESS must be a Zcash *transparent* address (t1.../t3...), got "${zecReserveAddress}". ` +
         'A shielded reserve cannot be publicly audited, which defeats the design.',
@@ -68,14 +71,19 @@ async function main() {
   console.log(`Reserve sink ${reserveSink}   << immutable, cannot ever be changed`)
   console.log(`Liquidity    ${liquiditySink}`)
   console.log(`Ops          ${opsSink}`)
-  console.log(`ZEC reserve  ${zecReserveAddress}`)
-  console.log(`zZEC owner   ${owner}`)
-  console.log(`  attestor   ${attestor}`)
-  console.log(`  minter     ${minter}`)
-  console.log(`Furnace`)
-  console.log(`  $ZEAL      ${zealToken}   << immutable`)
-  console.log(`  router     ${swapRouter}   << immutable; must expose V3 exactInput WITH deadline`)
-  console.log(`  igniter    ${igniter}\n`)
+  if (phase2) {
+    console.log(`ZEC reserve  ${zecReserveAddress}`)
+    console.log(`zZEC owner   ${owner}`)
+    console.log(`  attestor   ${attestor}`)
+    console.log(`  minter     ${minter}`)
+    console.log(`Furnace`)
+    console.log(`  $ZEAL      ${zealToken}   << immutable`)
+    console.log(`  router     ${swapRouter}   << immutable; must expose V3 exactInput WITH deadline`)
+    console.log(`  igniter    ${igniter}`)
+  } else {
+    console.log(`Mode         DEPLOY_ONLY=foundry (Phase 00). zZEC and the Furnace deploy in Phase 02.`)
+  }
+  console.log()
 
   const Foundry = await ethers.getContractFactory('ZealFoundry')
   const foundry = await Foundry.deploy(
@@ -90,17 +98,22 @@ async function main() {
   const foundryAddress = await foundry.getAddress()
   console.log(`ZealFoundry  ${foundryAddress}`)
 
-  const ZZEC = await ethers.getContractFactory('ZZEC')
-  const zzec = await ZZEC.deploy(zecReserveAddress, owner, attestor, minter, maxAttestationAge)
-  await zzec.waitForDeployment()
-  const zzecAddress = await zzec.getAddress()
-  console.log(`ZZEC         ${zzecAddress}`)
+  let zzecAddress: string | null = null
+  let furnaceAddress: string | null = null
+  if (phase2) {
+    const ZZEC = await ethers.getContractFactory('ZZEC')
+    const zzec = await ZZEC.deploy(zecReserveAddress, owner, attestor, minter, maxAttestationAge)
+    await zzec.waitForDeployment()
+    zzecAddress = await zzec.getAddress()
+    console.log(`ZZEC         ${zzecAddress}`)
 
-  const Furnace = await ethers.getContractFactory('ZealFurnace')
-  const furnace = await Furnace.deploy(zealToken, swapRouter, owner, igniter)
-  await furnace.waitForDeployment()
-  const furnaceAddress = await furnace.getAddress()
-  console.log(`ZealFurnace  ${furnaceAddress}\n`)
+    const Furnace = await ethers.getContractFactory('ZealFurnace')
+    const furnace = await Furnace.deploy(zealToken, swapRouter, owner, igniter)
+    await furnace.waitForDeployment()
+    furnaceAddress = await furnace.getAddress()
+    console.log(`ZealFurnace  ${furnaceAddress}`)
+  }
+  console.log()
 
   const record = {
     network: network.name,
@@ -118,8 +131,8 @@ async function main() {
       liquiditySink,
       opsSink,
     },
-    zzec: { zecReserveAddress, owner, attestor, minter, maxAttestationAge },
-    furnace: { zealToken, swapRouter, owner, igniter },
+    zzec: phase2 ? { zecReserveAddress, owner, attestor, minter, maxAttestationAge } : null,
+    furnace: phase2 ? { zealToken, swapRouter, owner, igniter } : null,
   }
 
   mkdirSync(join(__dirname, '..', 'deployments'), { recursive: true })
@@ -129,9 +142,8 @@ async function main() {
 
   console.log(`\nNext:`)
   console.log(`  1. Point the Pons fee redirect for $ZEAL at ${foundryAddress}`)
-  console.log(`  2. Paste all three addresses into src/config.ts on the website`)
-  console.log(`     (CONTRACTS.foundry, CONTRACTS.zzec, CONTRACTS.furnace)`)
-  console.log(`  2b. Point the zZEC LP position's fee collection at ${furnaceAddress}`)
+  console.log(`  2. Paste the address(es) into src/config.ts on the website (CONTRACTS.*)`)
+  if (phase2) console.log(`  2b. Point the zZEC LP position's fee collection at ${furnaceAddress}`)
   console.log(`  3. Verify on https://robinhoodchain.blockscout.com`)
   console.log(`  4. Post the first attestation before any mint — minting reverts without one\n`)
 }
