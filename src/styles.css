@@ -416,37 +416,21 @@ p:last-child { margin-bottom: 0; }
 .hero { padding-top: clamp(134px, 16vw, 196px); padding-bottom: 0; }
 .hero-in {
   display: grid;
-  grid-template-columns: minmax(0, 1.32fr) minmax(0, 0.68fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: clamp(32px, 5vw, 72px);
   align-items: center;
 }
-.hero-lede { margin-top: 30px; max-width: 52ch; }
+.hero-lede { margin-top: 30px; max-width: 58ch; }
 
 .hero-btns { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
 .hero-note { margin-top: 22px; color: var(--ink-faint); }
 
-.hero-art { position: relative; display: grid; align-items: center; }
 
 
 
-.hero-facts {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  border-top: 1px solid var(--paper-line);
-  margin-top: clamp(56px, 8vw, 96px);
-}
-.hero-facts > div { padding: clamp(26px, 3vw, 40px) 0 clamp(30px, 4vw, 48px); }
-.hero-facts > div + div {
-  padding-left: clamp(18px, 2.4vw, 34px);
-  border-left: 1px solid var(--paper-line);
-}
 
 @media (max-width: 980px) {
   .hero-in { grid-template-columns: 1fr; }
-  .hero-art { order: 0; margin-top: 8px; }
-  .hero-facts { grid-template-columns: repeat(2, 1fr); }
-  .hero-facts > div { padding-inline: 0 !important; }
-  .hero-facts > div:nth-child(even) { padding-left: 22px !important; }
 }
 @media (max-width: 560px) {
   .hero-crew { display: none; }
@@ -711,40 +695,6 @@ p:last-child { margin-bottom: 0; }
 
 .foundry .steps,
 .furnace .steps { margin-top: clamp(56px, 7vw, 112px); }
-.furnace .furnace-sum { background: var(--bg); }
-
-/* ============================================================
-   Furnace summary
-   ============================================================ */
-
-.furnace-sum {
-  margin-top: clamp(40px, 5vw, 64px);
-  border: 1px solid var(--line);
-}
-.furnace-sum-row {
-  display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: 24px;
-  align-items: start;
-  padding: 22px 26px;
-  border-bottom: 1px solid var(--line);
-}
-.furnace-sum-row .mono { color: var(--fg-faint); letter-spacing: 0.2em; padding-top: 4px; }
-.furnace-sum-row p { margin: 0; font-size: 16px; line-height: 1.6; }
-.furnace-sum-out { background: rgba(0, 200, 5, 0.06); }
-.furnace-sum-out .mono { color: var(--green); }
-.furnace-sum-out p { color: var(--fg); }
-.furnace-sum-addr {
-  display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: 24px;
-  padding: 18px 26px;
-  background: var(--bg-2);
-}
-.furnace-sum-addr .mono { color: var(--fg-faint); letter-spacing: 0.2em; padding-top: 2px; }
-@media (max-width: 620px) {
-  .furnace-sum-row, .furnace-sum-addr { grid-template-columns: 1fr; gap: 8px; }
-}
 
 /* ============================================================
    Calculators
@@ -845,68 +795,126 @@ p:last-child { margin-bottom: 0; }
 }
 
 /* ============================================================
-   Ledger
+   Ledger: two loops, side by side, alive
    ============================================================ */
 
+.hero-ledger { margin-top: clamp(48px, 6vw, 84px); }
+
 .ledger {
-  --lg-line: rgba(255, 255, 255, 0.1);
+  --lg-line: rgba(255, 255, 255, 0.09);
+  position: relative;
   background: var(--ink);
   color: var(--paper);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  width: 100%;
-  max-width: 520px;
-  justify-self: end;
-  box-shadow: 0 30px 60px -20px rgba(8, 9, 10, 0.35);
+  border-top: 2px solid var(--green-bright);
+  overflow: hidden;
 }
-.ledger-head {
+
+/* a green sweep runs across the panel every time a fresh read lands */
+.ledger::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 0%, rgba(0, 200, 5, 0.09) 50%, transparent 100%);
+  transform: translateX(-120%);
+  animation: lgSweep 14s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
+}
+@keyframes lgSweep {
+  0% { transform: translateX(-120%); }
+  18% { transform: translateX(120%); }
+  100% { transform: translateX(120%); }
+}
+
+.lg-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  gap: 16px;
+  padding: 16px 24px;
   border-bottom: 1px solid var(--lg-line);
+  flex-wrap: wrap;
 }
-.ledger-title { display: inline-flex; align-items: center; gap: 10px; letter-spacing: 0.2em; color: var(--paper); font-weight: 600; }
-.ledger-title .dot { background: var(--green-bright); }
-.ledger-title .dot-idle { background: rgba(255, 255, 255, 0.35); animation: none; box-shadow: none; }
-.ledger-block { color: rgba(255, 255, 255, 0.42); font-size: 11px; }
+.lg-title { display: inline-flex; align-items: center; gap: 10px; letter-spacing: 0.2em; font-weight: 600; font-size: 11px; }
+.lg-title .dot { background: var(--green-bright); }
+.lg-title .dot-err { background: #e0552f; animation: none; box-shadow: none; }
+.lg-meta { display: inline-flex; align-items: center; gap: 10px; color: rgba(255, 255, 255, 0.45); font-size: 11px; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; }
+.lg-sep { opacity: 0.4; }
+.lg-block { color: var(--green-bright); animation: lgFlash 1.2s var(--ease); }
+@keyframes lgFlash { 0% { color: #fff; } 100% { color: var(--green-bright); } }
 
-.ledger-grp {
-  padding: 14px 20px 6px;
-  font-size: 10px;
-  letter-spacing: 0.22em;
-  color: var(--green-bright);
-}
-
-.ledger-row {
+.lg-cols {
   display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: baseline;
-  gap: 4px 16px;
-  padding: 10px 20px;
-  border-top: 1px solid var(--lg-line);
+  grid-template-columns: 1.2fr 1fr;
 }
-.ledger-l { color: rgba(255, 255, 255, 0.55); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
-.ledger-v { display: inline-flex; align-items: baseline; gap: 8px; justify-self: end; }
-.ledger-n {
+.lg-col { padding: 22px 24px 24px; }
+.lg-col + .lg-col { border-left: 1px solid var(--lg-line); }
+
+.lg-grp {
+  font-size: 10.5px;
+  letter-spacing: 0.24em;
+  color: var(--green-bright);
+  margin-bottom: 18px;
+}
+
+.lg-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 28px;
+}
+
+.lg-n {
   font-family: var(--sans);
   font-weight: 900;
-  font-size: clamp(22px, 2.4vw, 30px);
-  letter-spacing: -0.03em;
+  font-size: clamp(30px, 3.6vw, 52px);
+  letter-spacing: -0.045em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
 }
-.ledger-u { color: rgba(255, 255, 255, 0.5); font-size: 11px; letter-spacing: 0.1em; }
-.ledger-h { grid-column: 1 / -1; color: rgba(255, 255, 255, 0.36); font-size: 10.5px; letter-spacing: 0.08em; }
+.lg-u { font-size: 11px; letter-spacing: 0.14em; color: rgba(255, 255, 255, 0.45); font-weight: 500; }
+.lg-l { margin-top: 8px; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255, 255, 255, 0.62); }
+.lg-h { margin-top: 3px; font-size: 10.5px; letter-spacing: 0.08em; color: rgba(255, 255, 255, 0.34); }
 
-.ledger-foot {
-  padding: 14px 20px 16px;
+.lg-note {
+  margin-top: 22px;
+  padding-top: 16px;
   border-top: 1px solid var(--lg-line);
-  color: rgba(255, 255, 255, 0.38);
   font-size: 10.5px;
   letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.38);
   line-height: 1.5;
 }
 
-@media (max-width: 980px) {
-  .ledger { max-width: none; justify-self: stretch; }
+/* the flow strip: a dashed line that moves, and the loop written as one sentence */
+.lg-flow {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  padding: 14px 24px 16px;
+  border-top: 1px solid var(--lg-line);
+}
+.lg-flow-line {
+  display: block;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--green-bright) 0 14px, transparent 14px 26px);
+  background-size: 26px 2px;
+  animation: lgFlow 1.4s linear infinite;
+  opacity: 0.75;
+}
+@keyframes lgFlow { to { background-position: 26px 0; } }
+.lg-flow-text { font-size: 10.5px; letter-spacing: 0.1em; color: rgba(255, 255, 255, 0.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width: 900px) {
+  .lg-cols { grid-template-columns: 1fr; }
+  .lg-col + .lg-col { border-left: 0; border-top: 1px solid var(--lg-line); }
+}
+@media (max-width: 520px) {
+  .lg-grid { grid-template-columns: 1fr; gap: 18px; }
+  .lg-flow-text { white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ledger::after, .lg-flow-line, .lg-block { animation: none; }
 }

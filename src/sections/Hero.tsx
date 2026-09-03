@@ -1,13 +1,7 @@
-import { CHAIN, LINKS, PONS, RESERVE_TAKE_PCT, TOKEN } from '../config'
+import { CHAIN, LINKS, PONS, TOKEN } from '../config'
 import { stagger } from '../useReveal'
 import { Ledger } from './Ledger'
 
-const FACTS = [
-  { n: `${RESERVE_TAKE_PCT.toFixed(2)}%`, l: 'of every trade becomes ZEC' },
-  { n: '1:1', l: `${TOKEN.wrapper} backed by native ZEC` },
-  { n: '100%', l: 'of the reserve address is public' },
-  { n: '0', l: 'ways to withdraw from the Furnace' },
-]
 
 export function Hero() {
   return (
@@ -47,18 +41,10 @@ export function Hero() {
           </p>
         </div>
 
-        <div className="hero-art" data-reveal="scale" style={stagger(2)}>
-          <Ledger />
-        </div>
       </div>
 
-      <div className="wrap hero-facts">
-        {FACTS.map((f, i) => (
-          <div key={f.l} data-reveal style={stagger(i, 110)}>
-            <div className="stat-n">{f.n}</div>
-            <div className="stat-l">{f.l}</div>
-          </div>
-        ))}
+      <div className="wrap hero-ledger" data-reveal="scale" style={stagger(3)}>
+        <Ledger />
       </div>
     </section>
   )
