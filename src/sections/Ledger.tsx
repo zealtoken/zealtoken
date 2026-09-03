@@ -1,20 +1,23 @@
 import { useEffect, useRef, useState } from 'react'
-import { CHAIN, CONTRACTS, PONS, TOKEN } from '../config'
+import { CHAIN, CONTRACTS, FURNACE, PONS, TOKEN } from '../config'
 import { MAX_UINT, SEL, readBatch, units, view, type Call } from '../lib/chain'
 
 /**
- * The ledger: every lifetime counter the three contracts expose, read live
- * from chain and shown in the hero. Before the contracts deploy it renders
- * the same rows at zero with a pre-launch tag, and switches itself on the
- * moment addresses land in config.ts.
+ * The ledger: both loops side by side, every lifetime counter the contracts
+ * expose, read live from Robinhood Chain.
+ *
+ * It is alive before launch. The block number is read from chain on every
+ * poll regardless of whether the contracts exist yet, so the panel ticks
+ * from day one; the contract counters switch on the moment their addresses
+ * land in config.ts.
  */
 
 type Snapshot = {
-  feesRouted: number // WETH through the Foundry, in ETH
-  toReserve: number // WETH sent to the reserve sink, in ETH
-  zecHeld: number // attested native ZEC
+  feesRouted: number
+  toReserve: number
+  zecHeld: number
   zzecSupply: number
-  coverage: number | null // ratio; null when no supply
+  coverage: number | null
   zealBurned: number
   burns: number
   block: bigint
@@ -31,7 +34,7 @@ const ZERO: Snapshot = {
   block: 0n,
 }
 
-const POLL_MS = 30_000
+const POLL_MS = 15_000
 
 async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
   const calls: Call[] = []
@@ -54,12 +57,13 @@ async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
     push('zealBurned', view(CONTRACTS.furnace, SEL.totalZealBurned))
     push('burns', view(CONTRACTS.furnace, SEL.burnCount))
   }
-  if (calls.length === 0) return ZERO
 
+  // Zero calls still returns the block: the chain read is what keeps the
+  // panel honest and alive before there is anything to count.
   const { values, block } = await readBatch(calls, signal)
   const get = (k: keyof Snapshot) => (idx[k] === undefined ? 0n : values[idx[k]!])
-
   const cov = get('coverage')
+
   return {
     feesRouted: units(get('feesRouted'), 18),
     toReserve: units(get('toReserve'), 18),
@@ -72,12 +76,9 @@ async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
   }
 }
 
-/** Eases a displayed number toward its target so updates read as motion, not jumps. */
 function useCountUp(target: number, ms = 900): number {
   const [shown, setShown] = useState(target)
   const fromRef = useRef(target)
-  const startRef = useRef(0)
-
   useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduced || fromRef.current === target) {
@@ -86,10 +87,10 @@ function useCountUp(target: number, ms = 900): number {
       return
     }
     const from = fromRef.current
-    startRef.current = performance.now()
+    const start = performance.now()
     let raf = 0
     const tick = (now: number) => {
-      const t = Math.min(1, (now - startRef.current) / ms)
+      const t = Math.min(1, (now - start) / ms)
       const e = 1 - Math.pow(1 - t, 3)
       setShown(from + (target - from) * e)
       if (t < 1) raf = requestAnimationFrame(tick)
@@ -98,64 +99,62 @@ function useCountUp(target: number, ms = 900): number {
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
   }, [target, ms])
-
   return shown
 }
 
 const fmt = (n: number, maxFrac: number) =>
-  n.toLocaleString('en-US', { maximumFractionDigits: maxFrac, minimumFractionDigits: 0 })
+  n.toLocaleString('en-US', { maximumFractionDigits: maxFrac })
 
-function Row({
-  label,
+function Stat({
   value,
   unit,
+  label,
   frac,
   hint,
 }: {
-  label: string
   value: number
   unit: string
+  label: string
   frac: number
   hint?: string
 }) {
   const shown = useCountUp(value)
   return (
-    <div className="ledger-row">
-      <span className="ledger-l mono">{label}</span>
-      <span className="ledger-v">
-        <span className="ledger-n">{fmt(shown, frac)}</span>
-        <span className="ledger-u mono">{unit}</span>
-      </span>
-      {hint && <span className="ledger-h mono">{hint}</span>}
+    <div className="lg-stat">
+      <div className="lg-n">
+        {fmt(shown, frac)}
+        <span className="lg-u mono">{unit}</span>
+      </div>
+      <div className="lg-l mono">{label}</div>
+      {hint && <div className="lg-h mono">{hint}</div>}
     </div>
   )
 }
 
 export function Ledger() {
-  const live = Boolean(CONTRACTS.foundry || CONTRACTS.zzec || CONTRACTS.furnace)
+  const contractsLive = Boolean(CONTRACTS.foundry || CONTRACTS.zzec || CONTRACTS.furnace)
   const [snap, setSnap] = useState<Snapshot>(ZERO)
   const [status, setStatus] = useState<'idle' | 'ok' | 'error'>('idle')
+  const [readAt, setReadAt] = useState<number | null>(null)
+  const [ago, setAgo] = useState(0)
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
-    if (!live) return
     const ctrl = new AbortController()
-    let timer = 0
-
     const run = async () => {
       if (document.visibilityState === 'hidden') return
       try {
         const s = await fetchSnapshot(ctrl.signal)
         setSnap(s)
         setStatus('ok')
+        setReadAt(Date.now())
         setTick((t) => t + 1)
       } catch {
         if (!ctrl.signal.aborted) setStatus('error')
       }
     }
-
     void run()
-    timer = window.setInterval(run, POLL_MS)
+    const timer = window.setInterval(run, POLL_MS)
     const onVis = () => document.visibilityState === 'visible' && void run()
     document.addEventListener('visibilitychange', onVis)
     return () => {
@@ -163,41 +162,71 @@ export function Ledger() {
       window.clearInterval(timer)
       document.removeEventListener('visibilitychange', onVis)
     }
-  }, [live])
+  }, [])
 
-  const coverageText =
+  // the clock that makes a zero-state panel visibly alive
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      if (readAt) setAgo(Math.max(0, Math.round((Date.now() - readAt) / 1000)))
+    }, 1000)
+    return () => window.clearInterval(t)
+  }, [readAt])
+
+  const coverageHint =
     snap.coverage === null ? 'no supply yet' : `${(snap.coverage * 100).toFixed(2)}% covered`
 
   return (
-    <div className="ledger" aria-live="polite" data-tick={tick}>
-      <div className="ledger-head">
-        <span className="ledger-title mono">
-          {live ? <span className="dot" /> : <span className="dot dot-idle" />}
-          {live ? 'LIVE LEDGER' : 'LEDGER · PRE-LAUNCH'}
+    <div className="ledger" aria-live="polite">
+      <div className="lg-head">
+        <span className="lg-title mono">
+          <span className={`dot ${status === 'error' ? 'dot-err' : ''}`} />
+          {contractsLive ? 'LIVE LEDGER' : 'LIVE LEDGER · CONTRACTS DEPLOY AT LAUNCH'}
         </span>
-        <span className="ledger-block mono">
-          {live && status === 'ok'
-            ? `block ${snap.block.toLocaleString('en-US')}`
-            : live && status === 'error'
-              ? 'rpc unreachable'
-              : `chain ${CHAIN.id}`}
+        <span className="lg-meta mono">
+          {status === 'ok' && (
+            <>
+              <span className="lg-block" key={tick}>
+                block {snap.block.toLocaleString('en-US')}
+              </span>
+              <span className="lg-sep">·</span>
+              <span>read {ago}s ago</span>
+            </>
+          )}
+          {status === 'error' && 'rpc unreachable · retrying'}
+          {status === 'idle' && `reading chain ${CHAIN.id}…`}
         </span>
       </div>
 
-      <div className="ledger-grp mono">LOOP 01 · THE FOUNDRY</div>
-      <Row label="fees routed" value={snap.feesRouted} unit="ETH" frac={4} />
-      <Row label="to the reserve" value={snap.toReserve} unit="ETH" frac={4} />
-      <Row label="ZEC held" value={snap.zecHeld} unit="ZEC" frac={2} hint="attested" />
-      <Row label={`${TOKEN.wrapper} minted`} value={snap.zzecSupply} unit={TOKEN.wrapper} frac={2} hint={coverageText} />
+      <div className="lg-cols">
+        <div className="lg-col">
+          <div className="lg-grp mono">LOOP 01 · THE FOUNDRY</div>
+          <div className="lg-grid">
+            <Stat value={snap.feesRouted} unit="ETH" label="fees routed" frac={4} />
+            <Stat value={snap.toReserve} unit="ETH" label="to the reserve" frac={4} />
+            <Stat value={snap.zecHeld} unit="ZEC" label="ZEC held" frac={2} hint="attested" />
+            <Stat value={snap.zzecSupply} unit={TOKEN.wrapper} label={`${TOKEN.wrapper} minted`} frac={2} hint={coverageHint} />
+          </div>
+        </div>
 
-      <div className="ledger-grp mono">LOOP 02 · THE FURNACE</div>
-      <Row label={`$${TOKEN.symbol} burned`} value={snap.zealBurned} unit={TOKEN.symbol} frac={0} />
-      <Row label="burns" value={snap.burns} unit="tx" frac={0} hint="→ 0x…dEaD" />
+        <div className="lg-col">
+          <div className="lg-grp mono">LOOP 02 · THE FURNACE</div>
+          <div className="lg-grid">
+            <Stat value={snap.zealBurned} unit={TOKEN.symbol} label={`$${TOKEN.symbol} burned`} frac={0} hint={`→ ${FURNACE.burnShort}`} />
+            <Stat value={snap.burns} unit="tx" label="burns" frac={0} hint="permissionless" />
+          </div>
+          <div className="lg-note mono">
+            {contractsLive
+              ? 'every number reads from the contracts · nothing here is editable'
+              : 'counters start at trade one · block number is live now'}
+          </div>
+        </div>
+      </div>
 
-      <div className="ledger-foot mono">
-        {live
-          ? 'read from the contracts every 30s · nothing here is editable'
-          : 'counters begin at the first trade · every number reads from chain'}
+      <div className="lg-flow" aria-hidden="true">
+        <span className="lg-flow-line" />
+        <span className="lg-flow-text mono">
+          ${TOKEN.symbol} trades → fees → ZEC reserve → {TOKEN.wrapper} minted → {TOKEN.wrapper} trades → fees → ${TOKEN.symbol} burned
+        </span>
       </div>
     </div>
   )

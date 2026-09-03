@@ -1,4 +1,4 @@
-import { CONTRACTS, FURNACE, TOKEN } from '../config'
+import { FURNACE, TOKEN } from '../config'
 import { EngravingScene } from '../art/EngravingScene'
 import { stagger } from '../useReveal'
 
@@ -68,31 +68,6 @@ export function Furnace() {
           ))}
         </div>
 
-        <div className="furnace-sum" data-reveal>
-          <div className="furnace-sum-row">
-            <span className="mono">LOOP 01</span>
-            <p>
-              <strong>${TOKEN.symbol} volume</strong> buys ZEC. The reserve only grows.
-            </p>
-          </div>
-          <div className="furnace-sum-row">
-            <span className="mono">LOOP 02</span>
-            <p>
-              <strong>{TOKEN.wrapper} volume</strong> buys ${TOKEN.symbol}. The supply only shrinks.
-            </p>
-          </div>
-          <div className="furnace-sum-row furnace-sum-out">
-            <span className="mono">RESULT</span>
-            <p>
-              More wrapper, less ${TOKEN.symbol}. Both loops run one way. Neither has a reverse
-              gear.
-            </p>
-          </div>
-          <div className="furnace-sum-addr">
-            <span className="mono">FURNACE</span>
-            <span className="addr">{CONTRACTS.furnace ?? `deploys with ${TOKEN.wrapper}`}</span>
-          </div>
-        </div>
       </div>
     </section>
   )
