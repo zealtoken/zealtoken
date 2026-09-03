@@ -53,7 +53,8 @@ const src = (addr: string) => `${CONTRACTS.explorer}/address/${addr}?tab=contrac
 const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 03', t: `$${TOKEN.symbol} live on ${PONS.launchpad}. Graduated in under an hour.`, href: LINKS.pons, label: 'Pons' },
   { d: 'Sep 03', t: 'ZealFoundry deployed. 60/25/15 split, no owner, no admin. Source verified.', href: CONTRACTS.foundry ? src(CONTRACTS.foundry) : undefined, label: 'source' },
-  { d: 'Sep 03', t: 'ZealTap deployed and verified. Pons V2 pays only a caller, so the Tap claims and hands everything to the Foundry.', href: PONS_V2.tap ? src(PONS_V2.tap) : undefined, label: 'source' },
+  { d: 'Sep 03', t: 'ZealTap deployed and verified. Pons V2 pays only a caller, so the Tap claims and hands everything to the Foundry.', href: src(PONS_V2.tapV1), label: 'source' },
+  { d: 'Sep 03', t: 'ZealTapV2 deployed and verified. It can sweep its own pool and migrate itself, so fee routing never depends on anyone else again. Still one exit: the Foundry.', href: PONS_V2.tap ? src(PONS_V2.tap) : undefined, label: 'source' },
   { d: 'Sep 03', t: `${TOKEN.wrapper} contract written and tested. 65 tests across the system, CI on every push.`, href: LINKS.repo ? `${LINKS.repo}/blob/main/contracts/contracts/ZZEC.sol` : undefined, label: 'ZZEC.sol' },
   { d: 'Sep 03', t: 'Reserve operator built: attest, mint, redemption watcher, ETH → ZEC sweep over Relay and NEAR Intents.', href: LINKS.repo ? `${LINKS.repo}/tree/main/ops` : undefined, label: 'ops/' },
   { d: 'Sep 03', t: 'Source publishing under a project org, not a person.', href: LINKS.repo ?? undefined, label: 'github' },
