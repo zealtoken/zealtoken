@@ -1,4 +1,5 @@
 import { ethers, network } from 'hardhat'
+import { unlock } from './lib/secure'
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -30,8 +31,8 @@ function requiredAddress(name: string): string {
 const ONLY = (process.env.DEPLOY_ONLY ?? 'all').toLowerCase() // 'foundry' for Phase 00
 
 async function main() {
-  const [deployer] = await ethers.getSigners()
   const net = await ethers.provider.getNetwork()
+  const deployer = await unlock(ethers.provider)
 
   const reserveSink = requiredAddress('RESERVE_SINK')
   const liquiditySink = requiredAddress('LIQUIDITY_SINK')
@@ -85,7 +86,7 @@ async function main() {
   }
   console.log()
 
-  const Foundry = await ethers.getContractFactory('ZealFoundry')
+  const Foundry = (await ethers.getContractFactory('ZealFoundry')).connect(deployer)
   const foundry = await Foundry.deploy(
     SPLIT.reserve,
     SPLIT.liquidity,
@@ -101,13 +102,13 @@ async function main() {
   let zzecAddress: string | null = null
   let furnaceAddress: string | null = null
   if (phase2) {
-    const ZZEC = await ethers.getContractFactory('ZZEC')
+    const ZZEC = (await ethers.getContractFactory('ZZEC')).connect(deployer)
     const zzec = await ZZEC.deploy(zecReserveAddress, owner, attestor, minter, maxAttestationAge)
     await zzec.waitForDeployment()
     zzecAddress = await zzec.getAddress()
     console.log(`ZZEC         ${zzecAddress}`)
 
-    const Furnace = await ethers.getContractFactory('ZealFurnace')
+    const Furnace = (await ethers.getContractFactory('ZealFurnace')).connect(deployer)
     const furnace = await Furnace.deploy(zealToken, swapRouter, owner, igniter)
     await furnace.waitForDeployment()
     furnaceAddress = await furnace.getAddress()

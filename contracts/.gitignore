@@ -6,3 +6,4 @@ typechain-types
 deployments/*.local.json
 .env.*
 !.env.example
+.keystore.json
