@@ -69,8 +69,8 @@ export const FOUNDRY_TAKE_PCT = (PONS.poolFeePct * PONS.creatorSharePct) / 100
 export const TOKEN = {
   symbol: 'ZEAL',
   wrapper: 'zZEC',
-  /** TODO: paste the real address once the Pons launch is live. */
-  address: null as string | null,
+  /** $ZEAL on Robinhood Chain, launched via Pons. */
+  address: '0x9fA1C5E90A11294F83A9F135b81ad1b537A5FFdC' as string | null,
   /** TODO: paste the multisig-held Zcash transparent address once funded. */
   reserveAddress: null as string | null,
 }
@@ -109,7 +109,7 @@ export const FURNACE = {
 export const LINKS = {
   x: 'https://x.com/ZealTheMascot',
   telegram: 'https://t.me/ZcashMascot',
-  pons: 'https://www.ponsfamily.com',
+  pons: 'https://www.ponsfamily.com/0x9fA1C5E90A11294F83A9F135b81ad1b537A5FFdC',
   zcash: 'https://z.cash',
   nearIntents: 'https://near-intents.org',
   robinhoodChain: 'https://robinhood.com/us/en/support/articles/robinhood-chain-mainnet/',
