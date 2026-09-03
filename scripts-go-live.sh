@@ -19,7 +19,7 @@ PY
 npx tsc -b --pretty false >/dev/null
 npm run build >/dev/null
 git add -A
-git -c user.name="Kyle McConnell" -c user.email="kylekmcconnell@gmail.com" commit -q -m "$(printf '$ZEAL is live: %s\n\nToken address wired into the site; the buy buttons now open the Pons\ntoken page instead of the launchpad homepage.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>' "$TOK")"
+git -c user.name="Zeal" -c user.email="dev@zealtoken.com" commit -q -m "$(printf '$ZEAL is live: %s\n\nToken address wired into the site; the buy buttons now open the Pons\ntoken page instead of the launchpad homepage.\n\nCo-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>' "$TOK")"
 git push -q origin main
 npx vercel --prod --yes 2>&1 | grep -E '"readyState"' | head -1
 echo "site updated and deployed for $TOK"
