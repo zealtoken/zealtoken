@@ -19,12 +19,17 @@ export const SEL = {
   lastAttestationAt: '0x8e353f4c', // lastAttestationAt()
   totalZealBurned: '0xa0024092', // totalZealBurned()
   burnCount: '0x524773ce', // burnCount()
-  balanceOf: '0x70a08231', // balanceOf(address), ERC-20
+  balanceOf: '0x70a08231', // balanceOf(address), ERC-20 and Pons V2FeeEscrow alike
+  totalRoutedNative: '0x1446461b', // totalRoutedNative()
+  totalToReserveNative: '0xbda62f04', // totalToReserveNative()
 } as const
 
 export const MAX_UINT = (1n << 256n) - 1n
 
-export type Call = { to: string; data: string }
+/** An eth_call, or a native balance read when `data` is omitted. */
+export type Call = { to: string; data?: string }
+
+export const nativeBalance = (addr: string): Call => ({ to: addr })
 
 export const encAddress = (addr: string) => addr.toLowerCase().replace(/^0x/, '').padStart(64, '0')
 
@@ -43,12 +48,11 @@ export async function readBatch(
   signal?: AbortSignal,
 ): Promise<{ values: bigint[]; block: bigint }> {
   const body = [
-    ...calls.map((c, i) => ({
-      jsonrpc: '2.0',
-      id: i + 1,
-      method: 'eth_call',
-      params: [{ to: c.to, data: c.data }, 'latest'],
-    })),
+    ...calls.map((c, i) =>
+      c.data
+        ? { jsonrpc: '2.0', id: i + 1, method: 'eth_call', params: [{ to: c.to, data: c.data }, 'latest'] }
+        : { jsonrpc: '2.0', id: i + 1, method: 'eth_getBalance', params: [c.to, 'latest'] },
+    ),
     { jsonrpc: '2.0', id: calls.length + 1, method: 'eth_blockNumber', params: [] },
   ]
 
