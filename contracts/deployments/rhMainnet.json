@@ -7,7 +7,8 @@
     "ZealFoundry": "0xa1C1Fb281cCC47C587565a01700bF61a03D885a6",
     "ZZEC": null,
     "ZealFurnace": null,
-    "ZealTap": "0xA0dAE8fe24BDfb2331A1D581dC47bE61c565E655"
+    "ZealTap": "0xA0dAE8fe24BDfb2331A1D581dC47bE61c565E655",
+    "ZealTapV2": "0x9F5b105d0DBee12376aC972Ec2207772c5EDbB47"
   },
   "foundry": {
     "split": {
@@ -25,5 +26,15 @@
     "escrow": "0xd3AFEB2a57f70eF218Aa82451c51B2fb0416Ac9e",
     "foundry": "0xa1C1Fb281cCC47C587565a01700bF61a03D885a6",
     "deployedAt": "2026-09-03T16:17:37.525Z"
+  },
+  "tap2": {
+    "escrow": "0xd3AFEB2a57f70eF218Aa82451c51B2fb0416Ac9e",
+    "foundry": "0xa1C1Fb281cCC47C587565a01700bF61a03D885a6",
+    "hook": "0xE5e702641Ea86F4ae6cC3cDaeD2B886f976Be044",
+    "factory": "0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e",
+    "token": "0x9fA1C5E90A11294F83A9F135b81ad1b537A5FFdC",
+    "poolId": "0x95f9fcf8eb2d707d6c9c8175822c6005fcce759933e54f8d5ca6df458c8ccaf0",
+    "steward": "0x1C083F2f85aCadae452C7512C45cD7c8a3ddbF03",
+    "deployedAt": "2026-09-03T22:29:19.254Z"
   }
 }

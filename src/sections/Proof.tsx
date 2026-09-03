@@ -16,7 +16,7 @@ const CHECKS: Check[] = [
   },
   {
     t: 'The Tap contract',
-    d: 'The Pons fee recipient. One door in, one door out: anyone can call pull() and every wei it claims goes to the Foundry. It cannot send anywhere else.',
+    d: 'The Pons fee recipient. Anyone can call sweep() or pull(), and every wei goes to the Foundry. It cannot send anywhere else. Moving the recipient takes a 48-hour public timelock.',
     v: PONS_V2.tap ?? 'deployed at launch',
     status: PONS_V2.tap ? 'verified' : 'pending',
     href: PONS_V2.tap ? src(PONS_V2.tap) : undefined,

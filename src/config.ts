@@ -108,8 +108,10 @@ export const PONS_V2 = {
   factory: '0x7eD598BcEf8bd9Edd8C97A195C6d13f40801EC7e',
   escrow: '0xd3AFEB2a57f70eF218Aa82451c51B2fb0416Ac9e',
   curve: '0x3C9D54Ed43Fa8558BD468975243eA10effFBe1fc',
-  /** Set once deployed; until Pons points the recipient here, fees credit to the Foundry key. */
-  tap: '0xA0dAE8fe24BDfb2331A1D581dC47bE61c565E655' as string | null,
+  /** ZealTapV2: sweeps its own pool, migrates itself. Until Pons points the recipient here, fees credit to the Foundry key. */
+  tap: '0x9F5b105d0DBee12376aC972Ec2207772c5EDbB47' as string | null,
+  /** First edition, superseded before it was ever the recipient. Kept for the record. */
+  tapV1: '0xA0dAE8fe24BDfb2331A1D581dC47bE61c565E655',
 } as const
 
 /** The burn. */
