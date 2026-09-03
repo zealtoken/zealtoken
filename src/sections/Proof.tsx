@@ -113,7 +113,7 @@ export function Proof() {
               drawn exactly where it sits.
             </p>
           </div>
-          <div className="grid g2 limits">
+          <div className="grid g3 limits">
             {LIMITS.map((l, i) => (
               <div key={l.t} data-reveal style={stagger(i, 80)}>
                 <h3 className="h4">{l.t}</h3>

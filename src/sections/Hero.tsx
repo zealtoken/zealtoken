@@ -1,11 +1,13 @@
 import { CHAIN, LINKS, PONS, TOKEN } from '../config'
 import { stagger } from '../useReveal'
 import { Ledger } from './Ledger'
+import { HeroBackdrop } from '../art/HeroBackdrop'
 
 
 export function Hero() {
   return (
     <section className="band hero" id="top">
+      <HeroBackdrop />
       <div className="wrap hero-in">
         <div className="hero-copy">
           <p className="eyebrow" data-reveal>
