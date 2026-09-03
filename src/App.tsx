@@ -5,6 +5,7 @@ import { Mechanism } from './sections/Mechanism'
 import { Furnace } from './sections/Furnace'
 import { FurnaceCalc } from './sections/Calculators'
 import { Proof } from './sections/Proof'
+import { Lore } from './sections/Lore'
 import { Close } from './sections/Close'
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
           </div>
         </section>
         <Proof />
+        <Lore />
         <Close />
       </main>
     </>

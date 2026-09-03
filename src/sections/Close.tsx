@@ -139,7 +139,7 @@ export function Close() {
             on the chain.
           </h2>
           <p className="lede" data-reveal style={stagger(1)}>
-            The reserve only grows. The supply only shrinks. Trade one starts both.
+            The reserve only grows. The supply only shrinks. Every trade does both.
           </p>
           <div className="hero-btns" data-reveal style={stagger(2)}>
             <a className="btn btn-primary" href={LINKS.pons} target="_blank" rel="noreferrer">
@@ -147,6 +147,9 @@ export function Close() {
             </a>
             <a className="btn btn-ghost" href={LINKS.x} target="_blank" rel="noreferrer">
               Follow @ZealTheMascot
+            </a>
+            <a className="btn btn-ghost" href={LINKS.telegram} target="_blank" rel="noreferrer">
+              Join the Telegram
             </a>
           </div>
         </div>
@@ -165,7 +168,9 @@ export function Close() {
               <a href="#furnace">The Furnace</a>
               <a href="#proof">Proof</a>
               <a href="#phases">Roadmap</a>
+              <a href="#lore">Lore</a>
               <a href={LINKS.x} target="_blank" rel="noreferrer">X</a>
+              <a href={LINKS.telegram} target="_blank" rel="noreferrer">Telegram</a>
               <a href={PONS.docsUrl} target="_blank" rel="noreferrer">Pons docs</a>
               <a href={LINKS.zcash} target="_blank" rel="noreferrer">Zcash</a>
             </nav>
@@ -173,7 +178,7 @@ export function Close() {
           <hr className="rule" />
           <div className="foot-meta">
             <p className="mono">
-              {CHAIN.name} · chain id {CHAIN.id} · settles to {CHAIN.settles}
+              {CHAIN.name} · chain id {CHAIN.id}
             </p>
             <p className="foot-legal">
               ${TOKEN.symbol} is a community token with no intrinsic value and no expectation of

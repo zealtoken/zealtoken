@@ -7,6 +7,7 @@ const ITEMS = [
   { href: '#furnace', label: 'The Furnace' },
   { href: '#proof', label: 'Proof' },
   { href: '#phases', label: 'Roadmap' },
+  { href: '#lore', label: 'Lore' },
   { href: '#faq', label: 'FAQ' },
 ]
 
