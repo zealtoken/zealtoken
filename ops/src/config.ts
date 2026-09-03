@@ -3,6 +3,7 @@
  * facts; secrets come from the environment and are never written here.
  */
 export const CHAIN = {
+  name: 'Robinhood Chain',
   id: 4663,
   rpc: process.env.RH_RPC_URL ?? 'https://rpc.mainnet.chain.robinhood.com',
 } as const
