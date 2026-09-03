@@ -10,7 +10,8 @@
     "attest": "tsx src/attest.ts",
     "mint": "tsx src/mint.ts",
     "redeem:watch": "tsx src/redeem-watch.ts",
-    "sweep": "tsx src/sweep.ts"
+    "sweep": "tsx src/sweep.ts",
+    "keys:create": "tsx src/keys.ts"
   },
   "dependencies": {
     "ethers": "^6.13.4"

@@ -8,7 +8,7 @@ import { reserveBalanceZats, chainTipHash, fmtZec } from './zcash.js'
  */
 async function main() {
   const [zats, proof] = await Promise.all([reserveBalanceZats(), chainTipHash()])
-  const c = zzec(roleSigner('ATTESTOR_KEY'))
+  const c = zzec(await roleSigner('attestor'))
   const [prev, supply] = (await Promise.all([c.reserveZats(), c.totalSupply()])) as [bigint, bigint]
   console.log(`reserve   ${fmtZec(zats)}  (previous attestation ${fmtZec(prev)})`)
   console.log(`supply    ${fmtZec(supply)}  -> coverage after: ${supply === 0n ? 'n/a' : (Number(zats) / Number(supply)).toFixed(4)}`)

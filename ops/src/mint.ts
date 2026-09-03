@@ -10,7 +10,7 @@ import { fmtZec } from './zcash.js'
 async function main() {
   const to = process.env.MINT_TO
   if (!to || !ethers.isAddress(to)) throw new Error('MINT_TO must be an address')
-  const c = zzec(roleSigner('MINTER_KEY'))
+  const c = zzec(await roleSigner('minter'))
   const [reserve, supply, fresh, paused] = (await Promise.all([c.reserveZats(), c.totalSupply(), c.attestationIsFresh(), c.mintingPaused()])) as [bigint, bigint, boolean, boolean]
   const headroom = reserve - supply
   console.log(`reserve ${fmtZec(reserve)}  supply ${fmtZec(supply)}  headroom ${fmtZec(headroom)}`)
