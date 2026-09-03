@@ -8,8 +8,10 @@ const PONS_KEEP_PER_100 = FEE_PER_100 - FOUNDRY_PER_100
 const SPLIT_PER_100 = SPLIT.map((x) => (FOUNDRY_PER_100 * x.pct) / 100)
 const SPLIT_TAKE_PCT = SPLIT.map((x) => (PONS.poolFeePct * PONS.creatorSharePct * x.pct) / 10_000)
 const PONS_TAKE_PCT = (PONS.poolFeePct * (100 - PONS.creatorSharePct)) / 100
-const money = (n: number) => `$${n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}`
-const pct = (n: number) => `${n.toFixed(3).replace(/0+$/, '').replace(/\.$/, '')}%`
+// two decimals minimum, a third only when the number needs it ($0.175, 0.105%)
+const trim = (n: number) => (Math.round(n * 1000) % 10 === 0 ? n.toFixed(2) : n.toFixed(3))
+const money = (n: number) => `$${trim(n)}`
+const pct = (n: number) => `${trim(n)}%`
 import { stagger } from '../useReveal'
 
 const PHASES = [
