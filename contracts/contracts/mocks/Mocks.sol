@@ -69,3 +69,32 @@ contract MockRouter is ISwapRouter {
         zealOut.mint(p.recipient, amountOut);
     }
 }
+
+import {IV2FeeEscrow} from "../ZealTap.sol";
+
+/// @dev Behaves like Pons V2FeeEscrow: credits are keyed by recipient, and
+///      claim() / claimToken() pay msg.sender only, reverting on zero.
+contract MockV2FeeEscrow is IV2FeeEscrow {
+    error NoBalance();
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public balanceOfToken;
+
+    function credit(address recipient) external payable { balanceOf[recipient] += msg.value; }
+    function creditToken(address recipient, address token, uint256 amount) external {
+        MockERC20(token).transferFrom(msg.sender, address(this), amount);
+        balanceOfToken[recipient][token] += amount;
+    }
+    function claim() external returns (uint256 amount) {
+        amount = balanceOf[msg.sender];
+        if (amount == 0) revert NoBalance();
+        balanceOf[msg.sender] = 0;
+        (bool ok,) = payable(msg.sender).call{value: amount}("");
+        require(ok, "send");
+    }
+    function claimToken(address token) external returns (uint256 amount) {
+        amount = balanceOfToken[msg.sender][token];
+        if (amount == 0) revert NoBalance();
+        balanceOfToken[msg.sender][token] = 0;
+        MockERC20(token).transfer(msg.sender, amount);
+    }
+}
