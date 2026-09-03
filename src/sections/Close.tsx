@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CHAIN, LINKS, PONS, RESERVE_TAKE_PCT, SPLIT, TOKEN } from '../config'
+import { CHAIN, CONTRACTS, LINKS, PONS, PONS_V2, RESERVE_TAKE_PCT, SPLIT, TOKEN } from '../config'
 
 // One $100 trade, walked to the cent. Everything derives from config.
 const FEE_PER_100 = PONS.poolFeePct
@@ -18,14 +18,14 @@ const PHASES = [
   {
     p: 'Phase 00',
     t: 'Launch',
-    s: 'now',
-    d: `$${TOKEN.symbol} launches on ${PONS.launchpad} with the fee redirect already pointed at the Foundry. The mechanism is live from trade one.`,
+    s: 'live',
+    d: `$${TOKEN.symbol} launched on ${PONS.launchpad} on Sep 3 and graduated in under an hour. The Foundry and the Tap are deployed with verified source. Fee routing to the Tap waits on a 3-day timelock at Pons.`,
   },
   {
     p: 'Phase 01',
     t: 'Reserve opens',
     s: 'next',
-    d: 'Multisig published. First WETH → ZEC swap over NEAR Intents. Reserve address goes public with its first balance.',
+    d: 'Reserve address published. First ETH → ZEC conversion over NEAR Intents. The reserve goes public with its first balance and the ledger starts counting ZEC.',
   },
   {
     p: 'Phase 02',
@@ -45,6 +45,19 @@ const PHASES = [
     s: 'the goal',
     d: 'Backing moves from a multisig to red·bridge or an equivalent trust-minimized design. The endgame is a reserve we cannot touch either.',
   },
+]
+
+const src = (addr: string) => `${CONTRACTS.explorer}/address/${addr}?tab=contract`
+
+/** Dated, linkable, and only things that already happened. */
+const LOG: { d: string; t: string; href?: string; label?: string }[] = [
+  { d: 'Sep 03', t: `$${TOKEN.symbol} live on ${PONS.launchpad}. Graduated in under an hour.`, href: LINKS.pons, label: 'Pons' },
+  { d: 'Sep 03', t: 'ZealFoundry deployed. 60/25/15 split, no owner, no admin. Source verified.', href: CONTRACTS.foundry ? src(CONTRACTS.foundry) : undefined, label: 'source' },
+  { d: 'Sep 03', t: 'ZealTap deployed and verified. Pons V2 pays only a caller, so the Tap claims and hands everything to the Foundry.', href: PONS_V2.tap ? src(PONS_V2.tap) : undefined, label: 'source' },
+  { d: 'Sep 03', t: `${TOKEN.wrapper} contract written and tested. 65 tests across the system, CI on every push.`, href: `${LINKS.repo}/blob/main/contracts/contracts/ZZEC.sol`, label: 'ZZEC.sol' },
+  { d: 'Sep 03', t: 'Reserve operator built: attest, mint, redemption watcher, ETH → ZEC sweep over Relay and NEAR Intents.', href: `${LINKS.repo}/tree/main/ops`, label: 'ops/' },
+  { d: 'Sep 03', t: 'Everything public. Contracts, operator, site.', href: LINKS.repo, label: 'github' },
+  { d: 'next', t: `Reserve address published. ${TOKEN.wrapper} deploys and verifies at supply zero. First attestation.` },
 ]
 
 const FAQ = [
@@ -110,8 +123,8 @@ export function Close() {
                 <div className="phase-body">
                   <div className="phase-head">
                     <span className="mono">{p.p}</span>
-                    <span className={`tag ${i === 0 ? 'tag-live' : ''}`}>
-                      {i === 0 && <span className="dot" />}
+                    <span className={`tag ${i === 0 ? 'tag-live' : 'tag-wait'}`}>
+                      <span className="dot" />
                       {p.s}
                     </span>
                   </div>
@@ -119,6 +132,26 @@ export function Close() {
                   <p>{p.d}</p>
                 </div>
               </article>
+            ))}
+          </div>
+
+          <div className="log" data-reveal>
+            <div className="log-head">
+              <p className="eyebrow">Build log</p>
+              <p className="log-note mono">dated · linked · nothing here is a promise</p>
+            </div>
+            {LOG.map((l, i) => (
+              <div className={`log-row ${l.d === 'next' ? 'log-next' : ''}`} key={i} data-reveal style={stagger(i, 60)}>
+                <span className="log-date mono">{l.d}</span>
+                <span className="log-text">{l.t}</span>
+                {l.href ? (
+                  <a className="log-link mono" href={l.href} target="_blank" rel="noreferrer">
+                    {l.label} ↗
+                  </a>
+                ) : (
+                  <span />
+                )}
+              </div>
             ))}
           </div>
         </div>
