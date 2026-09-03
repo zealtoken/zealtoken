@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CHAIN, FURNACE, LINKS, PONS, RESERVE_TAKE_PCT, TOKEN } from '../config'
+import { CHAIN, LINKS, PONS, RESERVE_TAKE_PCT, TOKEN } from '../config'
 import { stagger } from '../useReveal'
 
 const PHASES = [
@@ -7,62 +7,50 @@ const PHASES = [
     p: 'Phase 00',
     t: 'Launch',
     s: 'now',
-    d: `$${TOKEN.symbol} launches on ${PONS.launchpad}. The creator fee recipient is set to the Foundry contract at creation, so the mechanism is live from the first trade rather than bolted on later.`,
+    d: `$${TOKEN.symbol} launches on ${PONS.launchpad} with the fee redirect already pointed at the Foundry. The mechanism is live from trade one.`,
   },
   {
     p: 'Phase 01',
     t: 'Reserve opens',
     s: 'next',
-    d: 'Multisig signers and threshold published. First WETH → ZEC swap executed through NEAR Intents. Reserve address goes public with its first balance.',
+    d: 'Multisig published. First WETH → ZEC swap over NEAR Intents. Reserve address goes public with its first balance.',
   },
   {
     p: 'Phase 02',
     t: `${TOKEN.wrapper} mints`,
     s: 'planned',
-    d: `The wrapper and the Furnace deploy together on ${CHAIN.name}. ${TOKEN.wrapper} supply is capped at the attested reserve. Its liquidity is seeded from the liquidity slice, and that position’s fees are pointed at the Furnace, so the first ${TOKEN.wrapper} trade is the first $${TOKEN.symbol} burn.`,
+    d: `${TOKEN.wrapper} and the Furnace deploy together. Liquidity is seeded and its fees pointed at the Furnace, so the first ${TOKEN.wrapper} trade is the first $${TOKEN.symbol} burn.`,
   },
   {
     p: 'Phase 03',
     t: 'Redemption',
     s: 'planned',
-    d: `Burn-to-redeem opens. ${TOKEN.wrapper} holders can exit to native ZEC at any time, which is what makes the peg mean anything.`,
+    d: `Burn ${TOKEN.wrapper}, receive native ZEC. The peg means something the day this opens.`,
   },
   {
     p: 'Phase 04',
     t: 'Hand off custody',
     s: 'the goal',
-    d: 'Move backing from a multisig to trust-minimized custody as the tooling lands: red·bridge (Zcash Community Grants + Avalanche Foundation) or an equivalent MPC design. The endgame is a reserve we cannot touch either.',
+    d: 'Backing moves from a multisig to red·bridge or an equivalent trust-minimized design. The endgame is a reserve we cannot touch either.',
   },
 ]
 
 const FAQ = [
   {
-    q: `Where does the money to buy ZEC actually come from?`,
-    a: `Trading fees on $${TOKEN.symbol} itself. Pons charges ${PONS.poolFeePct.toFixed(2)}% on every trade and sends ${PONS.creatorSharePct}% of that to the token’s designated fee recipient. Ours is a contract, not a person. ${RESERVE_TAKE_PCT.toFixed(2)}% of all volume ends up as Zcash in the reserve.`,
+    q: `Where does the money to buy ZEC come from?`,
+    a: `$${TOKEN.symbol} trading fees. Pons takes ${PONS.poolFeePct.toFixed(2)}% per trade and sends ${PONS.creatorSharePct}% of it to the Foundry. ${RESERVE_TAKE_PCT.toFixed(2)}% of all volume becomes Zcash in the reserve.`,
   },
   {
-    q: `Is this a tax token? Am I paying extra?`,
-    a: `No extra tax on top. The ${PONS.poolFeePct.toFixed(2)}% is the standard Pons pool fee that every token on the launchpad pays. The difference is where the creator half goes: most projects route it to a founder’s wallet, and we route it to a machine that buys Zcash.`,
+    q: `Is this a tax token?`,
+    a: `No. The ${PONS.poolFeePct.toFixed(2)}% is the standard Pons pool fee every token on the launchpad pays. The difference is where the creator share goes: a contract that buys Zcash, not a founder’s wallet.`,
   },
   {
     q: `Why not build a real bridge?`,
-    a: `Because Zcash is not an EVM chain, and a real bridge means proving Zcash's state on ${CHAIN.name}: a light client that verifies Zcash block headers and shielded-pool proofs inside an EVM contract. That is a multi-year cryptography project. It is exactly what red·bridge (Zcash Community Grants and the Avalanche Foundation) exists to build, and it is on our roadmap to adopt the moment it ships. The networks that move ZEC today, NEAR Intents, Maya and THORChain, are not lock-and-mint bridges either: they are validator-bonded vaults that let you swap native ZEC for other assets. So the honest options for wrapped ZEC on this chain right now are a reserve with public attestation, or nothing. We picked the reserve, made every part of it checkable, and wrote the hand-off to trust-minimized custody into Phase 04. There is a second reason: a bridge to a chain holding zero ZEC is a door into an empty room. By the time better custody exists, the Foundry will already have filled the room.`,
-  },
-  {
-    q: `What stops you from running off with the reserve?`,
-    a: `In v1: a published multisig, a transparent address anyone can watch, and the fact that the whole point of the project evaporates the moment the balance moves wrong. That is a real trust assumption and we name it plainly in "What this is, and what it isn’t". Phase 04 exists to remove it.`,
-  },
-  {
-    q: `Does $${TOKEN.symbol} get burned?`,
-    a: `Yes, and by a contract, not a promise. Fees from the ${TOKEN.wrapper} liquidity the Foundry seeds are swapped for $${TOKEN.symbol} and sent to ${FURNACE.burnShort}. The Furnace has no other outbound path: no withdraw, no rescue, no owner access to the balance. Burns depend on ${TOKEN.wrapper} volume, so they start small and grow with the wrapper.`,
+    a: `Zcash is not an EVM chain. A real bridge means verifying Zcash headers and shielded-pool proofs inside an EVM contract, a multi-year cryptography project that red·bridge (Zcash Community Grants and the Avalanche Foundation) is building now. The ZEC networks that exist today, NEAR Intents, Maya, THORChain, are swap vaults, not bridges. So the options were a reserve with public attestation, or nothing. We built the reserve, and Phase 04 adopts the bridge the day it ships. By then the reserve is already full.`,
   },
   {
     q: `Does holding $${TOKEN.symbol} give me a claim on the ZEC?`,
-    a: `No. $${TOKEN.symbol} funds the reserve; it does not own it. If you want ZEC exposure, that is what ${TOKEN.wrapper} is for once it mints. What $${TOKEN.symbol} holders get is a supply that shrinks every time the wrapper is used. Keeping those two things separate is deliberate.`,
-  },
-  {
-    q: `Is ${TOKEN.wrapper} private?`,
-    a: `Not on ${CHAIN.name}. It is a transparent ERC-20 there, like everything else on an EVM chain. It gives you ZEC price exposure and onchain utility. Actual shielding happens on Zcash, after you redeem.`,
+    a: `No. $${TOKEN.symbol} funds the reserve; ${TOKEN.wrapper} is the exposure. What $${TOKEN.symbol} holders get is a supply that shrinks every time the wrapper is used.`,
   },
 ]
 
@@ -151,7 +139,7 @@ export function Close() {
             on the chain.
           </h2>
           <p className="lede" data-reveal style={stagger(1)}>
-            Every ${TOKEN.symbol} trade builds the reserve. Every {TOKEN.wrapper} trade burns ${TOKEN.symbol}.
+            The reserve only grows. The supply only shrinks. Trade one starts both.
           </p>
           <div className="hero-btns" data-reveal style={stagger(2)}>
             <a className="btn btn-primary" href={LINKS.pons} target="_blank" rel="noreferrer">
@@ -176,7 +164,6 @@ export function Close() {
               <a href="#foundry">The Foundry</a>
               <a href="#furnace">The Furnace</a>
               <a href="#proof">Proof</a>
-              <a href="#limits">Disclosures</a>
               <a href="#phases">Roadmap</a>
               <a href={LINKS.x} target="_blank" rel="noreferrer">X</a>
               <a href={PONS.docsUrl} target="_blank" rel="noreferrer">Pons docs</a>
