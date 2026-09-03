@@ -27,11 +27,10 @@ export function Hero() {
           </h1>
 
           <p className="lede hero-lede" data-reveal style={stagger(2)}>
-            Robinhood Chain has tokenized equities. It has stablecoins. It does not have
-            privacy. <strong>${TOKEN.symbol}</strong> is building {TOKEN.wrapper}: real Zcash,
-            bought on the open market, held in a public reserve, minted 1:1. Every{' '}
-            ${TOKEN.symbol} trade funds the reserve. Every {TOKEN.wrapper} trade buys{' '}
-            ${TOKEN.symbol} and burns it.
+            Robinhood Chain has stocks and stablecoins. It has no privacy asset.{' '}
+            <strong>${TOKEN.symbol}</strong> is bringing the first one: {TOKEN.wrapper}, real
+            Zcash held in a public reserve and minted 1:1. Every ${TOKEN.symbol} trade grows the
+            reserve. Every {TOKEN.wrapper} trade burns ${TOKEN.symbol}.
           </p>
 
           <div className="hero-btns" data-reveal style={stagger(3)}>
@@ -44,7 +43,7 @@ export function Hero() {
           </div>
 
           <p className="hero-note mono" data-reveal style={stagger(4)}>
-            No presale. No team allocation. The fee stream does the work.
+            No presale. No team allocation. Two contracts with no reverse gear.
           </p>
         </div>
 

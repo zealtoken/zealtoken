@@ -5,25 +5,25 @@ const STEPS = [
   {
     n: '01',
     t: 'Collect',
-    d: `The Foundry seeds ${TOKEN.wrapper} liquidity from its 25% slice. That position earns trading fees, in WETH and ${TOKEN.wrapper}, on every ${TOKEN.wrapper} trade. Those fees are collected into the Furnace contract.`,
+    d: `The Foundry seeds ${TOKEN.wrapper} liquidity. That position earns a fee on every ${TOKEN.wrapper} trade, and those fees flow to the Furnace.`,
     k: 'LP fees → Furnace',
   },
   {
     n: '02',
     t: 'Ignite',
-    d: `A keeper calls ignite(). The Furnace swaps the fee tokens for $${TOKEN.symbol} through the same pool $${TOKEN.symbol} trades in, with a minimum output so it cannot be sandwiched into a bad fill. The contract checks that the swap path ends in $${TOKEN.symbol} and that the recipient is itself.`,
+    d: `ignite() swaps the fees for $${TOKEN.symbol} with a minimum output, so it cannot be sandwiched. The path must end in $${TOKEN.symbol}; the recipient is always the Furnace.`,
     k: 'ignite(tokenIn, amountIn, minOut, path)',
   },
   {
     n: '03',
     t: 'Burn',
-    d: `Every $${TOKEN.symbol} the Furnace holds is sent to ${FURNACE.burnShort}, an address with no private key. burn() is permissionless: anyone can pull the lever, and ignite() pulls it automatically at the end of every swap.`,
+    d: `Everything the Furnace holds goes to ${FURNACE.burnShort}, an address with no private key. burn() is permissionless.`,
     k: `→ ${FURNACE.burnShort}`,
   },
   {
     n: '04',
     t: 'No exit',
-    d: 'No withdraw. No rescue. No sweep. No owner path to the balance. The only outbound transfer the contract can make is $ZEAL to the burn address, and the test suite pins the ABI so nothing can be added quietly.',
+    d: 'No withdraw, no rescue, no sweep. The only outbound transfer is the burn, and the test suite pins the ABI so that stays true.',
     k: '0 withdraw functions',
   },
 ]
@@ -40,9 +40,8 @@ export function Furnace() {
             The Furnace.
           </h2>
           <p className="lede" data-reveal style={stagger(2)}>
-            {TOKEN.wrapper} is a market. Markets pay fees. The Furnace takes the fees from the{' '}
-            {TOKEN.wrapper} liquidity the Foundry seeds, swaps them for ${TOKEN.symbol}, and sends
-            that ${TOKEN.symbol} to an address nobody holds the key to. It has one door.
+            {TOKEN.wrapper} is a market, and markets pay fees. The Furnace turns those fees into
+            burned ${TOKEN.symbol}. It has one door.
           </p>
         </div>
 
@@ -61,22 +60,20 @@ export function Furnace() {
           <div className="furnace-sum-row">
             <span className="mono">LOOP 01</span>
             <p>
-              <strong>${TOKEN.symbol} volume</strong> pays the Foundry. The Foundry buys ZEC. The
-              reserve grows and is never sold.
+              <strong>${TOKEN.symbol} volume</strong> buys ZEC. The reserve only grows.
             </p>
           </div>
           <div className="furnace-sum-row">
             <span className="mono">LOOP 02</span>
             <p>
-              <strong>{TOKEN.wrapper} volume</strong> pays the Furnace. The Furnace buys $
-              {TOKEN.symbol}. The supply shrinks and is never reissued.
+              <strong>{TOKEN.wrapper} volume</strong> buys ${TOKEN.symbol}. The supply only shrinks.
             </p>
           </div>
           <div className="furnace-sum-row furnace-sum-out">
             <span className="mono">RESULT</span>
             <p>
-              The more the wrapper is used, the less ${TOKEN.symbol} exists. Both loops run in one
-              direction. Neither has a reverse gear.
+              More wrapper, less ${TOKEN.symbol}. Both loops run one way. Neither has a reverse
+              gear.
             </p>
           </div>
           <div className="furnace-sum-addr">

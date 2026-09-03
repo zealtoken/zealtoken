@@ -43,19 +43,19 @@ export const SPLIT = [
     key: 'reserve',
     pct: 60,
     label: 'ZEC Reserve',
-    note: 'Swapped to native ZEC and moved into the reserve address. Backs zZEC 1:1.',
+    note: 'Becomes native ZEC in the reserve.',
   },
   {
     key: 'liquidity',
     pct: 25,
     label: 'zZEC Liquidity',
-    note: 'Paired into the zZEC market on Robinhood Chain. The fees that position earns feed the Furnace.',
+    note: 'Seeds the zZEC market. Its fees feed the Furnace.',
   },
   {
     key: 'ops',
     pct: 15,
     label: 'Operations',
-    note: 'Audits, reserve attestation, bridge infrastructure, listings. Spending is published.',
+    note: 'Audits, attestation, infrastructure. Published.',
   },
 ] as const
 

@@ -7,37 +7,37 @@ const STEPS = [
   {
     n: '01',
     t: 'Intake',
-    d: `Every buy and every sell of $${TOKEN.symbol} on Pons pays a ${PONS.poolFeePct.toFixed(2)}% pool fee. Pons keeps ${100 - PONS.creatorSharePct}%. The other ${PONS.creatorSharePct}% is the creator share.`,
+    d: `Every $${TOKEN.symbol} trade on Pons pays a ${PONS.poolFeePct.toFixed(2)}% pool fee. ${PONS.creatorSharePct}% of that is the creator share.`,
     k: `${PONS.poolFeePct.toFixed(2)}% → ${FOUNDRY_TAKE_PCT.toFixed(2)}%`,
   },
   {
     n: '02',
     t: 'Redirect',
-    d: 'That creator share does not land in a founder wallet. Pons lets the fee recipient be a contract, so it points at the Foundry, a contract with no owner, no admin and no upgrade path. It can only do the things below.',
+    d: 'The creator share goes to the Foundry contract, not a wallet. No owner, no admin, no upgrade path.',
     k: 'feeRedirects(token)',
   },
   {
     n: '03',
     t: 'Split',
-    d: 'The Foundry splits everything that arrives on a fixed schedule. The percentages are immutable constructor arguments. Not a setting, not a blog post. Rounding remainders go to the reserve.',
+    d: 'The split is an immutable constructor argument. Rounding dust goes to the reserve.',
     k: SPLIT.map((s) => `${s.pct}`).join(' / '),
   },
   {
     n: '04',
     t: 'Smelt',
-    d: 'The reserve share is swapped out of WETH into native ZEC through NEAR Intents, the same rail Zcash’s own Zashi wallet uses. Real coins, on the real Zcash chain.',
+    d: 'The reserve share is swapped from WETH into native ZEC over NEAR Intents, the rail Zcash’s own wallet uses.',
     k: 'WETH → native ZEC',
   },
   {
     n: '05',
     t: 'Reserve',
-    d: 'The ZEC settles into a published Zcash transparent address held by a multisig. Transparent on purpose: anyone can check the balance any time without asking us.',
+    d: 'The ZEC lands in a published transparent address. Anyone can check the balance without asking us.',
     k: 'public t-address',
   },
   {
     n: '06',
     t: 'Mint',
-    d: `${TOKEN.wrapper} is minted against that balance, one token per ZEC held, and paired into liquidity on ${CHAIN.name}. Supply can never exceed the reserve.`,
+    d: `${TOKEN.wrapper} is minted one per ZEC held and paired into liquidity on ${CHAIN.name}. The mint reverts past the reserve.`,
     k: `1 ZEC = 1 ${TOKEN.wrapper}`,
   },
 ]
@@ -60,18 +60,13 @@ export function Mechanism() {
           </div>
           <div>
             <p className="lede" data-reveal style={stagger(2)}>
-              {CHAIN.name} was built for tokenized equities, stablecoins and real-world assets,
-              settling to {CHAIN.settles}. It is an EVM chain full of things you can own in the
-              open.
+              {CHAIN.name} is where tokenized stocks and stablecoins live. Everything on it is
+              owned in the open. The one asset it is missing is the oldest privacy coin in crypto,
+              because Zcash does not speak EVM.
             </p>
             <p data-reveal style={stagger(3)}>
-              What it does not have is the oldest serious privacy asset in crypto. Zcash lives on
-              its own L1. Its shielded pool does not speak EVM, and no amount of wanting changes
-              that. Today you can hold a tokenized stock on Robinhood Chain. You cannot hold ZEC.
-            </p>
-            <p data-reveal style={stagger(4)}>
-              <strong>Zeal is the crew that closes that gap</strong>, and the mechanism that pays
-              for the closing.
+              <strong>Zeal puts it there first</strong>, and builds the machine that pays for it
+              out of trading volume instead of a treasury.
             </p>
           </div>
         </div>
@@ -99,8 +94,8 @@ export function Mechanism() {
               The Foundry.
             </h2>
             <p className="lede" data-reveal style={stagger(2)}>
-              Every trade pays a fee. Pons hands us {PONS.creatorSharePct}% of it. We do not keep
-              it. We spend it on Zcash, in public, on a schedule nobody can quietly change.
+              Every ${TOKEN.symbol} trade pays a fee. {PONS.creatorSharePct}% of it goes to a
+              contract that can only buy Zcash. Nobody, including us, can point it anywhere else.
             </p>
           </div>
         </div>
