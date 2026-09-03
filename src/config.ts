@@ -7,6 +7,13 @@ export const CHAIN = {
   name: 'Robinhood Chain',
   id: 4663,
   settles: 'Ethereum',
+  /**
+   * Public endpoint. Robinhood's docs call it rate-limited and not for
+   * production workloads; the ledger makes one batched call every 30 seconds
+   * per open tab, which is well inside that. Swap for a dedicated endpoint if
+   * traffic ever makes it a problem.
+   */
+  rpc: 'https://rpc.mainnet.chain.robinhood.com',
 } as const
 
 /** Pons launchpad economics. Fixed by the protocol, not by us. */
