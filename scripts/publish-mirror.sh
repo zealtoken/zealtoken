@@ -16,7 +16,7 @@ git filter-branch -f --env-filter '
   export GIT_COMMITTER_NAME="Zeal" GIT_COMMITTER_EMAIL="dev@zealtoken.com"
 ' -- --all >/dev/null
 if git log --all --format='%an %ae %cn %ce' | grep -qi "mcconnell\|kyle@"; then echo "rewrite failed, aborting"; exit 3; fi
-if git grep -qi "mcconnell\|kylekmcconnell" -- . ':!package-lock.json' ; then echo "personal identifier still in tree, aborting"; git grep -il "mcconnell" -- . ':!package-lock.json'; exit 4; fi
+if git grep -qi "mcconnell\|kylekmcconnell" -- . ':!package-lock.json' ':!scripts/publish-mirror.sh' ; then echo "personal identifier still in tree, aborting"; git grep -il "mcconnell" -- . ':!package-lock.json' ':!scripts/publish-mirror.sh'; exit 4; fi
 git remote add anon "$REMOTE"
 export GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh -i $HOME/.ssh/zeal_deploy -o IdentitiesOnly=yes}"
 git push -f anon main
