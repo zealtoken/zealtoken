@@ -1,4 +1,5 @@
 import { EngravingScene } from '../art/EngravingScene'
+import { StationStrip } from '../art/StationStrip'
 import { FoundryCalc } from './Calculators'
 import { CHAIN, FOUNDRY_TAKE_PCT, PONS, SPLIT, TOKEN } from '../config'
 import { stagger } from '../useReveal'
@@ -95,11 +96,12 @@ export function Mechanism() {
           srcLarge="/video/foundry-line-1600.mp4"
           poster="/video/foundry-line-poster.webp"
           posterSmall="/video/foundry-line-poster-sm.webp"
-          ratio="1728 / 1152"
+          ratio="1728 / 852"
           width={1600}
-          height={1067}
+          height={788}
           alt="The Foundry line, station by station: 01 Intake, every trade pays in. 02 Split, fixed allocation of 60% ZEC reserve, 25% zZEC liquidity, 15% operations. 03 Smelt, fees become real ZEC via NEAR Intents. 04 Reserve, public and auditable. 05 Mint, zZEC issued 1:1 and backed."
         />
+        <StationStrip which="foundry" />
 
         <div className="wrap">
           <div className="steps">
