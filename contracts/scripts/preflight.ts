@@ -1,4 +1,5 @@
 import { ethers, network } from 'hardhat'
+import { keystoreAddress, keystoreExists } from './lib/secure'
 
 /**
  * Everything that can be checked before a single wei of gas is spent.
@@ -36,7 +37,7 @@ function addr(name: string): string | null {
 
 async function main() {
   const net = await ethers.provider.getNetwork()
-  const signers = await ethers.getSigners()
+  const deployerAddr = keystoreAddress()
 
   console.log(`\n${'='.repeat(64)}`)
   console.log(`PREFLIGHT  ${network.name}  chainId ${net.chainId}`)
@@ -45,8 +46,10 @@ async function main() {
   if (net.chainId !== EXPECTED_CHAIN) {
     problems.push(`connected to chainId ${net.chainId}, expected ${EXPECTED_CHAIN} (Robinhood Chain)`)
   }
-  if (signers.length === 0) {
-    problems.push('no signer: DEPLOYER_KEY is missing from contracts/.env')
+  if (!keystoreExists()) {
+    problems.push('no keystore. Run: npm run key:create')
+  } else if (!deployerAddr) {
+    problems.push('keystore is unreadable. Recreate it with: npm run key:create')
   }
 
   const reserveSink = addr('RESERVE_SINK')
@@ -64,10 +67,10 @@ async function main() {
   // ---- deployer ----
   let balance = 0n
   let deployer = ''
-  if (signers.length > 0) {
-    deployer = await signers[0].getAddress()
+  if (deployerAddr) {
+    deployer = deployerAddr
     balance = await ethers.provider.getBalance(deployer)
-    console.log(`\nDeployer      ${deployer}`)
+    console.log(`\nDeployer      ${deployer}   (from keystore, not unlocked)`)
     console.log(`Balance       ${ethers.formatEther(balance)} ETH`)
     if (balance === 0n) problems.push('deployer has no ETH; it cannot pay gas')
     if (sinks.includes(deployer)) {
