@@ -959,11 +959,6 @@ p:last-child { margin-bottom: 0; }
   box-shadow: 0 1px 0 rgba(8, 9, 10, 0.04), 0 24px 60px -30px rgba(8, 9, 10, 0.35);
   transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), border-color 0.35s, box-shadow 0.35s;
 }
-.tweet:hover {
-  transform: translateY(-4px);
-  border-color: var(--green);
-  box-shadow: 0 1px 0 rgba(8, 9, 10, 0.04), 0 34px 70px -30px rgba(0, 163, 3, 0.45);
-}
 .tweet-head { display: flex; align-items: center; gap: 14px; }
 .tweet-avatar {
   width: 44px;
@@ -985,3 +980,7 @@ p:last-child { margin-bottom: 0; }
 .tweet-foot { display: flex; justify-content: space-between; margin-top: 16px; color: var(--paper-faint); }
 .tweet-open { color: var(--green-text); }
 .tweet:hover .tweet-open { text-decoration: underline; }
+
+/* lore: air between the title and the paragraph */
+#lore .h2 { margin-bottom: 26px; }
+#lore .lede, #lore .h2 + p { margin-top: 0; }
