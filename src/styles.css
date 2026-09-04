@@ -1059,3 +1059,18 @@ p:last-child { margin-bottom: 0; }
 .log-link { color: var(--green-text); text-decoration: none; white-space: nowrap; font-weight: 600; }
 .log-link:hover { text-decoration: underline; }
 @media (max-width: 640px) { .log-row { grid-template-columns: 60px 1fr; } .log-link { grid-column: 2; } }
+
+/* fee route panel (inside the ledger) */
+.route { margin-top: 22px; padding: 18px 20px; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; }
+.route-live { border-color: rgba(0, 200, 5, 0.5); }
+.route-head { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.route-title { font-size: 12px; letter-spacing: 0.18em; color: rgba(255,255,255,0.86); display: inline-flex; align-items: center; gap: 8px; }
+.route-note { font-size: 11.5px; letter-spacing: 0.08em; color: rgba(255,255,255,0.5); }
+.route-headline { margin: 0 0 14px; font-size: 16px; font-weight: 600; color: #fff; }
+.route-live .route-headline { color: var(--green-bright); }
+.route-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.route-l { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 6px; }
+.route-v { font-size: 15px; color: #fff; }
+.route-h { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 4px; }
+.dot-wait { background: rgba(255,255,255,0.5) !important; animation: none !important; }
+@media (max-width: 720px) { .route-grid { grid-template-columns: 1fr 1fr; } }
