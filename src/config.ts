@@ -83,7 +83,7 @@ export const CONTRACTS = {
   /** Immutable fee splitter. No owner, no admin, no upgrade path. Live since 2026-09-03. */
   foundry: '0xa1C1Fb281cCC47C587565a01700bF61a03D885a6' as string | null,
   /** The wrapper. Supply is capped by the attested reserve. */
-  zzec: null as string | null,
+  zzec: '0x0b151Ff7a7c5250130EC16C275790961d558E402' as string | null,
   /** zZEC fees in, burned $ZEAL out. No other exit. */
   furnace: null as string | null,
   explorer: 'https://robinhoodchain.blockscout.com',
