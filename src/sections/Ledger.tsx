@@ -24,6 +24,8 @@ type Snapshot = {
   coverage: number | null
   zealBurned: number
   burns: number
+  ethSpent: number // ETH the Furnace swapped into \$ZEAL, lifetime
+  zzecSpent: number // zZEC the Furnace swapped on the way, lifetime
   block: bigint
 }
 
@@ -38,6 +40,8 @@ const ZERO: Snapshot = {
   coverage: null,
   zealBurned: 0,
   burns: 0,
+  ethSpent: 0,
+  zzecSpent: 0,
   block: 0n,
 }
 
@@ -102,6 +106,8 @@ async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
   if (CONTRACTS.furnace) {
     push('zealBurned', view(CONTRACTS.furnace, SEL.totalZealBurned))
     push('burns', view(CONTRACTS.furnace, SEL.burnCount))
+    push('ethSpent', view(CONTRACTS.furnace, SEL.totalEthConsumed))
+    push('zzecSpent', view(CONTRACTS.furnace, SEL.totalZzecConsumed))
   }
 
   // Zero calls still returns the block: the chain read is what keeps the
@@ -121,6 +127,8 @@ async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
     coverage: CONTRACTS.zzec ? (cov === MAX_UINT ? null : Number(cov) / 10_000) : null,
     zealBurned: units(get('zealBurned'), 18),
     burns: Number(get('burns')),
+    ethSpent: units(get('ethSpent'), 18),
+    zzecSpent: units(get('zzecSpent'), 8),
     block,
   }
 }
@@ -279,6 +287,8 @@ export function Ledger() {
           <div className="lg-grid">
             <Stat value={snap.zealBurned} unit={TOKEN.symbol} label={`$${TOKEN.symbol} burned`} frac={0} hint={`→ ${FURNACE.burnShort}`} />
             <Stat value={snap.burns} unit="tx" label="burns" frac={0} hint="permissionless" />
+            <Stat value={snap.ethSpent} unit="ETH" label="spent buying back" frac={6} hint="fees swapped into \$ZEAL" />
+            <Stat value={snap.zzecSpent} unit={TOKEN.wrapper} label={`${TOKEN.wrapper} fees converted`} frac={6} hint="sold for ETH on the way" />
           </div>
           <div className="lg-note mono">
             {contractsLive
