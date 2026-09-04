@@ -35,7 +35,7 @@ export async function chainTip(host?: string): Promise<{ height: number; hash: s
   const info = await call<{ chainName: string; blockHeight: string | number }>((cb) => c.GetLightdInfo({}, cb))
   const b = await call<{ height: string | number; hash: Buffer }>((cb) => c.GetLatestBlock({}, cb))
   // lightwalletd returns the hash little-endian; explorers show it reversed
-  return { height: Number(b.height), hash: Buffer.from(b.hash).reverse().toString('hex'), chain: info.chainName }
+  return { height: Number(b.height), hash: '0x' + Buffer.from(b.hash).reverse().toString('hex'), chain: info.chainName }
 }
 
 if (process.argv[1]?.endsWith('zcash-light.ts')) {
