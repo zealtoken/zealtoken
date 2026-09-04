@@ -30,9 +30,16 @@ export async function chainTipHash(): Promise<string> {
 }
 
 /** Send native ZEC from the reserve to a transparent address. Returns the txid. */
-export async function sendZec(toTAddress: string, zats: bigint, memo = ''): Promise<string> {
+/**
+ * Send native ZEC to a transparent address. No memo: transparent outputs cannot carry one.
+ * zingo-cli's exact send grammar differs between releases (send vs quicksend, --online consent);
+ * pin the binary and set ZINGO_SEND_ARGS to match it, then prove one redemption end to end
+ * before Phase 03 opens. Nothing here runs until then.
+ */
+export async function sendZec(toTAddress: string, zats: bigint): Promise<string> {
   if (!/^t[13][a-zA-Z0-9]{33}$/.test(toTAddress)) throw new Error(`not a transparent address: ${toTAddress}`)
-  const out = await zingo(['--waitsync', 'send', toTAddress, zats.toString(), memo])
+  const extra = (process.env.ZINGO_SEND_ARGS ?? '--online').split(' ').filter(Boolean)
+  const out = await zingo([...extra, '--waitsync', process.env.ZINGO_SEND_CMD ?? 'quicksend', toTAddress, zats.toString()])
   const m = out.match(/[0-9a-f]{64}/i)
   if (!m) throw new Error(`send produced no txid: ${out.slice(0, 200)}`)
   return m[0]

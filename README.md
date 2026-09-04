@@ -24,7 +24,7 @@ lightwalletd node because browsers cannot speak gRPC. It holds no keys.
 
 ## Layout
 
-- [`contracts/`](contracts) · Solidity 0.8.24, Hardhat, 83 tests. `npm test`.
+- [`contracts/`](contracts) · Solidity 0.8.24, Hardhat, 84 tests. `npm test`.
 - [`ops/`](ops) · the reserve operator: attests the Zcash balance, mints zZEC
   up to it, honours redemptions, sweeps ETH → ZEC. Nothing here can move
   funds without a passphrase-unlocked key.

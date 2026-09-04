@@ -9,6 +9,10 @@ import { unlock } from './lib/secure'
  * hookless zZEC/ETH pool at 1% / spacing 200.
  *
  *   FURNACE_IGNITER=0x... npm run furnace      (owner defaults to the deployer)
+ *
+ * Deploy AFTER the zZEC/ETH pool exists (ops: npm run pool); the constructor
+ * refuses pools that are not initialized. To hand it the LP NFT afterwards, the
+ * OWNER must call positionManager.safeTransferFrom(owner, furnace, tokenId).
  */
 const POOL_MANAGER = '0x8366a39cc670b4001a1121b8f6a443a643e40951'
 const POSITION_MANAGER = '0x58daec3116aae6d93017baaea7749052e8a04fa7'
@@ -32,7 +36,9 @@ async function main() {
   console.log(`\nDeployer ${wallet.address}  ${ethers.formatEther(await ethers.provider.getBalance(wallet.address))} ETH`)
   console.log(`owner    ${owner}\nigniter  ${igniter}\nzZEC pool ${id(zzecPool)}\n$ZEAL pool ${id(zealPool)}\n`)
   const F = (await ethers.getContractFactory('ZealFurnaceV4')).connect(wallet)
-  const furnace = await F.deploy(POOL_MANAGER, POSITION_MANAGER, ZEAL, ZZEC, zzecPool, zealPool, owner, igniter)
+  const maxImpactBps = Number(process.env.FURNACE_MAX_IMPACT_BPS ?? 500)
+  console.log(`impact   ${maxImpactBps} bps per leg\n`)
+  const furnace = await F.deploy(POOL_MANAGER, POSITION_MANAGER, ZEAL, ZZEC, zzecPool, zealPool, maxImpactBps, owner, igniter)
   await furnace.waitForDeployment()
   const addr = await furnace.getAddress()
   console.log(`ZealFurnaceV4 ${addr}`)
@@ -41,6 +47,6 @@ async function main() {
   rec.contracts = { ...(rec.contracts ?? {}), ZealFurnaceV4: addr }
   rec.furnaceV4 = { poolManager: POOL_MANAGER, positionManager: POSITION_MANAGER, zeal: ZEAL, zzec: ZZEC, owner, igniter, deployedAt: new Date().toISOString() }
   writeFileSync(file, JSON.stringify(rec, null, 2) + '\n')
-  console.log(`\nNext:\n  1. CONTRACTS.furnace = '${addr}' in src/config.ts\n  2. Verify on robinhoodchain.blockscout.com\n  3. Send the zZEC/ETH LP NFT to it (safeTransferFrom) so collectFees() works, or forward fees manually\n`)
+  console.log(`\nNext:\n  1. CONTRACTS.furnace = '${addr}' in src/config.ts\n  2. Verify on robinhoodchain.blockscout.com\n  3. As owner: positionManager.safeTransferFrom(owner, furnace, tokenId) so collectFees() works (safeTransferFrom, not transferFrom)\n`)
 }
 main().catch((e) => { console.error(e); process.exitCode = 1 })

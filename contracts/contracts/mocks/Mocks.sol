@@ -156,7 +156,13 @@ contract MockPoolManagerV4 {
     uint256 private syncedBalance;
     address private locker;
 
-    function setRate(PoolKey calldata key, uint256 num, uint256 den) external { rateNum[keccak256(abi.encode(key))] = num; rateDen[keccak256(abi.encode(key))] = den; }
+    mapping(bytes32 => uint160) public sqrtPrice;
+    function setRate(PoolKey calldata key, uint256 num, uint256 den) external { bytes32 id = keccak256(abi.encode(key)); rateNum[id] = num; rateDen[id] = den; if (sqrtPrice[id] == 0) sqrtPrice[id] = 79228162514264337593543950336; }
+    function setSqrtPrice(PoolKey calldata key, uint160 p) external { sqrtPrice[keccak256(abi.encode(key))] = p; }
+    /// v4-core layout: slot0 for pools[poolId] at keccak(poolId . 6), sqrtPriceX96 in the low 160 bits.
+    function extsload(bytes32 slot) external view returns (bytes32) { return bytes32(uint256(slotPrice[slot])); }
+    mapping(bytes32 => uint160) private slotPrice;
+    function initPool(PoolKey calldata key, uint160 p) external { bytes32 id = keccak256(abi.encode(key)); sqrtPrice[id] = p; slotPrice[keccak256(abi.encodePacked(id, bytes32(uint256(6))))] = p; }
     function fund(address token, uint256 amount) external { MockERC20(token).mint(address(this), amount); }
     receive() external payable {}
 
@@ -198,9 +204,13 @@ contract MockPositionManagerV4 {
     uint256 public feeToken;
     address public feeTokenAddr;
     bytes public lastUnlockData;
+    mapping(uint256 => PoolKey) private poolOf;
     receive() external payable {}
+    function setPositionPool(uint256 tokenId, PoolKey calldata key) external { poolOf[tokenId] = key; }
+    function getPoolAndPositionInfo(uint256 tokenId) external view returns (PoolKey memory, uint256) { return (poolOf[tokenId], 0); }
     function setFees(address token, uint256 tokenAmt, uint256 ethAmt) external { feeTokenAddr = token; feeToken = tokenAmt; feeEth = ethAmt; }
-    function give(address to, uint256 tokenId) external { bytes4 sel = IERC721ReceiverLike(to).onERC721Received(msg.sender, msg.sender, tokenId, ""); require(sel == 0x150b7a02, "bad receiver"); }
+    function give(address to, uint256 tokenId) external { giveFrom(msg.sender, to, tokenId); }
+    function giveFrom(address from, address to, uint256 tokenId) public { bytes4 sel = IERC721ReceiverLike(to).onERC721Received(msg.sender, from, tokenId, ""); require(sel == 0x150b7a02, "bad receiver"); }
     function modifyLiquidities(bytes calldata unlockData, uint256) external payable {
         lastUnlockData = unlockData;
         (bytes memory actions, bytes[] memory params) = abi.decode(unlockData, (bytes, bytes[]));

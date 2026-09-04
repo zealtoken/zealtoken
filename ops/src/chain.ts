@@ -42,10 +42,15 @@ export async function roleSigner(role: 'attestor' | 'minter'): Promise<ethers.Wa
   if (existsSync(file)) {
     let pass = process.env[role === 'attestor' ? 'ATTESTOR_PASS' : 'MINTER_PASS']
     if (!pass) {
+      if (!process.stdin.isTTY) throw new Error(`no ${role.toUpperCase()}_PASS and no TTY to prompt on`)
       const { createInterface } = await import('node:readline')
       pass = await new Promise<string>((res) => {
-        const rl = createInterface({ input: process.stdin, output: process.stdout })
-        rl.question(`passphrase for ${role} key: `, (a) => { rl.close(); res(a) })
+        const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true })
+        process.stdout.write(`passphrase for ${role} key: `)
+        const out = process.stdout as unknown as { write: (s: string) => boolean }
+        const orig = out.write.bind(process.stdout)
+        out.write = (s: string) => (s.includes('\n') ? orig(s) : true)
+        rl.question('', (a) => { out.write = orig; process.stdout.write('\n'); rl.close(); res(a) })
       })
     }
     const w = await ethers.Wallet.fromEncryptedJson(readFileSync(file, 'utf8'), pass)

@@ -16,7 +16,10 @@ describe('ZealFurnaceV4', () => {
     const a = { zeal: await zeal.getAddress(), zzec: await zzec.getAddress(), pm: await pm.getAddress(), posm: await posm.getAddress() }
     const zzecPool = { currency0: ETH, currency1: a.zzec, fee: 10_000, tickSpacing: 200, hooks: ETH }
     const zealPool = { currency0: ETH, currency1: a.zeal, fee: 0, tickSpacing: 200, hooks: stranger.address }
-    const furnace = await (await ethers.getContractFactory('ZealFurnaceV4')).deploy(a.pm, a.posm, a.zeal, a.zzec, zzecPool, zealPool, owner.address, igniter.address)
+    const Q96 = 2n ** 96n
+    await pm.initPool(zzecPool, Q96)
+    await pm.initPool(zealPool, Q96)
+    const furnace = await (await ethers.getContractFactory('ZealFurnaceV4')).deploy(a.pm, a.posm, a.zeal, a.zzec, zzecPool, zealPool, 500, owner.address, igniter.address)
     const f = await furnace.getAddress()
     // 1 zZEC (1e8) -> 0.4 ETH ; 1 ETH -> 1,000,000 ZEAL
     await pm.setRate(zzecPool, ethers.parseEther('0.4'), 1e8)
@@ -32,10 +35,11 @@ describe('ZealFurnaceV4', () => {
     const fns = furnace.interface.fragments.filter((x) => x.type === 'function').map((x) => (x as unknown as { name: string }).name).sort()
     // Every state-changing function, by name. Anything not on this list is a door that must not exist.
     expect(fns).to.deep.equal([
-      'BURN_ADDRESS', 'ROLE_TIMELOCK', 'acceptOwnership', 'burn', 'burnCount', 'cancelIgniterProposal', 'collectFees',
-      'commitIgniter', 'ignite', 'igniter', 'onERC721Received', 'owner', 'pendingIgniter', 'pendingOwner', 'poolManager',
-      'positionId', 'positionManager', 'proposeIgniter', 'renounceOwnership', 'totalEthConsumed', 'totalZealBurned',
-      'totalZzecConsumed', 'transferOwnership', 'unlockCallback', 'zeal', 'zealPool', 'zzec', 'zzecPool',
+      'BURN_ADDRESS', 'PROPOSAL_WINDOW', 'ROLE_TIMELOCK', 'acceptOwnership', 'burn', 'burnCount', 'cancelIgniterProposal',
+      'collectFees', 'commitIgniter', 'ignite', 'igniter', 'maxImpactBps', 'onERC721Received', 'owner', 'pendingIgniter',
+      'pendingOwner', 'poolManager', 'positionId', 'positionManager', 'proposeIgniter', 'renounceOwnership',
+      'totalEthConsumed', 'totalZealBurned', 'totalZzecConsumed', 'transferOwnership', 'unlockCallback', 'zeal', 'zealPool',
+      'zzec', 'zzecPool',
     ])
   })
 
@@ -44,7 +48,7 @@ describe('ZealFurnaceV4', () => {
     await zzec.mint(f, 2n * 10n ** 8n) // 2 zZEC -> 0.8 ETH
     await igniter.sendTransaction({ to: f, value: ethers.parseEther('0.2') }) // + 0.2 ETH held = 1 ETH -> 1,000,000 ZEAL
     const expected = ethers.parseEther('1000000')
-    await expect(furnace.connect(igniter).ignite(expected)).to.emit(furnace, 'Ignited').withArgs(2n * 10n ** 8n, ethers.parseEther('1'), expected, igniter.address).and.to.emit(furnace, 'Burned')
+    await expect(furnace.connect(igniter).ignite(expected, '0x')).to.emit(furnace, 'Ignited').withArgs(2n * 10n ** 8n, ethers.parseEther('1'), expected, igniter.address).and.to.emit(furnace, 'Burned')
     expect(await zeal.balanceOf(BURN)).to.equal(expected)
     expect(await zeal.balanceOf(f)).to.equal(0n)
     expect(await zzec.balanceOf(f)).to.equal(0n)
@@ -57,29 +61,36 @@ describe('ZealFurnaceV4', () => {
   it('reverts below the floor instead of burning less', async () => {
     const { furnace, f, igniter } = await loadFixture(deploy)
     await igniter.sendTransaction({ to: f, value: ethers.parseEther('1') })
-    await expect(furnace.connect(igniter).ignite(ethers.parseEther('1000001'))).to.be.revertedWithCustomError(furnace, 'InsufficientOutput')
+    await expect(furnace.connect(igniter).ignite(ethers.parseEther('1000001'), '0x')).to.be.revertedWithCustomError(furnace, 'InsufficientOutput')
   })
 
   it('ignite is gated to the igniter; unlockCallback only to the pool manager', async () => {
     const { furnace, f, stranger, pm } = await loadFixture(deploy)
     await stranger.sendTransaction({ to: f, value: 1n })
-    await expect(furnace.connect(stranger).ignite(0)).to.be.revertedWithCustomError(furnace, 'NotIgniter')
+    await expect(furnace.connect(stranger).ignite(0, '0x')).to.be.revertedWithCustomError(furnace, 'NotIgniter')
     await expect(furnace.connect(stranger).unlockCallback('0x')).to.be.revertedWithCustomError(furnace, 'NotPoolManager')
     void pm
   })
 
   it('reverts when there is nothing to ignite', async () => {
     const { furnace, igniter } = await loadFixture(deploy)
-    await expect(furnace.connect(igniter).ignite(0)).to.be.revertedWithCustomError(furnace, 'NothingToIgnite')
+    await expect(furnace.connect(igniter).ignite(0, '0x')).to.be.revertedWithCustomError(furnace, 'NothingToIgnite')
   })
 
-  it('accepts one LP position from the position manager only, and collects its fees permissionlessly', async () => {
-    const { furnace, f, posm, zzec, a, stranger } = await loadFixture(deploy)
+  it('accepts one LP position: from the owner, via the position manager, in the zZEC pool only; collects fees permissionlessly', async () => {
+    const { furnace, f, posm, zzec, a, owner, stranger, zzecPool, zealPool } = await loadFixture(deploy)
     await expect(furnace.connect(stranger).collectFees()).to.be.revertedWithCustomError(furnace, 'NoPosition')
     await expect(furnace.onERC721Received(stranger.address, stranger.address, 7, '0x')).to.be.revertedWithCustomError(furnace, 'NotPositionManager')
-    await posm.give(f, 42)
+    await posm.setPositionPool(42, zzecPool)
+    await posm.setPositionPool(43, zzecPool)
+    await posm.setPositionPool(99, zealPool)
+    // a stranger cannot occupy the slot with their own NFT
+    await expect(posm.giveFrom(stranger.address, f, 42)).to.be.revertedWithCustomError(furnace, 'NotOwnerDeposit')
+    // the owner cannot deposit a position from the wrong pool
+    await expect(posm.giveFrom(owner.address, f, 99)).to.be.revertedWithCustomError(furnace, 'WrongPool')
+    await posm.giveFrom(owner.address, f, 42)
     expect(await furnace.positionId()).to.equal(42n)
-    await expect(posm.give(f, 43)).to.be.revertedWith('bad receiver').catch(() => {}) // second position is refused
+    await expect(posm.giveFrom(owner.address, f, 43)).to.be.revertedWithCustomError(furnace, 'AlreadyHoldsPosition')
     expect(await furnace.positionId()).to.equal(42n)
     await posm.setFees(a.zzec, 5n * 10n ** 7n, ethers.parseEther('0.1'))
     await expect(furnace.connect(stranger).collectFees()).to.emit(furnace, 'FeesCollected').withArgs(stranger.address, 42n)
@@ -95,11 +106,24 @@ describe('ZealFurnaceV4', () => {
     await expect(furnace.burn()).to.be.revertedWithCustomError(furnace, 'NothingToBurn')
   })
 
-  it('rejects pool keys that are not ETH-quoted markets of the right tokens', async () => {
+  it('rejects wrong pool keys, uninitialized pools, and a bad impact bound at construction', async () => {
     const { a, owner, igniter, zzecPool, zealPool } = await loadFixture(deploy)
     const F = await ethers.getContractFactory('ZealFurnaceV4')
-    await expect(F.deploy(a.pm, a.posm, a.zeal, a.zzec, { ...zzecPool, currency1: a.zeal }, zealPool, owner.address, igniter.address)).to.be.revertedWithCustomError(F, 'BadPoolKey')
-    await expect(F.deploy(a.pm, a.posm, a.zeal, a.zzec, zzecPool, { ...zealPool, currency0: a.zzec }, owner.address, igniter.address)).to.be.revertedWithCustomError(F, 'BadPoolKey')
+    await expect(F.deploy(a.pm, a.posm, a.zeal, a.zzec, { ...zzecPool, currency1: a.zeal }, zealPool, 500, owner.address, igniter.address)).to.be.revertedWithCustomError(F, 'BadPoolKey')
+    await expect(F.deploy(a.pm, a.posm, a.zeal, a.zzec, zzecPool, { ...zealPool, currency0: a.zzec }, 500, owner.address, igniter.address)).to.be.revertedWithCustomError(F, 'BadPoolKey')
+    // a typo in fee/spacing/hooks points at a pool that does not exist: refuse to deploy rather than lock inflows forever
+    await expect(F.deploy(a.pm, a.posm, a.zeal, a.zzec, { ...zzecPool, fee: 3000 }, zealPool, 500, owner.address, igniter.address)).to.be.revertedWithCustomError(F, 'PoolNotInitialized')
+    await expect(F.deploy(a.pm, a.posm, a.zeal, a.zzec, zzecPool, { ...zealPool, tickSpacing: 60 }, 500, owner.address, igniter.address)).to.be.revertedWithCustomError(F, 'PoolNotInitialized')
+    await expect(F.deploy(a.pm, a.posm, a.zeal, a.zzec, zzecPool, zealPool, 0, owner.address, igniter.address)).to.be.revertedWithCustomError(F, 'BadImpact')
+    await expect(F.deploy(a.pm, a.posm, a.zeal, a.zzec, zzecPool, zealPool, 5001, owner.address, igniter.address)).to.be.revertedWithCustomError(F, 'BadImpact')
+  })
+
+  it('ownership cannot be renounced, and a matured proposal expires after the window', async () => {
+    const { furnace, owner, stranger } = await loadFixture(deploy)
+    await expect(furnace.connect(owner).renounceOwnership()).to.be.revertedWithCustomError(furnace, 'CannotRenounce')
+    await furnace.connect(owner).proposeIgniter(stranger.address)
+    await time.increase(48 * 3600 + 7 * 86400 + 1)
+    await expect(furnace.connect(owner).commitIgniter()).to.be.revertedWithCustomError(furnace, 'ProposalExpired')
   })
 
   it('rotates the igniter only after the 48h timelock', async () => {

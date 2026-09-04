@@ -94,6 +94,7 @@ async function main() {
   const rq = await relayQuote(sinkEvm, ethIn)
   const out1 = BigInt(rq.details.currencyOut.amount)
   const dep = rq.steps[0].items[0].data
+  if (Number(dep.chainId) !== CHAIN.id || BigInt(dep.value) !== ethIn || !ethers.isAddress(dep.to)) throw new Error(`Relay deposit does not match the quote: chain ${dep.chainId} value ${dep.value} to ${dep.to}`)
   console.log(`hop 1  Relay      in ${ethers.formatEther(ethIn)}  out ${ethers.formatEther(out1)} ETH on Arbitrum  (~${rq.details.timeEstimate}s)`)
   console.log(`       deposit tx to ${dep.to}  value ${dep.value}  chainId ${dep.chainId}`)
 
@@ -123,16 +124,21 @@ async function main() {
   // arrival is judged by balance, so the status endpoint's shape cannot strand us
   for (let i = 0; i < 60; i++) {
     const b = await arb.getBalance(sinkEvm)
-    if (b > arbBefore) { sweep.relay.amountOutArb = (b - arbBefore).toString(); break }
+    // must look like THIS fill, not some unrelated dust credit
+    if (b - arbBefore >= (out1 * 9n) / 10n) { sweep.relay.amountOutArb = (b - arbBefore).toString(); break }
     await sleep(5_000)
   }
-  if (!sweep.relay.amountOutArb) throw new Error('hop 1: ETH never arrived on Arbitrum; check Relay status for ' + sweep.relay.requestId)
+  if (!sweep.relay.amountOutArb) throw new Error('hop 1: ETH never arrived on Arbitrum (or arrived short); check Relay status for ' + sweep.relay.requestId)
   saveLedger(ledger)
   console.log(`hop 1  arrived ${ethers.formatEther(sweep.relay.amountOutArb)} ETH on Arbitrum`)
 
   // hop 2 execute: real quote, then send to the deposit address
   const got = BigInt(sweep.relay.amountOutArb)
-  const real = await oneclickQuote((got * 995n) / 1000n, false, sinkEvm, tAddr)
+  const send2 = (got * 995n) / 1000n
+  const real = await oneclickQuote(send2, false, sinkEvm, tAddr)
+  if (!ethers.isAddress(real.quote.depositAddress)) throw new Error('1Click deposit address is not an EVM address: ' + real.quote.depositAddress)
+  if (BigInt(real.quote.amountIn) !== send2) throw new Error(`1Click amountIn ${real.quote.amountIn} != requested ${send2}`)
+  if (real.quoteRequest?.recipient !== tAddr) throw new Error('1Click quote recipient is not our reserve address')
   sweep.oneclick = { depositAddress: real.quote.depositAddress }; saveLedger(ledger)
   const tx2 = await signer.connect(arb).sendTransaction({ to: real.quote.depositAddress, value: BigInt(real.quote.amountIn) })
   sweep.oneclick.txHash = tx2.hash; saveLedger(ledger)
