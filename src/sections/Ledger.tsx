@@ -24,7 +24,7 @@ type Snapshot = {
   coverage: number | null
   zealBurned: number
   burns: number
-  ethSpent: number // ETH the Furnace swapped into \$ZEAL, lifetime
+  ethSpent: number // ETH the Furnace swapped into $ZEAL, lifetime
   zzecSpent: number // zZEC the Furnace swapped on the way, lifetime
   block: bigint
 }
@@ -287,7 +287,7 @@ export function Ledger() {
           <div className="lg-grid">
             <Stat value={snap.zealBurned} unit={TOKEN.symbol} label={`$${TOKEN.symbol} burned`} frac={0} hint={`→ ${FURNACE.burnShort}`} />
             <Stat value={snap.burns} unit="tx" label="burns" frac={0} hint="permissionless" />
-            <Stat value={snap.ethSpent} unit="ETH" label="spent buying back" frac={6} hint="fees swapped into \$ZEAL" />
+            <Stat value={snap.ethSpent} unit="ETH" label="spent buying back" frac={6} hint="fees swapped into $ZEAL" />
             <Stat value={snap.zzecSpent} unit={TOKEN.wrapper} label={`${TOKEN.wrapper} fees converted`} frac={6} hint="sold for ETH on the way" />
           </div>
           <div className="lg-note mono">
