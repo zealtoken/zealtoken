@@ -25,13 +25,13 @@ const PHASES = [
   {
     p: 'Phase 01',
     t: 'Reserve opens',
-    s: 'next',
+    s: 'live',
     d: 'First ZEC lands at the published reserve address. The live tile and the attestation agree on a non-zero number for the first time, and the first mint follows.',
   },
   {
     p: 'Phase 02',
     t: `${TOKEN.wrapper} mints`,
-    s: 'planned',
+    s: 'live',
     d: `${TOKEN.wrapper} and the Furnace deploy together. Liquidity is seeded and its fees pointed at the Furnace, so the first ${TOKEN.wrapper} trade is the first $${TOKEN.symbol} burn.`,
   },
   {
@@ -66,7 +66,9 @@ const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 04', t: 'First attestation posted by the attestor key, on a 6-hour schedule from here. Reserve 0, supply 0, coverage honest.', href: `${CONTRACTS.explorer}/tx/0x563e3ee4ac540c447ed0e8b61fc8e037233737f30508923058fcd92950b79786`, label: 'tx' },
   { d: 'Sep 04', t: 'Adversarial review pass over every contract, the operator, and the site. One real hole in the unreleased Furnace, plus operator and copy fixes. All closed. 84 tests.' },
   { d: 'Sep 04', t: 'First ZEC in the reserve, bought with ETH over NEAR Intents and attested on-chain a minute later. Both tiles agree.', href: `${CONTRACTS.explorer}/tx/0x8e2708905bf4b41809462165660b96bda0634d95f46683cea20373b93a6f1380`, label: 'tx' },
-  { d: 'next', t: 'First mint. zZEC market opens.' },
+  { d: 'Sep 04', t: 'First mint: 0.11833344 zZEC against 0.11833344 ZEC. Coverage exactly 1.00.', href: `${CONTRACTS.explorer}/tx/0x5c6c2f230b8990e2501d44196955cd16f7f1cb5917a896d12aca995864b6b530`, label: 'tx' },
+  { d: 'Sep 04', t: 'The zZEC/ETH market opens on Uniswap v4, initialized and seeded in one transaction. The first wrapped Zcash on Robinhood Chain is tradable.', href: `${CONTRACTS.explorer}/tx/0xa1251a34de6b4182ff9c04eabad724f520c7d28af925d1de38f64e97f29bf5de`, label: 'tx' },
+  { d: 'next', t: 'Pons routes $ZEAL fees to the Tap. The Furnace deploys and the first burn lands.' },
 ]
 
 const FAQ = [
