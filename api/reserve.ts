@@ -19,26 +19,27 @@ type Streamer = {
   GetLatestBlock(req: object, cb: (e: Error | null, r?: { height: string; hash: Buffer }) => void): void
 }
 
-function client(host: string): Streamer {
-  const def = loader.loadSync(join(PROTO_DIR, 'service.proto'), { keepCase: true, longs: String, defaults: true, includeDirs: [PROTO_DIR] })
-  const pkg = grpc.loadPackageDefinition(def) as unknown as { cash: { z: { wallet: { sdk: { rpc: { CompactTxStreamer: new (h: string, c: grpc.ChannelCredentials) => Streamer } } } } } }
+type Pkg = { cash: { z: { wallet: { sdk: { rpc: { CompactTxStreamer: new (h: string, c: grpc.ChannelCredentials) => Streamer & { close(): void } } } } } } }
+let pkg: Pkg | null = null
+function client(host: string): Streamer & { close(): void } {
+  pkg ??= grpc.loadPackageDefinition(loader.loadSync(join(PROTO_DIR, 'service.proto'), { keepCase: true, longs: String, defaults: true, includeDirs: [PROTO_DIR] })) as unknown as Pkg
   return new pkg.cash.z.wallet.sdk.rpc.CompactTxStreamer(host, grpc.credentials.createSsl())
 }
-const call = <T>(fn: (cb: (e: Error | null, r?: T) => void) => void, ms = 8000) =>
+const call = <T>(fn: (cb: (e: Error | null, r?: T) => void) => void, ms = 4000) =>
   new Promise<T>((res, rej) => { const t = setTimeout(() => rej(new Error('timeout')), ms); fn((e, r) => { clearTimeout(t); e ? rej(e) : res(r as T) }) })
 
 async function read() {
   let last: unknown
   for (const host of HOSTS) {
+    const c = client(host)
     try {
-      const c = client(host)
       const [bal, tip] = await Promise.all([
         call<{ valueZat: string }>((cb) => c.GetTaddressBalance({ addresses: [ADDRESS] }, cb)),
         call<{ height: string; hash: Buffer }>((cb) => c.GetLatestBlock({}, cb)),
       ])
       const zats = BigInt(bal.valueZat)
       return { address: ADDRESS, zats: zats.toString(), zec: Number(zats) / 1e8, height: Number(tip.height), hash: Buffer.from(tip.hash).reverse().toString('hex'), source: host, at: new Date().toISOString() }
-    } catch (e) { last = e }
+    } catch (e) { last = e } finally { c.close() }
   }
   throw last
 }

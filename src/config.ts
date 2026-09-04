@@ -71,7 +71,7 @@ export const TOKEN = {
   wrapper: 'zZEC',
   /** $ZEAL on Robinhood Chain, launched via Pons. */
   address: '0x9fA1C5E90A11294F83A9F135b81ad1b537A5FFdC' as string | null,
-  /** TODO: paste the multisig-held Zcash transparent address once funded. */
+  /** the operator-held Zcash transparent address once funded. */
   reserveAddress: 't1UjkXzcEG4krP5hou3Mik4VUZN72i9nJTw' as string | null,
 }
 

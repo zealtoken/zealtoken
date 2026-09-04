@@ -9,6 +9,7 @@ import { SEL, encAddress, hexToBig, readBatchRaw, units, word, wordAddress } fro
  */
 type Route = {
   recipient: string
+  buybackRecipient: string
   proposed: string | null
   effectiveAt: number
   expiresAt: number
@@ -35,6 +36,7 @@ async function fetchRoute(signal: AbortSignal): Promise<Route> {
   const proposedWord = word(pending, 0)
   return {
     recipient: wordAddress(launch, 4),
+    buybackRecipient: wordAddress(launch, 5),
     proposed: proposedWord === ZERO_WORD ? null : '0x' + proposedWord.slice(-40),
     effectiveAt: Number(hexToBig(word(pending, 1))),
     expiresAt: Number(hexToBig(word(pending, 2))),
@@ -80,7 +82,7 @@ export function FeeRoute() {
 
   if (!VISIBLE || !r || !PONS_V2.tap || !CONTRACTS.foundry) return null
 
-  const routingLive = same(r.recipient, PONS_V2.tap)
+  const routingLive = same(r.recipient, PONS_V2.tap) || same(r.buybackRecipient, PONS_V2.tap)
   const deadLetter = same(r.recipient, CONTRACTS.foundry)
   const proposedTap = same(r.proposed ?? '', PONS_V2.tap)
 

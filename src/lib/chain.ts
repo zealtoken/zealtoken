@@ -86,7 +86,11 @@ export async function readBatchRaw(calls: Call[], signal?: AbortSignal): Promise
   if (!res.ok) throw new Error(`rpc ${res.status}`)
   const out = (await res.json()) as RpcResult[]
   const byId = new Map(out.map((r) => [r.id, r]))
-  return calls.map((_, i) => byId.get(i + 1)?.result ?? '0x')
+  return calls.map((_, i) => {
+    const r = byId.get(i + 1)
+    if (!r || r.error || !r.result) throw new Error(r?.error?.message ?? 'missing result')
+    return r.result
+  })
 }
 
 /** Word `n` (32 bytes) of an ABI-encoded return. */
