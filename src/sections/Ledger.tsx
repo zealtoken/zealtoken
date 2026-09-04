@@ -14,7 +14,7 @@ import { FeeRoute } from './FeeRoute'
  */
 
 type Snapshot = {
-  earned: number // credited to our recipient(s) in the Pons escrow, awaiting claim
+  earned: number // credited to the Tap in the Pons escrow: claimable by anyone via pull()
   pending: number // ETH sitting in the Foundry, awaiting route()
   feesRouted: number
   toReserve: number
@@ -43,18 +43,18 @@ const POLL_MS = 15_000
 
 async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
   const calls: Call[] = []
-  const idx: Partial<Record<keyof Snapshot | 'earnedTap', number>> = {}
-  const push = (key: keyof Snapshot | 'earnedTap', c: Call) => {
+  const idx: Partial<Record<keyof Snapshot, number>> = {}
+  const push = (key: keyof Snapshot, c: Call) => {
     idx[key] = calls.length
     calls.push(c)
   }
 
   if (CONTRACTS.foundry) {
-    // Pons V2 pays $ZEAL fees in native ETH. They are credited to the fee
-    // recipient inside the escrow first; that balance is what moves on every
-    // trade. Read it for the Foundry (the original recipient) and the Tap.
-    push('earned', view(PONS_V2.escrow, SEL.balanceOf, CONTRACTS.foundry))
-    if (PONS_V2.tap) push('earnedTap', view(PONS_V2.escrow, SEL.balanceOf, PONS_V2.tap))
+    // Pons V2 credits creator fees to the recipient inside its escrow. Only a
+    // credit under the Tap is claimable; the credit under the old Foundry
+    // recipient is unclaimable by anyone and is shown, labelled, in the fee
+    // route panel instead of here.
+    if (PONS_V2.tap) push('earned', view(PONS_V2.escrow, SEL.balanceOf, PONS_V2.tap))
     // ETH sitting in the Foundry, claimed but not yet split.
     push('pending', nativeBalance(CONTRACTS.foundry))
     push('feesRouted', view(CONTRACTS.foundry, SEL.totalRoutedNative))
@@ -73,11 +73,11 @@ async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
   // Zero calls still returns the block: the chain read is what keeps the
   // panel honest and alive before there is anything to count.
   const { values, block } = await readBatch(calls, signal)
-  const get = (k: keyof Snapshot | 'earnedTap') => (idx[k] === undefined ? 0n : values[idx[k]!])
+  const get = (k: keyof Snapshot) => (idx[k] === undefined ? 0n : values[idx[k]!])
   const cov = get('coverage')
 
   return {
-    earned: units(get('earned') + get('earnedTap'), 18),
+    earned: units(get('earned'), 18),
     pending: units(get('pending'), 18),
     feesRouted: units(get('feesRouted'), 18),
     toReserve: units(get('toReserve'), 18),
@@ -215,13 +215,13 @@ export function Ledger() {
         <div className="lg-col">
           <div className="lg-grp mono">LOOP 01 · THE FOUNDRY</div>
           <div className="lg-grid">
-            <Stat value={snap.earned} unit="ETH" label="fees earned" frac={4} hint="in Pons escrow · awaiting claim" />
+            <Stat value={snap.earned} unit="ETH" label="claimable fees" frac={4} hint="credited to the Tap · anyone can pull()" />
             <Stat
               value={snap.pending}
               unit="ETH"
               label="in the Foundry"
               frac={4}
-              hint={snap.pending > 0 ? 'awaiting route()' : 'awaiting claim'}
+              hint={snap.pending > 0 ? 'awaiting route()' : 'nothing routed yet'}
             />
             <Stat value={snap.feesRouted} unit="ETH" label="fees routed" frac={4} />
             <Stat value={snap.toReserve} unit="ETH" label="to the reserve" frac={4} />

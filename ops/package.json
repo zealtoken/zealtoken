@@ -11,7 +11,8 @@
     "mint": "tsx src/mint.ts",
     "redeem:watch": "tsx src/redeem-watch.ts",
     "sweep": "tsx src/sweep.ts",
-    "keys:create": "tsx src/keys.ts"
+    "keys:create": "tsx src/keys.ts",
+    "pool": "tsx src/pool.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",
