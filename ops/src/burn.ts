@@ -2,8 +2,8 @@
  * Run the burn loop by hand, nothing locked: collect the zZEC/ETH position's
  * fees to the LP wallet, forward them to the Furnace, ignite.
  *
- *   LP_TOKEN_ID=1829215 npm run burn               # plan: shows collectable fees and the expected burn
- *   LP_TOKEN_ID=1829215 npm run burn -- --execute  # signs with the deployer keystore (LP owner + igniter)
+ *   LP_TOKEN_IDS=1829215,1835853 npm run burn               # plan
+ *   LP_TOKEN_IDS=1829215,1835853 npm run burn -- --execute  # signs with the deployer keystore (LP owner + igniter)
  *
  * FURNACE_ADDRESS comes from ops/.env after `npm run furnace` in contracts/.
  */
@@ -42,15 +42,17 @@ async function main() {
   const execute = process.argv.includes('--execute')
   const furnaceAddr = process.env.FURNACE_ADDRESS ?? ''
   if (!ethers.isAddress(furnaceAddr)) throw new Error('FURNACE_ADDRESS not set (deploy with `npm run furnace` in contracts/)')
-  const tokenId = BigInt(process.env.LP_TOKEN_ID ?? '0')
-  if (tokenId === 0n) throw new Error('LP_TOKEN_ID required')
+  const tokenIds = (process.env.LP_TOKEN_IDS ?? process.env.LP_TOKEN_ID ?? '').split(',').map((x) => x.trim()).filter(Boolean).map(BigInt)
+  if (tokenIds.length === 0) throw new Error('LP_TOKEN_IDS required (comma-separated)')
   const zzec = CONTRACTS.zzec
   const furnace = new ethers.Contract(furnaceAddr, furnaceAbi, provider)
-  const lpOwner: string = await posm.ownerOf(tokenId)
+  const owners: string[] = await Promise.all(tokenIds.map((id) => posm.ownerOf(id)))
+  const lpOwner = owners[0]
+  if (owners.some((o) => o.toLowerCase() !== lpOwner.toLowerCase())) throw new Error('all positions must share one owner')
 
   // Fees collectable = what a zero-liquidity decrease would pay out. Simulate it from the owner.
-  const actions = ethers.solidityPacked(['uint8', 'uint8'], [ACT.DECREASE_LIQUIDITY, ACT.TAKE_PAIR])
-  const params = [abi.encode(['uint256', 'uint256', 'uint128', 'uint128', 'bytes'], [tokenId, 0n, 0n, 0n, '0x']), abi.encode(['address', 'address', 'address'], [ETH, zzec, lpOwner])]
+  const actions = ethers.solidityPacked(Array(tokenIds.length + 1).fill('uint8'), [...tokenIds.map(() => ACT.DECREASE_LIQUIDITY), ACT.TAKE_PAIR])
+  const params = [...tokenIds.map((id) => abi.encode(['uint256', 'uint256', 'uint128', 'uint128', 'bytes'], [id, 0n, 0n, 0n, '0x'])), abi.encode(['address', 'address', 'address'], [ETH, zzec, lpOwner])]
   const unlockData = abi.encode(['bytes', 'bytes[]'], [actions, params])
   const [ethHeldF, zzecHeldF, burned, count, impact] = await Promise.all([provider.getBalance(furnaceAddr), erc20(zzec).balanceOf(furnaceAddr), furnace.totalZealBurned(), furnace.burnCount(), furnace.maxImpactBps()])
   const ethNow = await provider.getBalance(lpOwner), zzecNow: bigint = await erc20(zzec).balanceOf(lpOwner)
@@ -62,18 +64,18 @@ async function main() {
   const ethPerZzec = 1 / (Number(z.sqrtPriceX96) ** 2 / 2 ** 192) / 1e10 // raw1/raw0 with 8dp vs 18dp
 
   console.log(`\nFurnace ${furnaceAddr}  burned so far ${ethers.formatEther(burned)} ZEAL in ${count} burns  impact bound ${impact} bps (sqrt)`)
-  console.log(`LP #${tokenId} owner ${lpOwner}  |  Furnace holds ${ethers.formatEther(ethHeldF)} ETH + ${Number(zzecHeldF) / 1e8} zZEC`)
+  console.log(`LP #${tokenIds.join(', #')} owner ${lpOwner}  |  Furnace holds ${ethers.formatEther(ethHeldF)} ETH + ${Number(zzecHeldF) / 1e8} zZEC`)
   console.log(`prices  1 ETH = ${zealPerEth.toFixed(0)} ZEAL   1 zZEC = ${ethPerZzec.toFixed(5)} ETH`)
 
   if (!execute) {
-    console.log(`\nPlan: collect fees from #${tokenId} -> ${lpOwner}, forward ETH + zZEC to the Furnace, ignite.\nAdd --execute to sign (deployer keystore).\n`)
+    console.log(`\nPlan: collect fees from #${tokenIds.join(', #')} -> ${lpOwner}, forward ETH + zZEC to the Furnace, ignite.\nAdd --execute to sign (deployer keystore).\n`)
     return
   }
   const ksPath = process.env.LP_KEYSTORE ?? new URL('../../contracts/.keystore.json', import.meta.url).pathname
   const pass = process.env.LP_PASS ?? (await askHidden('keystore passphrase: '))
   const wallet = (await ethers.Wallet.fromEncryptedJson(readFileSync(ksPath, 'utf8'), pass)).connect(provider)
   delete process.env.LP_PASS
-  if (wallet.address.toLowerCase() !== lpOwner.toLowerCase()) throw new Error(`keystore ${wallet.address} does not own LP #${tokenId}`)
+  if (wallet.address.toLowerCase() !== lpOwner.toLowerCase()) throw new Error(`keystore ${wallet.address} does not own these positions`)
   if ((await furnace.igniter()).toLowerCase() !== wallet.address.toLowerCase()) throw new Error('keystore is not the Furnace igniter')
 
   // 1. collect
