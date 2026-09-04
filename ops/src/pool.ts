@@ -132,7 +132,7 @@ async function main() {
   const [ethBal, zBal] = await Promise.all([provider.getBalance(wallet.address), erc20(zzec).balanceOf(wallet.address)])
   console.log(`signer       ${wallet.address}  ${ethers.formatEther(ethBal)} ETH  ${Number(zBal) / 1e8} zZEC  -> position to ${owner}`)
   if (zBal < amount1) throw new Error('signer holds less zZEC than POOL_ZEC; mint to it first')
-  if (ethBal < amount0 + ethers.parseEther('0.002')) throw new Error('signer holds less ETH than POOL_ETH plus gas')
+  if (ethBal < amount0Max + ethers.parseEther('0.002')) throw new Error(`signer needs ${ethers.formatEther(amount0Max)} ETH plus gas`)
 
   // Permit2 path for the ERC-20 side
   const z = erc20(zzec).connect(wallet) as ethers.Contract

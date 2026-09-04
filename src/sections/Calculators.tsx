@@ -136,7 +136,7 @@ const toNum = (s: string) => {
 // ---------------------------------------------------------------- loop 01
 
 export function FoundryCalc() {
-  const [vol, setVol] = useState(1_000_000)
+  const [vol, setVol] = useState(100_000)
   const [zecPrice, setZecPrice] = useState('')
 
   const fee = (vol * PONS.poolFeePct) / 100
@@ -179,7 +179,7 @@ export function FoundryCalc() {
       <div className="calc-out">
         <div className="calc-out-main">
           <span className="stat-n green">{usd(reserveUsd)}</span>
-          <span className="stat-l">of Zcash bought and held, never sold</span>
+          <span className="stat-l">of Zcash bought into the reserve, before conversion costs</span>
         </div>
         <div className="calc-out-side">
           <SmallInput label="ZEC price (optional)" value={zecPrice} onChange={setZecPrice} prefix="$" />
@@ -202,7 +202,7 @@ export function FoundryCalc() {
 // ---------------------------------------------------------------- loop 02
 
 export function FurnaceCalc() {
-  const [vol, setVol] = useState(1_000_000)
+  const [vol, setVol] = useState(100_000)
   const [feePct, setFeePct] = useState(String(ZZEC_MARKET.poolFeePct.toFixed(2)))
   const [sharePct, setSharePct] = useState(String(ZZEC_MARKET.furnaceSharePct))
   const [zealPrice, setZealPrice] = useState('')
@@ -226,9 +226,9 @@ export function FurnaceCalc() {
         <SmallInput label="pool fee" value={feePct} onChange={setFeePct} suffix="%" />
         <SmallInput label="share to Furnace" value={sharePct} onChange={setSharePct} suffix="%" />
         <p className="calc-note">
-          Defaults assume {TOKEN.wrapper} trades in the same pool structure as ${TOKEN.symbol}: a{' '}
-          {ZZEC_MARKET.poolFeePct.toFixed(2)}% pool fee with {ZZEC_MARKET.furnaceSharePct}% of it
-          routed to the Furnace. Change either to model a different venue.
+          The {TOKEN.wrapper} market is a plain Uniswap v4 pool: its {ZZEC_MARKET.poolFeePct.toFixed(2)}% fee goes
+          to liquidity providers, and the Furnace earns the share of liquidity it holds. Defaults assume it
+          holds {ZZEC_MARKET.furnaceSharePct}%. Volume a small pool can carry is limited by its depth.
         </p>
       </div>
 

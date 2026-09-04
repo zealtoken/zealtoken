@@ -12,7 +12,8 @@
     "redeem:watch": "tsx src/redeem-watch.ts",
     "sweep": "tsx src/sweep.ts",
     "keys:create": "tsx src/keys.ts",
-    "pool": "tsx src/pool.ts"
+    "pool": "tsx src/pool.ts",
+    "watch:roles": "tsx src/watch-roles.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",

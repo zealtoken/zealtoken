@@ -44,7 +44,14 @@ async function read() {
   throw last
 }
 
-export default async function handler(_req: IncomingMessage, res: ServerResponse) {
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
+  // One cacheable URL only: a query string would bypass the CDN cache and hit the upstream node per request.
+  if ((req.url ?? '').split('?')[1]) {
+    res.statusCode = 400
+    res.setHeader('cache-control', 'public, s-maxage=3600')
+    res.end('{"error":"no query parameters"}')
+    return
+  }
   try {
     const body = await read()
     res.setHeader('content-type', 'application/json')
@@ -55,6 +62,7 @@ export default async function handler(_req: IncomingMessage, res: ServerResponse
     res.statusCode = 502
     res.setHeader('content-type', 'application/json')
     res.setHeader('cache-control', 'no-store')
-    res.end(JSON.stringify({ error: 'lightwalletd unreachable', detail: (e as Error).message }))
+    res.end(JSON.stringify({ error: 'lightwalletd unreachable' }))
+    void e
   }
 }

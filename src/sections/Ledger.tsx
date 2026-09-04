@@ -51,7 +51,7 @@ function useLiveReserve(): { zec: number; height: number } | null {
     const run = async () => {
       if (document.visibilityState === 'hidden') return
       try {
-        const r = await fetch('/api/reserve', { signal: ctrl.signal })
+        const r = await fetch('/api/reserve', { signal: ctrl.signal, cache: 'no-store' })
         if (!r.ok) return
         const j = (await r.json()) as { zec: number; height: number }
         setV({ zec: j.zec, height: j.height })

@@ -36,8 +36,8 @@ async function main() {
   console.log(`\nDeployer ${wallet.address}  ${ethers.formatEther(await ethers.provider.getBalance(wallet.address))} ETH`)
   console.log(`owner    ${owner}\nigniter  ${igniter}\nzZEC pool ${id(zzecPool)}\n$ZEAL pool ${id(zealPool)}\n`)
   const F = (await ethers.getContractFactory('ZealFurnaceV4')).connect(wallet)
-  const maxImpactBps = Number(process.env.FURNACE_MAX_IMPACT_BPS ?? 500)
-  console.log(`impact   ${maxImpactBps} bps per leg\n`)
+  const maxImpactBps = Number(process.env.FURNACE_MAX_IMPACT_BPS ?? 250) // sqrt-price bps; ~5% price per leg
+  console.log(`impact   ${maxImpactBps} bps of sqrt price per leg (about ${(1 - (1 - maxImpactBps / 10000) ** 2) * 100}% price)\n`)
   const furnace = await F.deploy(POOL_MANAGER, POSITION_MANAGER, ZEAL, ZZEC, zzecPool, zealPool, maxImpactBps, owner, igniter)
   await furnace.waitForDeployment()
   const addr = await furnace.getAddress()

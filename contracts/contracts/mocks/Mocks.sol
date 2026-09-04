@@ -205,7 +205,9 @@ contract MockPositionManagerV4 {
     address public feeTokenAddr;
     bytes public lastUnlockData;
     mapping(uint256 => PoolKey) private poolOf;
+    mapping(uint256 => address) public ownerOf;
     receive() external payable {}
+    function setOwner(uint256 tokenId, address o) external { ownerOf[tokenId] = o; }
     function setPositionPool(uint256 tokenId, PoolKey calldata key) external { poolOf[tokenId] = key; }
     function getPoolAndPositionInfo(uint256 tokenId) external view returns (PoolKey memory, uint256) { return (poolOf[tokenId], 0); }
     function setFees(address token, uint256 tokenAmt, uint256 ethAmt) external { feeTokenAddr = token; feeToken = tokenAmt; feeEth = ethAmt; }
@@ -214,10 +216,14 @@ contract MockPositionManagerV4 {
     function modifyLiquidities(bytes calldata unlockData, uint256) external payable {
         lastUnlockData = unlockData;
         (bytes memory actions, bytes[] memory params) = abi.decode(unlockData, (bytes, bytes[]));
-        require(actions.length == 2 && uint8(actions[0]) == 0x01 && uint8(actions[1]) == 0x11, "unexpected actions");
-        (, uint256 liquidity,,,) = abi.decode(params[0], (uint256, uint256, uint128, uint128, bytes));
-        require(liquidity == 0, "liquidity must be untouched");
-        (,, address to) = abi.decode(params[1], (address, address, address));
+        uint256 n = actions.length - 1;
+        require(n >= 1 && uint8(actions[n]) == 0x11, "last action must be TAKE_PAIR");
+        for (uint256 i = 0; i < n; ++i) {
+            require(uint8(actions[i]) == 0x01, "only DECREASE_LIQUIDITY");
+            (, uint256 liquidity,,,) = abi.decode(params[i], (uint256, uint256, uint128, uint128, bytes));
+            require(liquidity == 0, "liquidity must be untouched");
+        }
+        (,, address to) = abi.decode(params[n], (address, address, address));
         if (feeToken != 0) MockERC20(feeTokenAddr).mint(to, feeToken);
         if (feeEth != 0) { (bool ok,) = payable(to).call{value: feeEth}(""); require(ok, "eth"); }
     }

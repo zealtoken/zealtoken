@@ -63,7 +63,7 @@ const LIMITS = [
   },
   {
     t: `$${TOKEN.symbol} is a memecoin with a job.`,
-    d: 'Not equity, not a claim on the reserve. It funds the machine, and the machine burns it. Burns scale with wrapper volume, so they start small and compound.',
+    d: 'Not equity, not a claim on the reserve. It funds the machine, and the machine burns it. Burns scale with wrapper volume, so they start small and grow with it.',
   },
 ]
 

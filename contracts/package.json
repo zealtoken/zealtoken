@@ -16,7 +16,8 @@
     "preflight:zzec": "hardhat run scripts/preflight-zzec.ts --network rhMainnet",
     "zzec": "hardhat run scripts/deploy-zzec.ts --network rhMainnet",
     "tap2": "hardhat run scripts/deploy-tap2.ts --network rhMainnet",
-    "furnace": "hardhat run scripts/deploy-furnace.ts --network rhMainnet"
+    "furnace": "hardhat run scripts/deploy-furnace.ts --network rhMainnet",
+    "zzec:age": "hardhat run scripts/set-attestation-age.ts --network rhMainnet"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

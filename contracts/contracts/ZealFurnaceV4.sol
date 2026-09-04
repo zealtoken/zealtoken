@@ -35,6 +35,7 @@ interface IPoolManager {
 interface IPositionManager {
     function modifyLiquidities(bytes calldata unlockData, uint256 deadline) external payable;
     function getPoolAndPositionInfo(uint256 tokenId) external view returns (PoolKey memory, uint256);
+    function ownerOf(uint256 tokenId) external view returns (address);
 }
 
 /**
@@ -78,15 +79,16 @@ contract ZealFurnaceV4 is Ownable2Step, ReentrancyGuard, IERC721Receiver {
     PoolKey public zzecPool;
     /// @dev ETH/$ZEAL market: currency0 = ETH, currency1 = $ZEAL.
     PoolKey public zealPool;
-    /// @notice Each ignite leg may move its pool's price by at most this much. Bounds a bad fill.
+    /// @notice Each ignite leg may move its pool's SQRT price by at most this much (bps). Price moves by
+    ///         roughly twice that: 250 bps here is about a 5% price bound per leg. Bounds a bad fill.
     uint256 public immutable maxImpactBps;
 
     address public igniter;
     struct PendingRole { address account; uint64 eta; }
     PendingRole public pendingIgniter;
 
-    /// @notice LP position this contract holds, if any. Only its fees are ever touched.
-    uint256 public positionId;
+    /// @notice LP positions this contract holds. Only their fees are ever touched; liquidity never leaves.
+    uint256[] public positionIds;
 
     uint256 public totalZealBurned;
     uint256 public totalEthConsumed;
@@ -108,7 +110,8 @@ contract ZealFurnaceV4 is Ownable2Step, ReentrancyGuard, IERC721Receiver {
     error NothingToIgnite();
     error NothingToBurn();
     error NoPosition();
-    error AlreadyHoldsPosition();
+    error NotHeld();
+    error AlreadyListed();
     error InsufficientOutput(uint256 got, uint256 min);
     error BadPoolKey();
     error PoolNotInitialized(bytes32 poolId);
@@ -157,28 +160,45 @@ contract ZealFurnaceV4 is Ownable2Step, ReentrancyGuard, IERC721Receiver {
 
     // ------------------------------------------------------------- collect
 
-    /// @notice Pull this contract's LP fees into the Furnace. Anyone may call.
-    /// @dev DECREASE_LIQUIDITY with liquidity = 0 collects fees only; TAKE_PAIR delivers them here.
-    function collectFees() external nonReentrant {
-        uint256 id = positionId;
-        if (id == 0) revert NoPosition();
-        bytes memory actions = abi.encodePacked(ACTION_DECREASE_LIQUIDITY, ACTION_TAKE_PAIR);
-        bytes[] memory params = new bytes[](2);
-        params[0] = abi.encode(id, uint256(0), uint128(0), uint128(0), bytes(""));
-        params[1] = abi.encode(zzecPool.currency0, zzecPool.currency1, address(this));
-        positionManager.modifyLiquidities(abi.encode(actions, params), block.timestamp);
-        emit FeesCollected(msg.sender, id);
+    function positionCount() external view returns (uint256) { return positionIds.length; }
+
+    /// @notice Register a zZEC-pool position that reached this contract without the receiver hook
+    ///         (a plain transferFrom). Owner only; the NFT must already be held here. Opens no exit.
+    function adoptPosition(uint256 tokenId) external onlyOwner {
+        if (positionManager.ownerOf(tokenId) != address(this)) revert NotHeld();
+        (PoolKey memory key,) = positionManager.getPoolAndPositionInfo(tokenId);
+        if (_id(key) != _id(zzecPool)) revert WrongPool();
+        for (uint256 i = 0; i < positionIds.length; ++i) if (positionIds[i] == tokenId) revert AlreadyListed();
+        positionIds.push(tokenId);
+        emit PositionReceived(tokenId, msg.sender);
     }
 
-    /// @dev Accept exactly one LP NFT: sent by the owner, via the PositionManager, in the zZEC/ETH pool.
+    /// @notice Pull the LP fees of every position held into the Furnace. Anyone may call.
+    /// @dev DECREASE_LIQUIDITY with liquidity = 0 collects fees only; one TAKE_PAIR delivers them all here.
+    function collectFees() external nonReentrant {
+        uint256 n = positionIds.length;
+        if (n == 0) revert NoPosition();
+        bytes memory actions;
+        bytes[] memory params = new bytes[](n + 1);
+        for (uint256 i = 0; i < n; ++i) {
+            actions = abi.encodePacked(actions, ACTION_DECREASE_LIQUIDITY);
+            params[i] = abi.encode(positionIds[i], uint256(0), uint128(0), uint128(0), bytes(""));
+            emit FeesCollected(msg.sender, positionIds[i]);
+        }
+        actions = abi.encodePacked(actions, ACTION_TAKE_PAIR);
+        params[n] = abi.encode(zzecPool.currency0, zzecPool.currency1, address(this));
+        positionManager.modifyLiquidities(abi.encode(actions, params), block.timestamp);
+    }
+
+    /// @dev Accept LP NFTs: sent by the owner, via the PositionManager, in the zZEC/ETH pool only.
+    ///      Any number, so the liquidity share can keep adding positions whose fees feed the burn.
     ///      The real PositionManager only invokes this on safeTransferFrom, so mint to the owner first.
     function onERC721Received(address, address from, uint256 tokenId, bytes calldata) external returns (bytes4) {
         if (msg.sender != address(positionManager)) revert NotPositionManager();
         if (from != owner()) revert NotOwnerDeposit();
-        if (positionId != 0) revert AlreadyHoldsPosition();
         (PoolKey memory key,) = positionManager.getPoolAndPositionInfo(tokenId);
         if (_id(key) != _id(zzecPool)) revert WrongPool();
-        positionId = tokenId;
+        positionIds.push(tokenId);
         emit PositionReceived(tokenId, from);
         return IERC721Receiver.onERC721Received.selector;
     }
