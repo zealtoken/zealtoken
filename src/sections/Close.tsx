@@ -69,7 +69,8 @@ const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 04', t: 'First mint: 0.11833344 zZEC against 0.11833344 ZEC. Coverage exactly 1.00.', href: `${CONTRACTS.explorer}/tx/0x5c6c2f230b8990e2501d44196955cd16f7f1cb5917a896d12aca995864b6b530`, label: 'tx' },
   { d: 'Sep 04', t: 'The zZEC/ETH market opens on Uniswap v4, initialized and seeded in one transaction. The first wrapped Zcash on Robinhood Chain is tradable.', href: `${CONTRACTS.explorer}/tx/0xa1251a34de6b4182ff9c04eabad724f520c7d28af925d1de38f64e97f29bf5de`, label: 'tx' },
   { d: 'Sep 04', t: 'The Furnace deploys, verified, with an instant pause, owner-set hook data, and timelocked pool rotation added from an outside reader\u2019s review the same day. Loop two is on chain.', href: CONTRACTS.furnace ? src(CONTRACTS.furnace) : undefined, label: 'source' },
-  { d: 'next', t: 'First burn. Pons routes $ZEAL fees to the Tap.' },
+  { d: 'Sep 04', t: 'First burn. zZEC trading fees collected, swapped to $ZEAL through the Furnace, and sent to the burn address. 571.8 $ZEAL gone. Loop two turns.', href: `${CONTRACTS.explorer}/tx/0x51a42aec6c299e78a187c3f8e62266b7a9872718dfd04e87b2160b16f1dd17a2`, label: 'tx' },
+  { d: 'next', t: 'Pons routes $ZEAL fees to the Tap, and loop one turns too.' },
 ]
 
 const FAQ = [
