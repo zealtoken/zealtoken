@@ -168,17 +168,19 @@ function Stat({
   label,
   frac,
   hint,
+  small = false,
 }: {
   value: number
   unit: string
   label: string
   frac: number
   hint?: string
+  small?: boolean
 }) {
   const shown = useCountUp(value)
   return (
     <div className="lg-stat">
-      <div className="lg-n">
+      <div className={`lg-n ${small ? 'lg-n-sm' : ''}`}>
         {fmt(shown, frac)}
         <span className="lg-u mono">{unit}</span>
       </div>
@@ -287,8 +289,8 @@ export function Ledger() {
           <div className="lg-grid">
             <Stat value={snap.zealBurned} unit={TOKEN.symbol} label={`$${TOKEN.symbol} burned`} frac={0} hint={`→ ${FURNACE.burnShort}`} />
             <Stat value={snap.burns} unit="tx" label="burns" frac={0} hint="permissionless" />
-            <Stat value={snap.ethSpent} unit="ETH" label="spent buying back" frac={6} hint="fees swapped into $ZEAL" />
-            <Stat value={snap.zzecSpent} unit={TOKEN.wrapper} label={`${TOKEN.wrapper} fees converted`} frac={6} hint="sold for ETH on the way" />
+            <Stat value={snap.ethSpent} unit="ETH" label="spent buying back" frac={6} hint="fees swapped into $ZEAL" small />
+            <Stat value={snap.zzecSpent} unit={TOKEN.wrapper} label={`${TOKEN.wrapper} fees converted`} frac={6} hint="sold for ETH on the way" small />
           </div>
           <div className="lg-note mono">
             {contractsLive

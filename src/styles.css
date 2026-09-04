@@ -1086,3 +1086,7 @@ p:last-child { margin-bottom: 0; }
 .ca-compact .ca-btn { border-color: rgba(255,255,255,0.22); color: rgba(255,255,255,0.7); }
 .ca-compact .ca-btn:hover { color: var(--green-bright); border-color: var(--green-bright); }
 @media (max-width: 560px) { .ca { border-radius: 16px; } }
+
+/* secondary ledger stats: long decimals at a size that cannot overflow the column */
+.lg-n-sm { font-size: clamp(20px, 2.2vw, 28px); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.lg-n-sm .lg-u { font-size: 11px; }
