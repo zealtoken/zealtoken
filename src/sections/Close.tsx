@@ -63,7 +63,8 @@ const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 03', t: `${TOKEN.wrapper} deployed and verified. Supply zero. It cannot mint until the reserve is attested, and it can never stop redemptions.`, href: CONTRACTS.zzec ? src(CONTRACTS.zzec) : undefined, label: 'source' },
   { d: 'Sep 04', t: 'Live ZEC balance on the ledger, read from a Zcash node next to the attested number. Two sources, one truth.' },
   { d: 'Sep 04', t: 'The Furnace rebuilt for Uniswap v4: zZEC fees → ETH → $ZEAL → burn, LP fees collectable by anyone, liquidity itself untouchable. 9 new tests, 83 total.', href: LINKS.repo ? `${LINKS.repo}/blob/main/contracts/contracts/ZealFurnaceV4.sol` : undefined, label: 'source' },
-  { d: 'next', t: 'First ZEC in the reserve. First attestation. First mint. zZEC market opens.' },
+  { d: 'Sep 04', t: 'First attestation posted by the attestor key, on a 6-hour schedule from here. Reserve 0, supply 0, coverage honest.', href: `${CONTRACTS.explorer}/tx/0x563e3ee4ac540c447ed0e8b61fc8e037233737f30508923058fcd92950b79786`, label: 'tx' },
+  { d: 'next', t: 'First ZEC in the reserve. First mint. zZEC market opens.' },
 ]
 
 const FAQ = [
