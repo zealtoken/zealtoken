@@ -1074,3 +1074,15 @@ p:last-child { margin-bottom: 0; }
 .route-h { font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 4px; }
 .dot-wait { background: rgba(255,255,255,0.5) !important; animation: none !important; }
 @media (max-width: 720px) { .route-grid { grid-template-columns: 1fr 1fr; } }
+
+/* $ZEAL contract address pill */
+.ca { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 18px; padding: 8px 10px 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: rgba(0, 0, 0, 0.03); max-width: 100%; }
+.ca-l { font-size: 11px; letter-spacing: 0.16em; color: var(--green-text); font-weight: 700; }
+.ca-addr { font-size: 12.5px; color: var(--fg); word-break: break-all; }
+.ca-btn { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--fg-soft); cursor: pointer; text-decoration: none; }
+.ca-btn:hover { border-color: var(--green); color: var(--green-text); }
+.ca-compact { margin: 0 0 20px; border-color: rgba(255,255,255,0.18); background: transparent; }
+.ca-compact .ca-addr { color: rgba(255,255,255,0.8); }
+.ca-compact .ca-btn { border-color: rgba(255,255,255,0.22); color: rgba(255,255,255,0.7); }
+.ca-compact .ca-btn:hover { color: var(--green-bright); border-color: var(--green-bright); }
+@media (max-width: 560px) { .ca { border-radius: 16px; } }
