@@ -43,6 +43,32 @@ const ZERO: Snapshot = {
 
 const POLL_MS = 15_000
 
+/** The reserve's actual on-chain ZEC, via /api/reserve (lightwalletd). Null until the first read. */
+function useLiveReserve(): { zec: number; height: number } | null {
+  const [v, setV] = useState<{ zec: number; height: number } | null>(null)
+  useEffect(() => {
+    const ctrl = new AbortController()
+    const run = async () => {
+      if (document.visibilityState === 'hidden') return
+      try {
+        const r = await fetch('/api/reserve', { signal: ctrl.signal })
+        if (!r.ok) return
+        const j = (await r.json()) as { zec: number; height: number }
+        setV({ zec: j.zec, height: j.height })
+      } catch {
+        /* keep the last read */
+      }
+    }
+    void run()
+    const t = window.setInterval(run, 60_000)
+    return () => {
+      ctrl.abort()
+      window.clearInterval(t)
+    }
+  }, [])
+  return v
+}
+
 async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
   const calls: Call[] = []
   type Key = keyof Snapshot | 'stranded' | 'hookPending'
@@ -195,6 +221,7 @@ export function Ledger() {
     return () => window.clearInterval(t)
   }, [readAt])
 
+  const live = useLiveReserve()
   const coverageHint =
     snap.coverage === null ? 'no supply yet' : `${(snap.coverage * 100).toFixed(2)}% covered`
 
@@ -235,7 +262,14 @@ export function Ledger() {
             />
             <Stat value={snap.feesRouted} unit="ETH" label="fees routed" frac={4} />
             <Stat value={snap.toReserve} unit="ETH" label="to the reserve" frac={4} />
-            <Stat value={snap.zecHeld} unit="ZEC" label="ZEC held" frac={2} hint="attested" />
+            <Stat value={snap.zecHeld} unit="ZEC" label="ZEC attested" frac={4} hint="last attestation on-chain" />
+            <Stat
+              value={live?.zec ?? 0}
+              unit="ZEC"
+              label="ZEC in reserve"
+              frac={4}
+              hint={live ? `live · Zcash block ${live.height.toLocaleString('en-US')}` : 'reading Zcash…'}
+            />
             <Stat value={snap.zzecSupply} unit={TOKEN.wrapper} label={`${TOKEN.wrapper} minted`} frac={2} hint={coverageHint} />
           </div>
         </div>
