@@ -1,3 +1,4 @@
+import { taddrBalanceZats, chainTip } from './zcash-light.js'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { RESERVE, ZATS_PER_ZEC } from './config.js'
@@ -19,22 +20,13 @@ async function zingo(args: string[]): Promise<string> {
 }
 
 /** Transparent balance of the reserve address, in zatoshi, after a sync. */
-export async function reserveBalanceZats(): Promise<bigint> {
-  const out = await zingo(['--waitsync', 'balance'])
-  // zingo prints JSON for `balance`; the transparent line is what backs zZEC.
-  const j = JSON.parse(out.slice(out.indexOf('{')))
-  const t = j.transparent_balance ?? j.tbalance ?? j.transparent
-  if (t === undefined) throw new Error(`unexpected balance output: ${out.slice(0, 200)}`)
-  return BigInt(t)
+export async function reserveBalanceZats(address: string): Promise<bigint> {
+  return taddrBalanceZats(address)
 }
 
 /** Latest synced block hash, used as the attestation's proofRef. */
 export async function chainTipHash(): Promise<string> {
-  const out = await zingo(['--waitsync', 'info'])
-  const j = JSON.parse(out.slice(out.indexOf('{')))
-  const h: string = j.latest_block_hash ?? j.block_hash ?? ''
-  if (!/^[0-9a-f]{64}$/i.test(h)) throw new Error(`no block hash in info: ${out.slice(0, 200)}`)
-  return '0x' + h
+  return (await chainTip()).hash
 }
 
 /** Send native ZEC from the reserve to a transparent address. Returns the txid. */

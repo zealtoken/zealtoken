@@ -72,7 +72,7 @@ export const TOKEN = {
   /** $ZEAL on Robinhood Chain, launched via Pons. */
   address: '0x9fA1C5E90A11294F83A9F135b81ad1b537A5FFdC' as string | null,
   /** TODO: paste the multisig-held Zcash transparent address once funded. */
-  reserveAddress: null as string | null,
+  reserveAddress: 't1UjkXzcEG4krP5hou3Mik4VUZN72i9nJTw' as string | null,
 }
 
 /**
@@ -125,6 +125,7 @@ export const FURNACE = {
 } as const
 
 export const LINKS = {
+  zcashExplorer: 'https://mainnet.zcashexplorer.app/address/',
   /** Public mirror under an anonymous org; null until it exists. Never link a personal account. */
   repo: 'https://github.com/zealtoken/zealtoken' as string | null,
   x: 'https://x.com/ZealTheMascot',
