@@ -35,8 +35,8 @@ describe('ZealFurnaceV4', () => {
     const fns = furnace.interface.fragments.filter((x) => x.type === 'function').map((x) => (x as unknown as { name: string }).name).sort()
     // Every state-changing function, by name. Anything not on this list is a door that must not exist.
     expect(fns).to.deep.equal([
-      'BURN_ADDRESS', 'PROPOSAL_WINDOW', 'ROLE_TIMELOCK', 'acceptOwnership', 'burn', 'burnCount', 'cancelIgniterProposal',
-      'adoptPosition', 'collectFees', 'commitIgniter', 'ignite', 'igniter', 'maxImpactBps', 'onERC721Received', 'owner', 'pendingIgniter',
+      'BURN_ADDRESS', 'PROPOSAL_WINDOW', 'ROLE_TIMELOCK', 'acceptOwnership', 'adoptPosition', 'burn', 'burnCount',
+      'cancelIgniterProposal', 'collectFees', 'commitIgniter', 'ignite', 'igniter', 'maxImpactBps', 'onERC721Received', 'owner', 'pendingIgniter',
       'pendingOwner', 'poolManager', 'positionCount', 'positionIds', 'positionManager', 'proposeIgniter', 'renounceOwnership',
       'totalEthConsumed', 'totalZealBurned', 'totalZzecConsumed', 'transferOwnership', 'unlockCallback', 'zeal', 'zealPool',
       'zzec', 'zzecPool',
