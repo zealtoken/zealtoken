@@ -8,7 +8,8 @@
     "ZZEC": "0x0b151Ff7a7c5250130EC16C275790961d558E402",
     "ZealFurnace": null,
     "ZealTap": "0xA0dAE8fe24BDfb2331A1D581dC47bE61c565E655",
-    "ZealTapV2": "0x9F5b105d0DBee12376aC972Ec2207772c5EDbB47"
+    "ZealTapV2": "0x9F5b105d0DBee12376aC972Ec2207772c5EDbB47",
+    "ZealFurnaceV4": "0x72C2f71dC3c0058974fd59039F9A79397bf87E70"
   },
   "foundry": {
     "split": {
@@ -43,5 +44,14 @@
     "poolId": "0x95f9fcf8eb2d707d6c9c8175822c6005fcce759933e54f8d5ca6df458c8ccaf0",
     "steward": "0x1C083F2f85aCadae452C7512C45cD7c8a3ddbF03",
     "deployedAt": "2026-09-03T22:29:19.254Z"
+  },
+  "furnaceV4": {
+    "poolManager": "0x8366a39cc670b4001a1121b8f6a443a643e40951",
+    "positionManager": "0x58daec3116aae6d93017baaea7749052e8a04fa7",
+    "zeal": "0x9fA1C5E90A11294F83A9F135b81ad1b537A5FFdC",
+    "zzec": "0x0b151Ff7a7c5250130EC16C275790961d558E402",
+    "owner": "0x1C083F2f85aCadae452C7512C45cD7c8a3ddbF03",
+    "igniter": "0x1C083F2f85aCadae452C7512C45cD7c8a3ddbF03",
+    "deployedAt": "2026-09-04T22:59:27.363Z"
   }
 }
