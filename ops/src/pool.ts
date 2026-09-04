@@ -191,7 +191,6 @@ async function main() {
     abi.encode(['address', 'address'], [ETH, zzec]),
     abi.encode(['address', 'address'], [ETH, wallet.address]),
   ]
-  const nextId = await posm.nextTokenId()
   const unlockData = abi.encode(['bytes', 'bytes[]'], [actions, params])
   const deadline = Math.floor(Date.now() / 1000) + 1200
   const p = posm.connect(wallet) as ethers.Contract
@@ -200,9 +199,13 @@ async function main() {
     ? [posm.interface.encodeFunctionData('modifyLiquidities', [unlockData, deadline])]
     : [posm.interface.encodeFunctionData('initializePool', [key, sqrtPriceX96]), posm.interface.encodeFunctionData('modifyLiquidities', [unlockData, deadline])]
   const tx = await p.multicall(calls, { value: amount0Max })
-  console.log(`${initialized ? 'mint LP     ' : 'init + mint '} ${tx.hash}`); await tx.wait()
+  console.log(`${initialized ? 'mint LP     ' : 'init + mint '} ${tx.hash}`); const rc = await tx.wait()
+  // The token id comes from the receipt's ERC-721 Transfer, never from a pre-read of nextTokenId (others mint too).
+  const transferTopic = ethers.id('Transfer(address,address,uint256)')
+  const mintLog = (rc?.logs ?? []).find((l: ethers.Log) => l.address.toLowerCase() === V4.positionManager.toLowerCase() && l.topics[0] === transferTopic && l.topics.length === 4 && BigInt(l.topics[1]) === 0n)
+  const tokenId = mintLog ? BigInt(mintLog.topics[3]).toString() : '(not found in receipt)'
   const [s, L] = await Promise.all([stateView.getSlot0(poolId), stateView.getLiquidity(poolId)])
   if (s.sqrtPriceX96 === 0n || L === 0n) throw new Error('pool shows no price or no liquidity after the mint; investigate before retrying')
-  console.log(`\nDONE  position #${nextId} -> ${owner}\n      pool liquidity ${L}  sqrtPrice ${s.sqrtPriceX96}  tick ${s.tick}\n      poolId ${poolId}\n`)
+  console.log(`\nDONE  position #${tokenId} -> ${owner}\n      pool liquidity ${L}  sqrtPrice ${s.sqrtPriceX96}  tick ${s.tick}\n      poolId ${poolId}\n`)
 }
 main().catch((e) => { console.error(e.shortMessage ?? e.message ?? e); process.exit(1) })

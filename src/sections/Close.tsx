@@ -134,7 +134,7 @@ export function Close() {
                 <div className="phase-body">
                   <div className="phase-head">
                     <span className="mono">{p.p}</span>
-                    <span className={`tag ${i === 0 ? 'tag-live' : 'tag-wait'}`}>
+                    <span className={`tag ${p.s === 'live' ? 'tag-live' : 'tag-wait'}`}>
                       <span className="dot" />
                       {p.s}
                     </span>
