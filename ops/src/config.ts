@@ -2,6 +2,9 @@
  * Everything the operator needs to know, in one place. Addresses are public
  * facts; secrets come from the environment and are never written here.
  */
+// Load ops/.env when present so every script works from a plain `npm run`.
+try { process.loadEnvFile(new URL('../.env', import.meta.url).pathname) } catch { /* no .env: rely on the environment */ }
+
 export const CHAIN = {
   name: 'Robinhood Chain',
   id: 4663,
