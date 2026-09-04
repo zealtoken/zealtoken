@@ -1,5 +1,6 @@
 import { CHAIN, LINKS, PONS, TOKEN } from '../config'
 import { stagger } from '../useReveal'
+import { ContractAddress } from './ContractAddress'
 import { Ledger } from './Ledger'
 import { HeroBackdrop } from '../art/HeroBackdrop'
 
@@ -38,7 +39,10 @@ export function Hero() {
             </a>
           </div>
 
-          <p className="hero-note mono" data-reveal style={stagger(4)}>
+          <div data-reveal style={stagger(4)}>
+            <ContractAddress />
+          </div>
+          <p className="hero-note mono" data-reveal style={stagger(5)}>
             No presale. No team allocation. Two contracts with no reverse gear.
           </p>
         </div>

@@ -13,6 +13,7 @@ const trim = (n: number) => (Math.round(n * 1000) % 10 === 0 ? n.toFixed(2) : n.
 const money = (n: number) => `$${trim(n)}`
 const pct = (n: number) => `${trim(n)}%`
 import { stagger } from '../useReveal'
+import { ContractAddress } from './ContractAddress'
 
 const PHASES = [
   {
@@ -228,6 +229,7 @@ export function Close() {
             <p className="mono">
               {CHAIN.name} · chain id {CHAIN.id}
             </p>
+            <ContractAddress compact />
             <p className="foot-legal">
               ${TOKEN.symbol} is a community token with no intrinsic value and no expectation of
               financial return. Nothing here is investment advice, an offer, or a solicitation.
