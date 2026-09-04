@@ -87,6 +87,16 @@ contract ZealFurnaceV4 is Ownable2Step, ReentrancyGuard, IERC721Receiver {
     struct PendingRole { address account; uint64 eta; }
     PendingRole public pendingIgniter;
 
+    /// @notice Owner kill switch for ignite. Instant, like zZEC's mint pause. Burn and collectFees never pause.
+    bool public ignitePaused;
+    /// @notice Data forwarded to the $ZEAL pool's hook on every ignite. Owner-set, never caller-chosen.
+    bytes public zealHookData;
+
+    /// @dev A pool migration would otherwise strand every inflow forever. Rotation is owner-proposed,
+    ///      48h delayed, expires like a role change, and only ever points at initialized pools.
+    struct PendingPools { PoolKey zzecPool; PoolKey zealPool; uint64 eta; bool set; }
+    PendingPools public pendingPools;
+
     /// @notice LP positions this contract holds. Only their fees are ever touched; liquidity never leaves.
     uint256[] public positionIds;
 
@@ -102,6 +112,11 @@ contract ZealFurnaceV4 is Ownable2Step, ReentrancyGuard, IERC721Receiver {
     event IgniterProposed(address indexed account, uint64 eta);
     event IgniterSet(address indexed previous, address indexed current);
     event IgniterProposalCancelled(address indexed account);
+    event IgnitePaused(bool paused);
+    event HookDataSet(bytes data);
+    event PoolsProposed(bytes32 zzecPoolId, bytes32 zealPoolId, uint64 eta);
+    event PoolsCommitted(bytes32 zzecPoolId, bytes32 zealPoolId);
+    event PoolsProposalCancelled();
 
     error NotIgniter();
     error NotPoolManager();
@@ -122,6 +137,7 @@ contract ZealFurnaceV4 is Ownable2Step, ReentrancyGuard, IERC721Receiver {
     error TimelockNotElapsed(uint64 eta);
     error ProposalExpired(uint64 eta);
     error CannotRenounce();
+    error Paused();
 
     modifier onlyIgniter() { if (msg.sender != igniter) revert NotIgniter(); _; }
 
@@ -209,9 +225,10 @@ contract ZealFurnaceV4 is Ownable2Step, ReentrancyGuard, IERC721Receiver {
      * @notice Swap the zZEC held into ETH, then the ETH held into $ZEAL, then burn it all.
      *         Each leg stops at maxImpactBps of price movement; whatever is left waits for the next ignite.
      * @param minZealOut Floor on $ZEAL received across the whole ignition. Reverts below it.
-     * @param hookData  Passed to the $ZEAL pool's hook (Pons); empty today.
      */
-    function ignite(uint256 minZealOut, bytes calldata hookData) external onlyIgniter nonReentrant returns (uint256 zealOut) {
+    function ignite(uint256 minZealOut) external onlyIgniter nonReentrant returns (uint256 zealOut) {
+        if (ignitePaused) revert Paused();
+        bytes memory hookData = zealHookData;
         uint256 zzecHeld = zzec.balanceOf(address(this));
         uint256 ethHeld = address(this).balance;
         if (zzecHeld == 0 && ethHeld == 0) revert NothingToIgnite();
@@ -336,6 +353,43 @@ contract ZealFurnaceV4 is Ownable2Step, ReentrancyGuard, IERC721Receiver {
     function cancelIgniterProposal() external onlyOwner {
         emit IgniterProposalCancelled(pendingIgniter.account);
         delete pendingIgniter;
+    }
+
+    function setIgnitePaused(bool paused) external onlyOwner {
+        ignitePaused = paused;
+        emit IgnitePaused(paused);
+    }
+
+    function setZealHookData(bytes calldata data) external onlyOwner {
+        zealHookData = data;
+        emit HookDataSet(data);
+    }
+
+    function proposePools(PoolKey calldata zzecPool_, PoolKey calldata zealPool_) external onlyOwner {
+        if (zzecPool_.currency0 != address(0) || zzecPool_.currency1 != address(zzec)) revert BadPoolKey();
+        if (zealPool_.currency0 != address(0) || zealPool_.currency1 != address(zeal)) revert BadPoolKey();
+        if (_sqrtPrice(poolManager, _id(zzecPool_)) == 0) revert PoolNotInitialized(_id(zzecPool_));
+        if (_sqrtPrice(poolManager, _id(zealPool_)) == 0) revert PoolNotInitialized(_id(zealPool_));
+        uint64 eta = uint64(block.timestamp) + ROLE_TIMELOCK;
+        pendingPools = PendingPools(zzecPool_, zealPool_, eta, true);
+        emit PoolsProposed(_id(zzecPool_), _id(zealPool_), eta);
+    }
+
+    function commitPools() external onlyOwner {
+        PendingPools memory p = pendingPools;
+        if (!p.set) revert NoPendingRole();
+        if (block.timestamp < p.eta) revert TimelockNotElapsed(p.eta);
+        if (block.timestamp > p.eta + PROPOSAL_WINDOW) revert ProposalExpired(p.eta);
+        // Positions already held belong to the old zZEC pool; they stay collectable only if the pool is unchanged.
+        zzecPool = p.zzecPool;
+        zealPool = p.zealPool;
+        delete pendingPools;
+        emit PoolsCommitted(_id(p.zzecPool), _id(p.zealPool));
+    }
+
+    function cancelPoolsProposal() external onlyOwner {
+        delete pendingPools;
+        emit PoolsProposalCancelled();
     }
 
     /// @dev An ownerless Furnace could never rotate a lost igniter, locking every inflow. Not allowed.
