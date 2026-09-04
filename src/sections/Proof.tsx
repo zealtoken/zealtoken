@@ -1,4 +1,4 @@
-import { CHAIN, CONTRACTS, FURNACE, PONS_V2, TOKEN } from '../config'
+import { CHAIN, CONTRACTS, FURNACE, LINKS, PONS_V2, TOKEN } from '../config'
 import { stagger } from '../useReveal'
 
 type Status = 'verified' | 'pending'
@@ -26,6 +26,7 @@ const CHECKS: Check[] = [
     d: 'A Zcash transparent address, published here. Shielded would be unauditable, which is the opposite of what a wrapper needs.',
     v: TOKEN.reserveAddress ?? 'published at reserve open',
     status: TOKEN.reserveAddress ? 'verified' : 'pending',
+    href: TOKEN.reserveAddress ? LINKS.zcashExplorer + TOKEN.reserveAddress : undefined,
   },
   {
     t: `The ${TOKEN.wrapper} contract`,
@@ -99,7 +100,7 @@ export function Proof() {
                 <div className="addr">
                   {c.href ? (
                     <a href={c.href} target="_blank" rel="noreferrer">
-                      {c.v} <span className="addr-go">read the source ↗</span>
+                      {c.v} <span className="addr-go">{c.href?.includes('zcash') ? 'watch it ↗' : 'read the source ↗'}</span>
                     </a>
                   ) : (
                     c.v
