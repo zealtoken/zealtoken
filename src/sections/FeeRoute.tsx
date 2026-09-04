@@ -51,6 +51,9 @@ function countdown(to: number, now: number): string {
   return d > 0 ? `${d}d ${h}h ${m}m` : h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
+/** Flip to false to hide the whole panel without touching anything else. */
+const VISIBLE = true
+
 export function FeeRoute() {
   const [r, setR] = useState<Route | null>(null)
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000))
@@ -75,7 +78,7 @@ export function FeeRoute() {
     }
   }, [])
 
-  if (!r || !PONS_V2.tap || !CONTRACTS.foundry) return null
+  if (!VISIBLE || !r || !PONS_V2.tap || !CONTRACTS.foundry) return null
 
   const routingLive = same(r.recipient, PONS_V2.tap)
   const deadLetter = same(r.recipient, CONTRACTS.foundry)
@@ -124,7 +127,7 @@ export function FeeRoute() {
         <div className="route-cell">
           <div className="route-l mono">credited to the old recipient</div>
           <div className="route-v mono">{r.strandedEth.toLocaleString('en-US', { maximumFractionDigits: 4 })} ETH</div>
-          <div className="route-h mono">unclaimable by anyone · our launch mistake, stated plainly</div>
+          <div className="route-h mono">in Pons escrow</div>
         </div>
       </div>
     </div>
