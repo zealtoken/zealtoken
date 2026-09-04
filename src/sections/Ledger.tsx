@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { CHAIN, CONTRACTS, FURNACE, PONS_V2, TOKEN } from '../config'
+import { CHAIN, CONTRACTS, FURNACE, LINKS, PONS_V2, TOKEN } from '../config'
 import { MAX_UINT, SEL, nativeBalance, readBatch, units, view, type Call } from '../lib/chain'
 import { FeeRoute } from './FeeRoute'
 
@@ -169,6 +169,7 @@ function Stat({
   frac,
   hint,
   small = false,
+  href,
 }: {
   value: number
   unit: string
@@ -176,6 +177,8 @@ function Stat({
   frac: number
   hint?: string
   small?: boolean
+  /** Where this number is read from. Every tile links to its source so anyone can check it. */
+  href?: string
 }) {
   const shown = useCountUp(value)
   return (
@@ -184,10 +187,31 @@ function Stat({
         {fmt(shown, frac)}
         <span className="lg-u mono">{unit}</span>
       </div>
-      <div className="lg-l mono">{label}</div>
+      <div className="lg-l mono">
+        {href ? (
+          <a className="lg-src" href={href} target="_blank" rel="noreferrer" title="Read this value at its source">
+            {label} ↗
+          </a>
+        ) : (
+          label
+        )}
+      </div>
       {hint && <div className="lg-h mono">{hint}</div>}
     </div>
   )
+}
+
+const X = CONTRACTS.explorer
+const SRC = {
+  escrow: `${X}/address/${PONS_V2.escrow}?tab=read_contract`,
+  tap: PONS_V2.tap ? `${X}/address/${PONS_V2.tap}` : undefined,
+  foundry: CONTRACTS.foundry ? `${X}/address/${CONTRACTS.foundry}?tab=read_contract` : undefined,
+  foundryBalance: CONTRACTS.foundry ? `${X}/address/${CONTRACTS.foundry}` : undefined,
+  zzec: CONTRACTS.zzec ? `${X}/address/${CONTRACTS.zzec}?tab=read_contract` : undefined,
+  zzecToken: CONTRACTS.zzec ? `${X}/token/${CONTRACTS.zzec}` : undefined,
+  reserve: TOKEN.reserveAddress ? LINKS.zcashExplorer + TOKEN.reserveAddress : undefined,
+  furnace: CONTRACTS.furnace ? `${X}/address/${CONTRACTS.furnace}?tab=read_contract` : undefined,
+  burnAddress: `${X}/address/${FURNACE.burnAddress}?tab=tokens`,
 }
 
 export function Ledger() {
@@ -261,36 +285,38 @@ export function Ledger() {
         <div className="lg-col">
           <div className="lg-grp mono">LOOP 01 · THE FOUNDRY</div>
           <div className="lg-grid">
-            <Stat value={snap.generated} unit="ETH" label="fees generated" frac={5} hint="all creator fees so far · see fee route below" />
-            <Stat value={snap.earned} unit="ETH" label="claimable fees" frac={5} hint="credited to the Tap · anyone can pull()" />
+            <Stat value={snap.generated} unit="ETH" label="fees generated" frac={5} hint="all creator fees so far · see fee route below" href={SRC.escrow} />
+            <Stat value={snap.earned} unit="ETH" label="claimable fees" frac={5} hint="credited to the Tap · anyone can pull()" href={SRC.tap} />
             <Stat
               value={snap.pending}
               unit="ETH"
               label="in the Foundry"
               frac={5}
               hint={snap.pending > 0 ? 'awaiting route()' : 'nothing routed yet'}
+              href={SRC.foundryBalance}
             />
-            <Stat value={snap.feesRouted} unit="ETH" label="fees routed" frac={5} />
-            <Stat value={snap.toReserve} unit="ETH" label="to the reserve" frac={5} />
-            <Stat value={snap.zecHeld} unit="ZEC" label="ZEC attested" frac={4} hint="last attestation on-chain" />
+            <Stat value={snap.feesRouted} unit="ETH" label="fees routed" frac={5} href={SRC.foundry} />
+            <Stat value={snap.toReserve} unit="ETH" label="to the reserve" frac={5} href={SRC.foundry} />
+            <Stat value={snap.zecHeld} unit="ZEC" label="ZEC attested" frac={4} hint="last attestation on-chain" href={SRC.zzec} />
             <Stat
               value={live?.zec ?? 0}
               unit="ZEC"
               label="ZEC in reserve"
               frac={4}
               hint={live ? `live · Zcash block ${live.height.toLocaleString('en-US')}` : 'reading Zcash…'}
+              href={SRC.reserve}
             />
-            <Stat value={snap.zzecSupply} unit={TOKEN.wrapper} label={`${TOKEN.wrapper} minted`} frac={2} hint={coverageHint} />
+            <Stat value={snap.zzecSupply} unit={TOKEN.wrapper} label={`${TOKEN.wrapper} minted`} frac={4} hint={coverageHint} href={SRC.zzecToken} />
           </div>
         </div>
 
         <div className="lg-col">
           <div className="lg-grp mono">LOOP 02 · THE FURNACE</div>
           <div className="lg-grid">
-            <Stat value={snap.zealBurned} unit={TOKEN.symbol} label={`$${TOKEN.symbol} burned`} frac={0} hint={`→ ${FURNACE.burnShort}`} />
-            <Stat value={snap.burns} unit="tx" label="burns" frac={0} hint="permissionless" />
-            <Stat value={snap.ethSpent} unit="ETH" label="spent buying back" frac={6} hint="fees swapped into $ZEAL" small />
-            <Stat value={snap.zzecSpent} unit={TOKEN.wrapper} label={`${TOKEN.wrapper} fees converted`} frac={6} hint="sold for ETH on the way" small />
+            <Stat value={snap.zealBurned} unit={TOKEN.symbol} label={`$${TOKEN.symbol} burned`} frac={0} hint={`→ ${FURNACE.burnShort}`} href={SRC.burnAddress} />
+            <Stat value={snap.burns} unit="tx" label="burns" frac={0} hint="permissionless" href={SRC.furnace} />
+            <Stat value={snap.ethSpent} unit="ETH" label="spent buying back" frac={6} hint="fees swapped into $ZEAL" small href={SRC.furnace} />
+            <Stat value={snap.zzecSpent} unit={TOKEN.wrapper} label={`${TOKEN.wrapper} fees converted`} frac={6} hint="sold for ETH on the way" small href={SRC.furnace} />
           </div>
           <div className="lg-note mono">
             {contractsLive
