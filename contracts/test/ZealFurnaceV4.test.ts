@@ -33,7 +33,7 @@ describe('ZealFurnaceV4', () => {
     // Every state-changing function, by name. Anything not on this list is a door that must not exist.
     expect(fns).to.deep.equal([
       'BURN_ADDRESS', 'ROLE_TIMELOCK', 'acceptOwnership', 'burn', 'burnCount', 'cancelIgniterProposal', 'collectFees',
-      'commitIgniter', 'igniter', 'ignite', 'onERC721Received', 'owner', 'pendingIgniter', 'pendingOwner', 'poolManager',
+      'commitIgniter', 'ignite', 'igniter', 'onERC721Received', 'owner', 'pendingIgniter', 'pendingOwner', 'poolManager',
       'positionId', 'positionManager', 'proposeIgniter', 'renounceOwnership', 'totalEthConsumed', 'totalZealBurned',
       'totalZzecConsumed', 'transferOwnership', 'unlockCallback', 'zeal', 'zealPool', 'zzec', 'zzecPool',
     ])
