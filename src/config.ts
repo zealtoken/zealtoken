@@ -85,7 +85,7 @@ export const CONTRACTS = {
   /** The wrapper. Supply is capped by the attested reserve. */
   zzec: '0x0b151Ff7a7c5250130EC16C275790961d558E402' as string | null,
   /** zZEC fees in, burned $ZEAL out. No other exit. */
-  furnace: null as string | null,
+  furnace: '0x72C2f71dC3c0058974fd59039F9A79397bf87E70' as string | null,
   explorer: 'https://robinhoodchain.blockscout.com',
 }
 
