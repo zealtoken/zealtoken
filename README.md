@@ -14,8 +14,8 @@ Everything that can be a contract is a contract, and every contract is verified.
 | ZealFoundry · immutable 60/25/15 fee splitter, no owner | [`0xa1C1…85a6`](https://robinhoodchain.blockscout.com/address/0xa1C1Fb281cCC47C587565a01700bF61a03D885a6?tab=contract) | live · source verified |
 | ZealTapV2 · Pons fee recipient; sweeps its own pool, one door to the Foundry | [`0x9F5b…bB47`](https://robinhoodchain.blockscout.com/address/0x9F5b105d0DBee12376aC972Ec2207772c5EDbB47?tab=contract) | live · source verified |
 | ZealTap v1 · first edition, superseded before it was ever the recipient | [`0xA0dA…E655`](https://robinhoodchain.blockscout.com/address/0xA0dAE8fe24BDfb2331A1D581dC47bE61c565E655?tab=contract) | live · source verified |
-| ZZEC · 1:1 wrapped Zcash, attest → mint cap, redeem never pausable | [`0x0b15…E402`](https://robinhoodchain.blockscout.com/address/0x0b151Ff7a7c5250130EC16C275790961d558E402?tab=contract) | live · source verified · supply 0 until the reserve fills |
-| ZealFurnaceV4 · zZEC fees → ETH → $ZEAL → burn, on Uniswap v4 | [`contracts/contracts/ZealFurnaceV4.sol`](contracts/contracts/ZealFurnaceV4.sol) | written, tested, deploys when the zZEC market opens |
+| ZZEC · 1:1 wrapped Zcash, attest → mint cap, redeem never pausable | [`0x0b15…E402`](https://robinhoodchain.blockscout.com/address/0x0b151Ff7a7c5250130EC16C275790961d558E402?tab=contract) | live · source verified · minted against a real reserve |
+| ZealFurnaceV4 · zZEC fees → ETH → $ZEAL → burn, on Uniswap v4 | [`0x72C2…7E70`](https://robinhoodchain.blockscout.com/address/0x72C2f71dC3c0058974fd59039F9A79397bf87E70?tab=contract) | live · source verified · first burn done |
 
 The live numbers on [zealtoken.com](https://zealtoken.com) are read straight
 from these contracts over JSON-RPC in the browser. The one server-side piece is
@@ -24,7 +24,7 @@ lightwalletd node because browsers cannot speak gRPC. It holds no keys.
 
 ## Layout
 
-- [`contracts/`](contracts) · Solidity 0.8.24, Hardhat, 84 tests. `npm test`.
+- [`contracts/`](contracts) · Solidity 0.8.24, Hardhat, 87 tests. `npm test`.
 - [`ops/`](ops) · the reserve operator: attests the Zcash balance, mints zZEC
   up to it, honours redemptions, sweeps ETH → ZEC. Nothing here can move
   funds without a passphrase-unlocked key.
