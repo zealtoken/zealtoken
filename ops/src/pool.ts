@@ -123,7 +123,49 @@ async function main() {
   console.log(`will use     ${ethers.formatEther(need0)} ETH + ${Number(need1) / 1e8} zZEC  (maxima +0.5%; the rest is refunded / untouched)`)
   console.log(`ticks        ${tickLower} .. ${tickUpper}`)
 
-  if (!execute) { console.log('\nPlan only. Add --execute to sign.\n'); return }
+  const simulate = process.argv.includes('--simulate')
+  if (!execute && !simulate) { console.log('\nPlan only. Add --simulate to dry-run the exact transaction on chain, --execute to sign.\n'); return }
+  if (simulate) {
+    // Build the exact multicall the execute path signs and ask the node to run it from the LP wallet. Nothing is sent.
+    const from = ethers.getAddress(process.env.LP_FROM ?? '0x1C083F2f85aCadae452C7512C45cD7c8a3ddbF03')
+    const ceil2 = (n: bigint, d: bigint) => (n + d - 1n) / d
+    const n0 = ceil2(liquidity * (sB - useSqrt) * Q96, useSqrt * sB), n1 = ceil2(liquidity * (useSqrt - sA), Q96)
+    const a0 = (n0 * 1005n) / 1000n, a1 = (n1 * 1005n) / 1000n
+    const acts = ethers.solidityPacked(['uint8', 'uint8', 'uint8'], [ACT.MINT_POSITION, ACT.SETTLE_PAIR, ACT.SWEEP])
+    const prm = [
+      abi.encode([POOL_KEY_T, 'int24', 'int24', 'uint256', 'uint128', 'uint128', 'address', 'bytes'], [key, tickLower, tickUpper, liquidity, a0, a1, from, '0x']),
+      abi.encode(['address', 'address'], [ETH, zzec]), abi.encode(['address', 'address'], [ETH, from]),
+    ]
+    const ud = abi.encode(['bytes', 'bytes[]'], [acts, prm])
+    const dl = Math.floor(Date.now() / 1000) + 1200
+    const calls = initialized ? [posm.interface.encodeFunctionData('modifyLiquidities', [ud, dl])] : [posm.interface.encodeFunctionData('initializePool', [key, sqrtPriceX96]), posm.interface.encodeFunctionData('modifyLiquidities', [ud, dl])]
+    const data = posm.interface.encodeFunctionData('multicall', [calls])
+    const [zAllow, p2] = await Promise.all([erc20(zzec).allowance(from, V4.permit2), permit2.allowance(from, zzec, V4.positionManager)])
+    console.log(`\nsimulating from ${from}: permit2 allowance ${zAllow >= a1 ? 'ok' : 'MISSING (execute sets it first)'}, posm allowance ${p2.amount >= a1 ? 'ok' : 'MISSING (execute sets it first)'}`)
+    // If the approvals are not on chain yet, simulate with state overrides that pretend they are.
+    // Permit2's allowance mapping is slot 1 as well.
+    const overrides: Record<string, { stateDiff: Record<string, string> }> = {}
+    if (zAllow < a1 || p2.amount < a1) {
+      // ZZEC is `ERC20, Ownable2Step, ReentrancyGuard` on plain OpenZeppelin v5 storage: _allowances is slot 1.
+      const inner = ethers.keccak256(abi.encode(['address', 'uint256'], [from, 1]))
+      const zSlot = ethers.keccak256(abi.encode(['address', 'bytes32'], [V4.permit2, inner]))
+      const s1 = ethers.keccak256(abi.encode(['address', 'uint256'], [from, 1]))
+      const s2 = ethers.keccak256(abi.encode(['address', 'bytes32'], [zzec, s1]))
+      const pSlot = ethers.keccak256(abi.encode(['address', 'bytes32'], [V4.positionManager, s2]))
+      // PackedAllowance: uint160 amount | uint48 expiration | uint48 nonce
+      const packed = ethers.toBeHex(((1n << 160n) - 1n) | (BigInt(Math.floor(Date.now() / 1000) + 86400) << 160n), 32)
+      overrides[zzec] = { stateDiff: { [zSlot]: ethers.toBeHex(ethers.MaxUint256, 32) } }
+      overrides[V4.permit2] = { stateDiff: { [pSlot]: packed } }
+      console.log('approvals not on chain yet: simulating with them overridden in')
+    }
+    try {
+      const gas = await provider.send('eth_estimateGas', [{ from, to: V4.positionManager, data, value: ethers.toBeHex(a0) }, 'latest', ...(Object.keys(overrides).length ? [overrides] : [])])
+      console.log(`SIMULATION OK: the exact init+mint multicall succeeds from ${from}; gas ~${Number(gas)}\n`)
+    } catch (e) {
+      console.log('SIMULATION REVERTED:', (e as { shortMessage?: string; message?: string }).shortMessage ?? (e as Error).message, '\n'); process.exitCode = 1
+    }
+    return
+  }
 
   const ksPath = process.env.LP_KEYSTORE ?? new URL('../../contracts/.keystore.json', import.meta.url).pathname
   const pass = process.env.LP_PASS ?? await askHidden('keystore passphrase: ')
