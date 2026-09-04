@@ -1,3 +1,4 @@
+import { RESERVE } from './config.js'
 import { zzec, roleSigner } from './chain.js'
 import { reserveBalanceZats, chainTipHash, fmtZec } from './zcash.js'
 
@@ -7,7 +8,7 @@ import { reserveBalanceZats, chainTipHash, fmtZec } from './zcash.js'
  * proofRef is the Zcash block hash it was read at.
  */
 async function main() {
-  const [zats, proof] = await Promise.all([reserveBalanceZats(), chainTipHash()])
+  const [zats, proof] = await Promise.all([reserveBalanceZats(RESERVE.zcashTAddress), chainTipHash()])
   const c = zzec(await roleSigner('attestor'))
   const [prev, supply] = (await Promise.all([c.reserveZats(), c.totalSupply()])) as [bigint, bigint]
   console.log(`reserve   ${fmtZec(zats)}  (previous attestation ${fmtZec(prev)})`)
