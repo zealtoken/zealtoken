@@ -1090,3 +1090,7 @@ p:last-child { margin-bottom: 0; }
 /* secondary ledger stats: long decimals at a size that cannot overflow the column */
 .lg-n-sm { font-size: clamp(20px, 2.2vw, 28px); letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .lg-n-sm .lg-u { font-size: 11px; }
+
+/* every ledger tile links to the contract or address it is read from */
+.lg-src { color: inherit; text-decoration: none; border-bottom: 1px dotted rgba(255,255,255,0.35); }
+.lg-src:hover { color: var(--green-bright); border-bottom-color: var(--green-bright); }
