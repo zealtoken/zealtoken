@@ -15,14 +15,14 @@ Everything that can be a contract is a contract, and every contract is verified.
 | ZealTapV2 · Pons fee recipient; sweeps its own pool, one door to the Foundry | [`0x9F5b…bB47`](https://robinhoodchain.blockscout.com/address/0x9F5b105d0DBee12376aC972Ec2207772c5EDbB47?tab=contract) | live · source verified |
 | ZealTap v1 · first edition, superseded before it was ever the recipient | [`0xA0dA…E655`](https://robinhoodchain.blockscout.com/address/0xA0dAE8fe24BDfb2331A1D581dC47bE61c565E655?tab=contract) | live · source verified |
 | ZZEC · 1:1 wrapped Zcash, attest → mint cap, redeem never pausable | [`contracts/contracts/ZZEC.sol`](contracts/contracts/ZZEC.sol) | written, tested, deploys at reserve open |
-| ZealFurnace · zZEC fees → buy $ZEAL → burn | [`contracts/contracts/ZealFurnace.sol`](contracts/contracts/ZealFurnace.sol) | written, tested, being rebuilt for Uniswap V4 |
+| ZealFurnaceV4 · zZEC fees → ETH → $ZEAL → burn, on Uniswap v4 | [`contracts/contracts/ZealFurnaceV4.sol`](contracts/contracts/ZealFurnaceV4.sol) | written, tested, deploys when the zZEC market opens |
 
 The live numbers on [zealtoken.com](https://zealtoken.com) are read straight
 from these contracts over JSON-RPC. There is no backend to trust.
 
 ## Layout
 
-- [`contracts/`](contracts) · Solidity 0.8.24, Hardhat, 74 tests. `npm test`.
+- [`contracts/`](contracts) · Solidity 0.8.24, Hardhat, 83 tests. `npm test`.
 - [`ops/`](ops) · the reserve operator: attests the Zcash balance, mints zZEC
   up to it, honours redemptions, sweeps ETH → ZEC. Nothing here can move
   funds without a passphrase-unlocked key.

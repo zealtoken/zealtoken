@@ -141,3 +141,75 @@ contract MockPonsFactory {
         buybackEnabled[token] = enabled;
     }
 }
+
+import {PoolKey, SwapParams} from "../ZealFurnaceV4.sol";
+
+interface IUnlockCallbackV4 { function unlockCallback(bytes calldata data) external returns (bytes memory); }
+
+/// @dev Uniswap v4 PoolManager stand-in: constant-rate swaps, real settle/take accounting per currency.
+contract MockPoolManagerV4 {
+    /// out = in * rateNum / rateDen, keyed by keccak(poolKey)
+    mapping(bytes32 => uint256) public rateNum;
+    mapping(bytes32 => uint256) public rateDen;
+    mapping(address => int256) public owed; // per currency, positive = caller owes the manager
+    address private syncedCurrency;
+    uint256 private syncedBalance;
+    address private locker;
+
+    function setRate(PoolKey calldata key, uint256 num, uint256 den) external { rateNum[keccak256(abi.encode(key))] = num; rateDen[keccak256(abi.encode(key))] = den; }
+    function fund(address token, uint256 amount) external { MockERC20(token).mint(address(this), amount); }
+    receive() external payable {}
+
+    function unlock(bytes calldata data) external returns (bytes memory r) {
+        locker = msg.sender;
+        r = IUnlockCallbackV4(msg.sender).unlockCallback(data);
+        locker = address(0);
+    }
+    function swap(PoolKey memory key, SwapParams memory p, bytes calldata) external returns (int256 delta) {
+        require(msg.sender == locker, "not unlocked");
+        bytes32 id = keccak256(abi.encode(key));
+        require(p.amountSpecified < 0, "exact in only");
+        uint256 amtIn = uint256(-p.amountSpecified);
+        uint256 amtOut = amtIn * rateNum[id] / rateDen[id];
+        (address cin, address cout) = p.zeroForOne ? (key.currency0, key.currency1) : (key.currency1, key.currency0);
+        owed[cin] += int256(amtIn);
+        owed[cout] -= int256(amtOut);
+        int128 a0 = p.zeroForOne ? -int128(int256(amtIn)) : int128(int256(amtOut));
+        int128 a1 = p.zeroForOne ? int128(int256(amtOut)) : -int128(int256(amtIn));
+        delta = int256(uint256(uint128(a0))) << 128 | int256(uint256(uint128(a1)));
+        delta = (int256(a0) << 128) | int256(uint256(uint128(a1)));
+    }
+    function sync(address currency) external { syncedCurrency = currency; syncedBalance = currency == address(0) ? 0 : MockERC20(currency).balanceOf(address(this)); }
+    function settle() external payable returns (uint256 paid) {
+        if (syncedCurrency == address(0)) { paid = msg.value; }
+        else { require(msg.value == 0, "NonzeroNativeValue"); paid = MockERC20(syncedCurrency).balanceOf(address(this)) - syncedBalance; }
+        owed[syncedCurrency] -= int256(paid);
+    }
+    function take(address currency, address to, uint256 amount) external {
+        owed[currency] += int256(amount);
+        if (currency == address(0)) { (bool ok,) = payable(to).call{value: amount}(""); require(ok, "eth"); }
+        else MockERC20(currency).transfer(to, amount);
+    }
+}
+
+/// @dev PositionManager stand-in: hands the Furnace an NFT id, and pays preset fees on a zero decrease.
+contract MockPositionManagerV4 {
+    uint256 public feeEth;
+    uint256 public feeToken;
+    address public feeTokenAddr;
+    bytes public lastUnlockData;
+    receive() external payable {}
+    function setFees(address token, uint256 tokenAmt, uint256 ethAmt) external { feeTokenAddr = token; feeToken = tokenAmt; feeEth = ethAmt; }
+    function give(address to, uint256 tokenId) external { bytes4 sel = IERC721ReceiverLike(to).onERC721Received(msg.sender, msg.sender, tokenId, ""); require(sel == 0x150b7a02, "bad receiver"); }
+    function modifyLiquidities(bytes calldata unlockData, uint256) external payable {
+        lastUnlockData = unlockData;
+        (bytes memory actions, bytes[] memory params) = abi.decode(unlockData, (bytes, bytes[]));
+        require(actions.length == 2 && uint8(actions[0]) == 0x01 && uint8(actions[1]) == 0x11, "unexpected actions");
+        (, uint256 liquidity,,,) = abi.decode(params[0], (uint256, uint256, uint128, uint128, bytes));
+        require(liquidity == 0, "liquidity must be untouched");
+        (,, address to) = abi.decode(params[1], (address, address, address));
+        if (feeToken != 0) MockERC20(feeTokenAddr).mint(to, feeToken);
+        if (feeEth != 0) { (bool ok,) = payable(to).call{value: feeEth}(""); require(ok, "eth"); }
+    }
+}
+interface IERC721ReceiverLike { function onERC721Received(address, address, uint256, bytes calldata) external returns (bytes4); }
