@@ -55,7 +55,7 @@ export const SPLIT = [
     key: 'ops',
     pct: 15,
     label: 'Operations',
-    note: 'Audits, attestation, infrastructure. Published.',
+    note: 'Audits, attestation, infrastructure.',
   },
 ] as const
 
@@ -96,7 +96,8 @@ export const CONTRACTS = {
  */
 export const ZZEC_MARKET = {
   poolFeePct: 1.0,
-  furnaceSharePct: 70,
+  /** Share of the zZEC pool's liquidity the Furnace holds; its fee share equals this. */
+  furnaceSharePct: 100,
 } as const
 
 /**

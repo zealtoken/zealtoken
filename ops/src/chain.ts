@@ -54,8 +54,12 @@ export async function roleSigner(role: 'attestor' | 'minter'): Promise<ethers.Wa
       })
     }
     const w = await ethers.Wallet.fromEncryptedJson(readFileSync(file, 'utf8'), pass)
+    delete process.env[role === 'attestor' ? 'ATTESTOR_PASS' : 'MINTER_PASS'] // shorten its lifetime in this process
     return new ethers.Wallet(w.privateKey, provider)
   }
-  if (envKey) return new ethers.Wallet(envKey, provider)
+  if (envKey) {
+    if (process.env.ALLOW_RAW_KEY !== '1') throw new Error(`${role.toUpperCase()}_KEY is set; use the keystore in ops/.keys (or ALLOW_RAW_KEY=1 on purpose)`)
+    return new ethers.Wallet(envKey, provider)
+  }
   throw new Error(`no ${role} key: run npm run keys:create (or set ${role.toUpperCase()}_KEY)`)
 }

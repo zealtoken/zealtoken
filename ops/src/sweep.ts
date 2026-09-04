@@ -7,8 +7,9 @@
  *
  * Default is PREPARE ONLY: both hops are quoted (1Click in dry mode), the plan
  * is printed with the exact Relay deposit transaction, and nothing is signed.
- * Set SWEEPER_KEY to let this process sign; it must be the key of the wallet
- * holding the ETH (the reserve sink). Every sweep is appended to sweeps.json
+ * To sign, point SWEEPER_KEYSTORE at an encrypted keystore for the reserve sink
+ * (prompted for its passphrase, or SWEEPER_PASS). A raw SWEEPER_KEY is refused
+ * unless ALLOW_RAW_KEY=1. Every sweep is appended to sweeps.json
  * so a re-run can never double-send.
  *
  *   SWEEP_ETH=0.05 npm run sweep            # quote + plan, nothing moves
@@ -16,6 +17,7 @@
  */
 import { ethers } from 'ethers'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { createInterface } from 'node:readline'
 import { CHAIN, RESERVE, requireEnv } from './config.js'
 
 const RELAY = process.env.RELAY_API ?? 'https://api.relay.link'
@@ -34,6 +36,17 @@ type Sweep = {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+function askHidden(q: string): Promise<string> {
+  return new Promise((res) => {
+    if (!process.stdin.isTTY) throw new Error('no TTY for a passphrase prompt; set SWEEPER_PASS')
+    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true })
+    process.stdout.write(q)
+    const out = process.stdout as unknown as { write: (s: string) => boolean }
+    const orig = out.write.bind(process.stdout)
+    out.write = (s: string) => (s.includes('\n') ? orig(s) : true)
+    rl.question('', (a) => { out.write = orig; process.stdout.write('\n'); rl.close(); res(a) })
+  })
+}
 const json = async (url: string, init?: RequestInit) => {
   const headers: Record<string, string> = { 'content-type': 'application/json', ...(init?.headers as Record<string, string>) }
   if (process.env.ONECLICK_JWT && url.startsWith(ONECLICK)) headers.authorization = `Bearer ${process.env.ONECLICK_JWT}`
@@ -77,8 +90,16 @@ async function main() {
   const ethIn = ethers.parseEther(requireEnv('SWEEP_ETH'))
   const tAddr = RESERVE.zcashTAddress
   const sinkEvm = RESERVE.sinkEvm
-  const key = process.env.SWEEPER_KEY
-  const signer = key ? new ethers.Wallet(key) : null
+  let signer: ethers.Wallet | null = null
+  if (process.env.SWEEPER_KEYSTORE) {
+    const pass = process.env.SWEEPER_PASS ?? (await askHidden('passphrase for the reserve sink keystore: '))
+    const w = await ethers.Wallet.fromEncryptedJson(readFileSync(process.env.SWEEPER_KEYSTORE, 'utf8'), pass)
+    delete process.env.SWEEPER_PASS
+    signer = new ethers.Wallet(w.privateKey)
+  } else if (process.env.SWEEPER_KEY) {
+    if (process.env.ALLOW_RAW_KEY !== '1') throw new Error('SWEEPER_KEY is set; use SWEEPER_KEYSTORE (or ALLOW_RAW_KEY=1 on purpose)')
+    signer = new ethers.Wallet(process.env.SWEEPER_KEY)
+  }
   if (signer && signer.address.toLowerCase() !== sinkEvm.toLowerCase()) {
     throw new Error(`SWEEPER_KEY is ${signer.address}, not the reserve sink ${sinkEvm}. Refusing.`)
   }

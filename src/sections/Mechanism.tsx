@@ -14,7 +14,7 @@ const STEPS = [
   {
     n: '02',
     t: 'Redirect',
-    d: 'The creator share goes to the Foundry contract, not a wallet. No owner, no admin, no upgrade path.',
+    d: 'The creator share goes to the Foundry contract, which splits it to three published wallets. No owner, no admin, no upgrade path.',
     k: 'feeRedirects(token)',
   },
   {
@@ -38,7 +38,7 @@ const STEPS = [
   {
     n: '06',
     t: 'Mint',
-    d: `${TOKEN.wrapper} is minted one per ZEC held and paired into liquidity on ${CHAIN.name}. The mint reverts past the reserve.`,
+    d: `${TOKEN.wrapper} is minted one per ZEC held and paired into liquidity on ${CHAIN.name}. The mint reverts past the last attested reserve.`,
     k: `1 ZEC = 1 ${TOKEN.wrapper}`,
   },
 ]
@@ -86,7 +86,7 @@ export function Mechanism() {
             </h2>
             <p className="lede" data-reveal style={stagger(2)}>
               Every ${TOKEN.symbol} trade pays a fee. {PONS.creatorSharePct}% of it goes to a
-              contract that can only buy Zcash. Nobody, including us, can point it anywhere else.
+              contract that can only split it 60/25/15 to three published wallets. We convert the reserve share to ZEC, and every conversion is logged. Re-pointing the fee stream takes a 48-hour public notice.
             </p>
           </div>
         </div>

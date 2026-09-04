@@ -2,6 +2,9 @@ import 'dotenv/config' // loads contracts/.env so the deployer key never has to 
 import type { HardhatUserConfig } from 'hardhat/config'
 import '@nomicfoundation/hardhat-toolbox'
 
+// Signing goes through the encrypted keystore (scripts/lib/secure.ts). A raw key in the
+// environment is refused unless explicitly allowed, so one cannot silently reappear.
+if (process.env.DEPLOYER_KEY && process.env.ALLOW_RAW_KEY !== '1') throw new Error('DEPLOYER_KEY is set; use the keystore (or ALLOW_RAW_KEY=1 on purpose)')
 const PK = process.env.DEPLOYER_KEY ? [process.env.DEPLOYER_KEY] : []
 
 const config: HardhatUserConfig = {

@@ -61,10 +61,10 @@ const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 03', t: 'Everything public: contracts, tests, operator, site.', href: LINKS.repo ?? undefined, label: 'github' },
   { d: 'Sep 03', t: 'Reserve address published. A transparent Zcash address anyone can watch, balance zero until the first conversion lands.', href: TOKEN.reserveAddress ? LINKS.zcashExplorer + TOKEN.reserveAddress : undefined, label: 'zcash' },
   { d: 'Sep 03', t: `${TOKEN.wrapper} deployed and verified. Supply zero. It cannot mint until the reserve is attested, and it can never stop redemptions.`, href: CONTRACTS.zzec ? src(CONTRACTS.zzec) : undefined, label: 'source' },
-  { d: 'Sep 04', t: 'Live ZEC balance on the ledger, read from a Zcash node next to the attested number. Two sources, one truth.' },
+  { d: 'Sep 04', t: 'Live ZEC balance on the ledger, read from a Zcash node next to the attested number. Check either against the explorer.' },
   { d: 'Sep 04', t: 'The Furnace rebuilt for Uniswap v4: zZEC fees → ETH → $ZEAL → burn, LP fees collectable by anyone, liquidity itself untouchable. 9 new tests, 83 total.', href: LINKS.repo ? `${LINKS.repo}/blob/main/contracts/contracts/ZealFurnaceV4.sol` : undefined, label: 'source' },
   { d: 'Sep 04', t: 'First attestation posted by the attestor key, on a 6-hour schedule from here. Reserve 0, supply 0, coverage honest.', href: `${CONTRACTS.explorer}/tx/0x563e3ee4ac540c447ed0e8b61fc8e037233737f30508923058fcd92950b79786`, label: 'tx' },
-  { d: 'Sep 04', t: 'Independent adversarial review of every contract, the operator, and the site. One real hole in the unreleased Furnace, plus operator and copy fixes. All closed. 84 tests.' },
+  { d: 'Sep 04', t: 'Adversarial review pass over every contract, the operator, and the site. One real hole in the unreleased Furnace, plus operator and copy fixes. All closed. 84 tests.' },
   { d: 'next', t: 'First ZEC in the reserve. First mint. zZEC market opens.' },
 ]
 
@@ -75,7 +75,7 @@ const FAQ = [
   },
   {
     q: `Is this a tax token?`,
-    a: `No. The ${PONS.poolFeePct.toFixed(2)}% is the standard Pons pool fee every token on the launchpad pays. The difference is where the creator share goes: a contract that buys Zcash, not a founder’s wallet.`,
+    a: `No. The ${PONS.poolFeePct.toFixed(2)}% is the standard Pons pool fee every token on the launchpad pays. The difference is where the creator share goes: a contract that splits it to three published wallets, and the largest share buys Zcash.`,
   },
   {
     q: `Why not build a real bridge?`,
@@ -192,7 +192,7 @@ export function Close() {
             on the chain.
           </h2>
           <p className="lede" data-reveal style={stagger(1)}>
-            The reserve only grows. The supply only shrinks. Every trade does both.
+            Trades grow the reserve. Redemptions draw on it. Burns shrink the supply.
           </p>
           <div className="hero-btns" data-reveal style={stagger(2)}>
             <a className="btn btn-primary" href={LINKS.pons} target="_blank" rel="noreferrer">

@@ -43,7 +43,7 @@ export function Hero() {
             <ContractAddress />
           </div>
           <p className="hero-note mono" data-reveal style={stagger(5)}>
-            No presale. No team allocation. Two contracts with no reverse gear.
+            No presale. No team allocation. A fee splitter with no owner, and admin keys behind 48-hour public timelocks everywhere else.
           </p>
         </div>
 

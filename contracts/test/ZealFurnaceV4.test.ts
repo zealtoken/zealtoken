@@ -36,8 +36,8 @@ describe('ZealFurnaceV4', () => {
     // Every state-changing function, by name. Anything not on this list is a door that must not exist.
     expect(fns).to.deep.equal([
       'BURN_ADDRESS', 'PROPOSAL_WINDOW', 'ROLE_TIMELOCK', 'acceptOwnership', 'burn', 'burnCount', 'cancelIgniterProposal',
-      'collectFees', 'commitIgniter', 'ignite', 'igniter', 'maxImpactBps', 'onERC721Received', 'owner', 'pendingIgniter',
-      'pendingOwner', 'poolManager', 'positionId', 'positionManager', 'proposeIgniter', 'renounceOwnership',
+      'adoptPosition', 'collectFees', 'commitIgniter', 'ignite', 'igniter', 'maxImpactBps', 'onERC721Received', 'owner', 'pendingIgniter',
+      'pendingOwner', 'poolManager', 'positionCount', 'positionIds', 'positionManager', 'proposeIgniter', 'renounceOwnership',
       'totalEthConsumed', 'totalZealBurned', 'totalZzecConsumed', 'transferOwnership', 'unlockCallback', 'zeal', 'zealPool',
       'zzec', 'zzecPool',
     ])
@@ -77,7 +77,7 @@ describe('ZealFurnaceV4', () => {
     await expect(furnace.connect(igniter).ignite(0, '0x')).to.be.revertedWithCustomError(furnace, 'NothingToIgnite')
   })
 
-  it('accepts one LP position: from the owner, via the position manager, in the zZEC pool only; collects fees permissionlessly', async () => {
+  it('accepts LP positions from the owner via the position manager, zZEC pool only, and collects all their fees permissionlessly', async () => {
     const { furnace, f, posm, zzec, a, owner, stranger, zzecPool, zealPool } = await loadFixture(deploy)
     await expect(furnace.connect(stranger).collectFees()).to.be.revertedWithCustomError(furnace, 'NoPosition')
     await expect(furnace.onERC721Received(stranger.address, stranger.address, 7, '0x')).to.be.revertedWithCustomError(furnace, 'NotPositionManager')
@@ -89,13 +89,27 @@ describe('ZealFurnaceV4', () => {
     // the owner cannot deposit a position from the wrong pool
     await expect(posm.giveFrom(owner.address, f, 99)).to.be.revertedWithCustomError(furnace, 'WrongPool')
     await posm.giveFrom(owner.address, f, 42)
-    expect(await furnace.positionId()).to.equal(42n)
-    await expect(posm.giveFrom(owner.address, f, 43)).to.be.revertedWithCustomError(furnace, 'AlreadyHoldsPosition')
-    expect(await furnace.positionId()).to.equal(42n)
+    await posm.giveFrom(owner.address, f, 43)
+    expect(await furnace.positionCount()).to.equal(2n)
+    expect(await furnace.positionIds(1)).to.equal(43n)
     await posm.setFees(a.zzec, 5n * 10n ** 7n, ethers.parseEther('0.1'))
-    await expect(furnace.connect(stranger).collectFees()).to.emit(furnace, 'FeesCollected').withArgs(stranger.address, 42n)
+    await expect(furnace.connect(stranger).collectFees()).to.emit(furnace, 'FeesCollected').withArgs(stranger.address, 42n).and.to.emit(furnace, 'FeesCollected').withArgs(stranger.address, 43n)
     expect(await zzec.balanceOf(f)).to.equal(5n * 10n ** 7n)
     expect(await ethers.provider.getBalance(f)).to.equal(ethers.parseEther('0.1'))
+  })
+
+  it('adopts a position that arrived without the receiver hook: owner only, held here, right pool, once', async () => {
+    const { furnace, f, posm, owner, stranger, zzecPool, zealPool } = await loadFixture(deploy)
+    await posm.setPositionPool(7, zzecPool)
+    await posm.setPositionPool(8, zealPool)
+    await expect(furnace.connect(stranger).adoptPosition(7)).to.be.revertedWithCustomError(furnace, 'OwnableUnauthorizedAccount')
+    await expect(furnace.connect(owner).adoptPosition(7)).to.be.revertedWithCustomError(furnace, 'NotHeld')
+    await posm.setOwner(7, f)
+    await posm.setOwner(8, f)
+    await expect(furnace.connect(owner).adoptPosition(8)).to.be.revertedWithCustomError(furnace, 'WrongPool')
+    await furnace.connect(owner).adoptPosition(7)
+    expect(await furnace.positionCount()).to.equal(1n)
+    await expect(furnace.connect(owner).adoptPosition(7)).to.be.revertedWithCustomError(furnace, 'AlreadyListed')
   })
 
   it('burn is permissionless and only ever pays the burn address', async () => {

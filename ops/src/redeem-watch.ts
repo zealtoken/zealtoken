@@ -43,6 +43,13 @@ async function main() {
   const seen = new Set<string>()
   let running = false
 
+  // lastBlock only advances once nothing older is still queued, so a crash mid-backlog never skips a redemption.
+  let highest = 0
+  const done = (block: number) => {
+    highest = Math.max(highest, block)
+    if (queue.length === 0) ledger.lastBlock = Math.max(ledger.lastBlock ?? 0, highest)
+    save(ledger)
+  }
   const pump = async () => {
     if (running) return
     running = true
@@ -50,15 +57,14 @@ async function main() {
       while (queue.length) {
         const j = queue.shift()!
         const key = j.id.toString()
-        if (ledger.entries[key]) { ledger.lastBlock = Math.max(ledger.lastBlock ?? 0, j.block); save(ledger); continue }
+        if (ledger.entries[key]) { done(j.block); continue }
         console.log(`#${key} ${j.from} burned ${fmtZec(j.amount)} -> ${j.zaddr}`)
         ledger.entries[key] = { txid: 'PENDING', at: new Date().toISOString(), amountZats: j.amount.toString(), to: j.zaddr }
         save(ledger)
         try {
           const txid = await sendZec(j.zaddr, j.amount)
           ledger.entries[key] = { ...ledger.entries[key], txid }
-          ledger.lastBlock = Math.max(ledger.lastBlock ?? 0, j.block)
-          save(ledger)
+          done(j.block)
           console.log(`#${key} paid  zcash txid ${txid}`)
         } catch (e) {
           // Left PENDING on purpose: the send may or may not have broadcast.
@@ -79,7 +85,15 @@ async function main() {
 
   // Subscribe first, then backfill, so nothing between "tip" and "listening" is lost.
   c.on(c.filters.RedemptionRequested(), (id, from, amount, zaddr, ev) => enqueue(id, from, amount, zaddr, Number(ev?.log?.blockNumber ?? 0)))
-  const past = await c.queryFilter(c.filters.RedemptionRequested(), fromBlock)
+  let past
+  try {
+    past = await c.queryFilter(c.filters.RedemptionRequested(), fromBlock)
+  } catch (e) {
+    // Running live-only would silently skip the gap and then advance lastBlock past it. Refuse.
+    console.error('backfill failed; refusing to run live-only', e instanceof Error ? e.message : e)
+    await c.removeAllListeners()
+    process.exit(1)
+  }
   for (const ev of past) {
     const [id, from, amount, zaddr] = (ev as unknown as { args: [bigint, string, bigint, string] }).args
     enqueue(id, from, amount, zaddr, ev.blockNumber)
