@@ -13,7 +13,8 @@
     "sweep": "tsx src/sweep.ts",
     "keys:create": "tsx src/keys.ts",
     "pool": "tsx src/pool.ts",
-    "watch:roles": "tsx src/watch-roles.ts"
+    "watch:roles": "tsx src/watch-roles.ts",
+    "burn": "tsx src/burn.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",
