@@ -19,8 +19,8 @@ export const SEL = {
   lastAttestationAt: '0x8e353f4c', // lastAttestationAt()
   totalZealBurned: '0xa0024092', // totalZealBurned()
   burnCount: '0x524773ce', // burnCount()
-  totalEthConsumed: '0x59ff3df5', // totalEthConsumed(): ETH the Furnace spent buying \$ZEAL
-  totalZzecConsumed: '0x3dff8184', // totalZzecConsumed(): zZEC the Furnace sold on the way to \$ZEAL
+  totalEthConsumed: '0x59ff3df5', // totalEthConsumed(): ETH the Furnace spent buying $ZEAL
+  totalZzecConsumed: '0x3dff8184', // totalZzecConsumed(): zZEC the Furnace sold on the way to $ZEAL
   balanceOf: '0x70a08231', // balanceOf(address), ERC-20 and Pons V2FeeEscrow alike
   totalRoutedNative: '0x1446461b', // totalRoutedNative()
   totalToReserveNative: '0xbda62f04', // totalToReserveNative()
