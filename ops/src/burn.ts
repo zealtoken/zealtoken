@@ -24,7 +24,7 @@ const abi = ethers.AbiCoder.defaultAbiCoder()
 const posm = new ethers.Contract(V4.positionManager, ['function modifyLiquidities(bytes,uint256) payable', 'function ownerOf(uint256) view returns (address)'], provider)
 const stateView = new ethers.Contract(V4.stateView, ['function getSlot0(bytes32) view returns (uint160 sqrtPriceX96,int24,uint24,uint24)'], provider)
 const erc20 = (a: string) => new ethers.Contract(a, ['function balanceOf(address) view returns (uint256)', 'function transfer(address,uint256) returns (bool)'], provider)
-const furnaceAbi = ['function ignite(uint256 minZealOut, bytes hookData) returns (uint256)', 'function igniter() view returns (address)', 'function totalZealBurned() view returns (uint256)', 'function burnCount() view returns (uint256)', 'function maxImpactBps() view returns (uint256)']
+const furnaceAbi = ['function ignite(uint256 minZealOut) returns (uint256)', 'function igniter() view returns (address)', 'function totalZealBurned() view returns (uint256)', 'function burnCount() view returns (uint256)', 'function maxImpactBps() view returns (uint256)']
 
 function askHidden(q: string): Promise<string> {
   return new Promise((res) => {
@@ -96,7 +96,7 @@ async function main() {
   const minOut = ethers.parseEther((expect * 0.85).toFixed(18))
   if (ethIn === 0n) { console.log('nothing to ignite'); return }
   console.log(`ignite    expect ~${expect.toFixed(0)} ZEAL, floor ${ethers.formatEther(minOut)}`)
-  const tx3 = await (furnace.connect(wallet) as ethers.Contract).ignite(minOut, '0x')
+  const tx3 = await (furnace.connect(wallet) as ethers.Contract).ignite(minOut)
   console.log(`ignite    ${tx3.hash}`); await tx3.wait()
   console.log(`\nDONE  burned total ${ethers.formatEther(await furnace.totalZealBurned())} ZEAL in ${await furnace.burnCount()} burns\n`)
 }
