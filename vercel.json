@@ -1,0 +1,3 @@
+{
+  "functions": { "api/reserve.ts": { "includeFiles": "api/proto/**", "maxDuration": 15 } }
+}
