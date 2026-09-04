@@ -20,13 +20,13 @@ const PHASES = [
     p: 'Phase 00',
     t: 'Launch',
     s: 'live',
-    d: `$${TOKEN.symbol} launched on ${PONS.launchpad} on Sep 3 and graduated in under an hour. The Foundry and the Tap are deployed with verified source. Fee routing to the Tap waits on a 3-day timelock at Pons.`,
+    d: `$${TOKEN.symbol} launched on ${PONS.launchpad} on Sep 3 and graduated in under an hour. The Foundry and the Tap are deployed with verified source. Fee routing to the Tap waits on Pons proposing the recipient change, then a 3-day timelock.`,
   },
   {
     p: 'Phase 01',
     t: 'Reserve opens',
     s: 'next',
-    d: 'Reserve address published. First ETH → ZEC conversion over NEAR Intents. The reserve goes public with its first balance and the ledger starts counting ZEC.',
+    d: 'First ZEC lands at the published reserve address. The live tile and the attestation agree on a non-zero number for the first time, and the first mint follows.',
   },
   {
     p: 'Phase 02',
@@ -44,7 +44,7 @@ const PHASES = [
     p: 'Phase 04',
     t: 'Hand off custody',
     s: 'the goal',
-    d: 'Backing moves from a multisig to red·bridge or an equivalent trust-minimized design. The endgame is a reserve we cannot touch either.',
+    d: 'Backing moves from operator custody to red·bridge or an equivalent trust-minimized design. The endgame is a reserve we cannot touch either.',
   },
 ]
 
@@ -56,7 +56,7 @@ const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 03', t: 'ZealFoundry deployed. 60/25/15 split, no owner, no admin. Source verified.', href: CONTRACTS.foundry ? src(CONTRACTS.foundry) : undefined, label: 'source' },
   { d: 'Sep 03', t: 'ZealTap deployed and verified. Pons V2 pays only a caller, so the Tap claims and hands everything to the Foundry.', href: src(PONS_V2.tapV1), label: 'source' },
   { d: 'Sep 03', t: 'ZealTapV2 deployed and verified. It can sweep its own pool and migrate itself, so fee routing never depends on anyone else again. Still one exit: the Foundry.', href: PONS_V2.tap ? src(PONS_V2.tap) : undefined, label: 'source' },
-  { d: 'Sep 03', t: `${TOKEN.wrapper} contract written and tested. 65 tests across the system, CI on every push.`, href: LINKS.repo ? `${LINKS.repo}/blob/main/contracts/contracts/ZZEC.sol` : undefined, label: 'ZZEC.sol' },
+  { d: 'Sep 03', t: `${TOKEN.wrapper} contract written and tested, CI on every push.`, href: LINKS.repo ? `${LINKS.repo}/blob/main/contracts/contracts/ZZEC.sol` : undefined, label: 'ZZEC.sol' },
   { d: 'Sep 03', t: 'Reserve operator built: attest, mint, redemption watcher, ETH → ZEC sweep over Relay and NEAR Intents.', href: LINKS.repo ? `${LINKS.repo}/tree/main/ops` : undefined, label: 'ops/' },
   { d: 'Sep 03', t: 'Everything public: contracts, tests, operator, site.', href: LINKS.repo ?? undefined, label: 'github' },
   { d: 'Sep 03', t: 'Reserve address published. A transparent Zcash address anyone can watch, balance zero until the first conversion lands.', href: TOKEN.reserveAddress ? LINKS.zcashExplorer + TOKEN.reserveAddress : undefined, label: 'zcash' },

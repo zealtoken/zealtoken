@@ -14,11 +14,13 @@ Everything that can be a contract is a contract, and every contract is verified.
 | ZealFoundry · immutable 60/25/15 fee splitter, no owner | [`0xa1C1…85a6`](https://robinhoodchain.blockscout.com/address/0xa1C1Fb281cCC47C587565a01700bF61a03D885a6?tab=contract) | live · source verified |
 | ZealTapV2 · Pons fee recipient; sweeps its own pool, one door to the Foundry | [`0x9F5b…bB47`](https://robinhoodchain.blockscout.com/address/0x9F5b105d0DBee12376aC972Ec2207772c5EDbB47?tab=contract) | live · source verified |
 | ZealTap v1 · first edition, superseded before it was ever the recipient | [`0xA0dA…E655`](https://robinhoodchain.blockscout.com/address/0xA0dAE8fe24BDfb2331A1D581dC47bE61c565E655?tab=contract) | live · source verified |
-| ZZEC · 1:1 wrapped Zcash, attest → mint cap, redeem never pausable | [`contracts/contracts/ZZEC.sol`](contracts/contracts/ZZEC.sol) | written, tested, deploys at reserve open |
+| ZZEC · 1:1 wrapped Zcash, attest → mint cap, redeem never pausable | [`0x0b15…E402`](https://robinhoodchain.blockscout.com/address/0x0b151Ff7a7c5250130EC16C275790961d558E402?tab=contract) | live · source verified · supply 0 until the reserve fills |
 | ZealFurnaceV4 · zZEC fees → ETH → $ZEAL → burn, on Uniswap v4 | [`contracts/contracts/ZealFurnaceV4.sol`](contracts/contracts/ZealFurnaceV4.sol) | written, tested, deploys when the zZEC market opens |
 
 The live numbers on [zealtoken.com](https://zealtoken.com) are read straight
-from these contracts over JSON-RPC. There is no backend to trust.
+from these contracts over JSON-RPC in the browser. The one server-side piece is
+`/api/reserve`, which relays the reserve's transparent balance from a Zcash
+lightwalletd node because browsers cannot speak gRPC. It holds no keys.
 
 ## Layout
 
@@ -56,7 +58,8 @@ ABIs in `contracts/`; there is no indexer and no server.
 
 ## Status
 
-Phase 00 (launch) is live. Phase 01 opens when the reserve address is published
-and the first ETH → ZEC conversion lands. The dated build log on
+Phase 00 (launch) is live, zZEC is deployed at supply zero, the reserve address
+is published and attested on a 6-hour schedule. Phase 01 completes when the
+first ZEC lands and the first mint follows. The dated build log on
 [zealtoken.com](https://zealtoken.com#phases) lists only things that have already
 happened, each linked to verified source.

@@ -38,7 +38,7 @@ const CHECKS: Check[] = [
   {
     t: 'Coverage',
     d: `ZEC held ÷ ${TOKEN.wrapper} supply, both readable at any block. mint() reverts below 1.`,
-    v: '≥ 1.00 enforced on mint',
+    v: '≥ 1.00 enforced in code',
     status: CONTRACTS.zzec ? 'verified' : 'pending',
   },
   {
@@ -55,7 +55,7 @@ const LIVE = CHECKS.filter((c) => c.status === 'verified').length
 const LIMITS = [
   {
     t: `${TOKEN.wrapper} v1 is reserve-backed, not trustless.`,
-    d: 'The contracts guarantee the split, the supply cap and the exit. A human attests the Zcash balance and a multisig holds it, with signers published before the first mint. Phase 04 hands that off to trust-minimized custody.',
+    d: 'The contracts guarantee the split, the supply cap and the exit. A human attests the Zcash balance and the operator’s key holds it, at a published transparent address anyone can watch. Phase 04 hands that off to trust-minimized custody.',
   },
   {
     t: `${TOKEN.wrapper} is exposure, not shielding.`,

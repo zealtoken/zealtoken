@@ -135,7 +135,7 @@ function useCountUp(target: number, ms = 900): number {
       setShown(target)
       return
     }
-    const from = fromRef.current
+    const from = shown
     const start = performance.now()
     let raf = 0
     const tick = (now: number) => {
@@ -251,17 +251,17 @@ export function Ledger() {
         <div className="lg-col">
           <div className="lg-grp mono">LOOP 01 · THE FOUNDRY</div>
           <div className="lg-grid">
-            <Stat value={snap.generated} unit="ETH" label="fees generated" frac={4} hint="all creator fees so far · see fee route below" />
-            <Stat value={snap.earned} unit="ETH" label="claimable fees" frac={4} hint="credited to the Tap · anyone can pull()" />
+            <Stat value={snap.generated} unit="ETH" label="fees generated" frac={5} hint="all creator fees so far · see fee route below" />
+            <Stat value={snap.earned} unit="ETH" label="claimable fees" frac={5} hint="credited to the Tap · anyone can pull()" />
             <Stat
               value={snap.pending}
               unit="ETH"
               label="in the Foundry"
-              frac={4}
+              frac={5}
               hint={snap.pending > 0 ? 'awaiting route()' : 'nothing routed yet'}
             />
-            <Stat value={snap.feesRouted} unit="ETH" label="fees routed" frac={4} />
-            <Stat value={snap.toReserve} unit="ETH" label="to the reserve" frac={4} />
+            <Stat value={snap.feesRouted} unit="ETH" label="fees routed" frac={5} />
+            <Stat value={snap.toReserve} unit="ETH" label="to the reserve" frac={5} />
             <Stat value={snap.zecHeld} unit="ZEC" label="ZEC attested" frac={4} hint="last attestation on-chain" />
             <Stat
               value={live?.zec ?? 0}
