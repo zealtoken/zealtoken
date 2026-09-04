@@ -14,6 +14,7 @@ import { FeeRoute } from './FeeRoute'
  */
 
 type Snapshot = {
+  generated: number // every creator fee $ZEAL has produced: stranded credit + Tap credit + pending in the hook
   earned: number // credited to the Tap in the Pons escrow: claimable by anyone via pull()
   pending: number // ETH sitting in the Foundry, awaiting route()
   feesRouted: number
@@ -27,6 +28,7 @@ type Snapshot = {
 }
 
 const ZERO: Snapshot = {
+  generated: 0,
   earned: 0,
   pending: 0,
   feesRouted: 0,
@@ -43,8 +45,9 @@ const POLL_MS = 15_000
 
 async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
   const calls: Call[] = []
-  const idx: Partial<Record<keyof Snapshot, number>> = {}
-  const push = (key: keyof Snapshot, c: Call) => {
+  type Key = keyof Snapshot | 'stranded' | 'hookPending'
+  const idx: Partial<Record<Key, number>> = {}
+  const push = (key: Key, c: Call) => {
     idx[key] = calls.length
     calls.push(c)
   }
@@ -55,6 +58,11 @@ async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
     // recipient is unclaimable by anyone and is shown, labelled, in the fee
     // route panel instead of here.
     if (PONS_V2.tap) push('earned', view(PONS_V2.escrow, SEL.balanceOf, PONS_V2.tap))
+    // Everything $ZEAL has generated so far, wherever it sits: the credit
+    // stranded under the old recipient, the Tap's credit, and what is still
+    // pending in the hook. Honest traction, separate from what is claimable.
+    push('stranded', view(PONS_V2.escrow, SEL.balanceOf, CONTRACTS.foundry))
+    push('hookPending', { to: PONS_V2.hook, data: SEL.pendingFees + PONS_V2.poolId.slice(2) + '0'.repeat(64) })
     // ETH sitting in the Foundry, claimed but not yet split.
     push('pending', nativeBalance(CONTRACTS.foundry))
     push('feesRouted', view(CONTRACTS.foundry, SEL.totalRoutedNative))
@@ -73,10 +81,11 @@ async function fetchSnapshot(signal: AbortSignal): Promise<Snapshot> {
   // Zero calls still returns the block: the chain read is what keeps the
   // panel honest and alive before there is anything to count.
   const { values, block } = await readBatch(calls, signal)
-  const get = (k: keyof Snapshot) => (idx[k] === undefined ? 0n : values[idx[k]!])
+  const get = (k: Key) => (idx[k] === undefined ? 0n : values[idx[k]!])
   const cov = get('coverage')
 
   return {
+    generated: units(get('stranded') + get('earned') + get('hookPending'), 18),
     earned: units(get('earned'), 18),
     pending: units(get('pending'), 18),
     feesRouted: units(get('feesRouted'), 18),
@@ -215,6 +224,7 @@ export function Ledger() {
         <div className="lg-col">
           <div className="lg-grp mono">LOOP 01 · THE FOUNDRY</div>
           <div className="lg-grid">
+            <Stat value={snap.generated} unit="ETH" label="fees generated" frac={4} hint="all creator fees so far · see fee route below" />
             <Stat value={snap.earned} unit="ETH" label="claimable fees" frac={4} hint="credited to the Tap · anyone can pull()" />
             <Stat
               value={snap.pending}
