@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CHAIN, CONTRACTS, FURNACE, PONS_V2, TOKEN } from '../config'
 import { MAX_UINT, SEL, nativeBalance, readBatch, units, view, type Call } from '../lib/chain'
+import { FeeRoute } from './FeeRoute'
 
 /**
  * The ledger: both loops side by side, every lifetime counter the contracts
@@ -242,6 +243,8 @@ export function Ledger() {
           </div>
         </div>
       </div>
+
+      <FeeRoute />
 
       <div className="lg-flow" aria-hidden="true">
         <span className="lg-flow-line" />

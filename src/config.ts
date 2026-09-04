@@ -112,6 +112,9 @@ export const PONS_V2 = {
   tap: '0x9F5b105d0DBee12376aC972Ec2207772c5EDbB47' as string | null,
   /** First edition, superseded before it was ever the recipient. Kept for the record. */
   tapV1: '0xA0dAE8fe24BDfb2331A1D581dC47bE61c565E655',
+  hook: '0xE5e702641Ea86F4ae6cC3cDaeD2B886f976Be044',
+  /** Uniswap V4 PoolId of the graduated $ZEAL/ETH pool. */
+  poolId: '0x95f9fcf8eb2d707d6c9c8175822c6005fcce759933e54f8d5ca6df458c8ccaf0',
 } as const
 
 /** The burn. */

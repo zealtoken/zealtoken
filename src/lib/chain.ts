@@ -22,6 +22,9 @@ export const SEL = {
   balanceOf: '0x70a08231', // balanceOf(address), ERC-20 and Pons V2FeeEscrow alike
   totalRoutedNative: '0x1446461b', // totalRoutedNative()
   totalToReserveNative: '0xbda62f04', // totalToReserveNative()
+  pendingCreatorFeeRecipient: '0x9beacf4a', // Pons factory: pendingCreatorFeeRecipient(address) -> (recipient, effectiveAt, expiresAt)
+  launches: '0xad091230', // Pons hook: launches(bytes32) -> LaunchInfo (creator is word 4)
+  pendingFees: '0x359b4f30', // Pons hook: pendingFees(bytes32,address)
 } as const
 
 export const MAX_UINT = (1n << 256n) - 1n
@@ -75,6 +78,20 @@ export async function readBatch(
   const blockRes = byId.get(calls.length + 1)
   return { values, block: hexToBig(blockRes?.result ?? '0x') }
 }
+
+/** Same round trip, but the raw hex of every result, for multi-word returns. */
+export async function readBatchRaw(calls: Call[], signal?: AbortSignal): Promise<string[]> {
+  const body = calls.map((c, i) => ({ jsonrpc: '2.0', id: i + 1, method: 'eth_call', params: [{ to: c.to, data: c.data }, 'latest'] }))
+  const res = await fetch(CHAIN.rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal })
+  if (!res.ok) throw new Error(`rpc ${res.status}`)
+  const out = (await res.json()) as RpcResult[]
+  const byId = new Map(out.map((r) => [r.id, r]))
+  return calls.map((_, i) => byId.get(i + 1)?.result ?? '0x')
+}
+
+/** Word `n` (32 bytes) of an ABI-encoded return. */
+export const word = (hex: string, n: number): string => '0x' + (hex.slice(2 + n * 64, 66 + n * 64) || '0'.repeat(64))
+export const wordAddress = (hex: string, n: number): string => '0x' + word(hex, n).slice(-40)
 
 /** bigint with `decimals` places → JS number for display only. */
 export function units(v: bigint, decimals: number): number {
