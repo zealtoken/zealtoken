@@ -59,7 +59,8 @@ const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 03', t: 'Reserve operator built: attest, mint, redemption watcher, ETH → ZEC sweep over Relay and NEAR Intents.', href: LINKS.repo ? `${LINKS.repo}/tree/main/ops` : undefined, label: 'ops/' },
   { d: 'Sep 03', t: 'Everything public: contracts, tests, operator, site.', href: LINKS.repo ?? undefined, label: 'github' },
   { d: 'Sep 03', t: 'Reserve address published. A transparent Zcash address anyone can watch, balance zero until the first conversion lands.', href: TOKEN.reserveAddress ? LINKS.zcashExplorer + TOKEN.reserveAddress : undefined, label: 'zcash' },
-  { d: 'next', t: `${TOKEN.wrapper} deploys and verifies at supply zero. First attestation.` },
+  { d: 'Sep 03', t: `${TOKEN.wrapper} deployed and verified. Supply zero. It cannot mint until the reserve is attested, and it can never stop redemptions.`, href: CONTRACTS.zzec ? src(CONTRACTS.zzec) : undefined, label: 'source' },
+  { d: 'next', t: 'First ETH → ZEC conversion lands in the reserve. First attestation. First mint.' },
 ]
 
 const FAQ = [
