@@ -35,6 +35,7 @@ const POOL_KEY_T = 'tuple(address currency0,address currency1,uint24 fee,int24 t
 const posm = new ethers.Contract(V4.positionManager, [
   `function initializePool(${POOL_KEY_T} key,uint160 sqrtPriceX96) payable returns (int24)`,
   'function modifyLiquidities(bytes unlockData,uint256 deadline) payable',
+  'function multicall(bytes[] data) payable returns (bytes[])',
   'function nextTokenId() view returns (uint256)',
 ], provider)
 const stateView = new ethers.Contract(V4.stateView, [
@@ -49,6 +50,18 @@ const erc20 = (a: string) => new ethers.Contract(a, [
   'function balanceOf(address) view returns (uint256)', 'function allowance(address,address) view returns (uint256)',
   'function approve(address,uint256) returns (bool)', 'function decimals() view returns (uint8)',
 ], provider)
+
+function askHidden(q: string): Promise<string> {
+  return new Promise((res) => {
+    if (!process.stdin.isTTY) throw new Error('no TTY for a passphrase prompt; set LP_PASS')
+    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true })
+    process.stdout.write(q)
+    const out = process.stdout as unknown as { write: (s: string) => boolean }
+    const orig = out.write.bind(process.stdout)
+    out.write = (s: string) => (s.includes('\n') ? orig(s) : true)
+    rl.question('', (a) => { out.write = orig; process.stdout.write('\n'); rl.close(); res(a) })
+  })
+}
 
 const bsqrt = (n: bigint): bigint => { if (n < 2n) return n; let x = BigInt(Math.floor(Math.sqrt(Number(n)))); while (x * x > n) x--; while ((x + 1n) * (x + 1n) <= n) x++; return x }
 const sqrtAtTick = (tick: number): bigint => BigInt(Math.floor(Math.sqrt(1.0001 ** tick) * 2 ** 96)) // full-range bounds only; precision there is irrelevant
@@ -82,23 +95,38 @@ async function main() {
   const [slot0, existingL] = await Promise.all([stateView.getSlot0(poolId), stateView.getLiquidity(poolId)])
   const initialized = slot0.sqrtPriceX96 !== 0n
   const useSqrt = initialized ? (slot0.sqrtPriceX96 as bigint) : sqrtPriceX96
+  if (initialized) {
+    // Someone (maybe us, earlier) already set a price. Refuse silently adopting one that is off-market.
+    const onchain = Number(useSqrt) ** 2 / 2 ** 192 // raw1/raw0
+    const drift = Math.abs(onchain / priceRaw - 1)
+    console.log(`on-chain    1 ZEC = ${(1e8 / 1e18 / onchain).toFixed(5)} ETH  (market ${ethPerZec.toFixed(5)}; drift ${(drift * 100).toFixed(2)}%)`)
+    if (drift > 0.01 && !process.env.ALLOW_PRICE_DRIFT) throw new Error('pool price is more than 1% off market; set ALLOW_PRICE_DRIFT=1 to proceed anyway')
+  }
 
   // LiquidityAmounts.getLiquidityForAmounts, full range (sqrtA < P < sqrtB)
   const sA = sqrtAtTick(tickLower), sB = sqrtAtTick(tickUpper)
   const l0 = (amount0 * useSqrt * sB) / (sB - useSqrt) / Q96
   const l1 = (amount1 * Q96) / (useSqrt - sA)
   const liquidity = ((l0 < l1 ? l0 : l1) * 9995n) / 10_000n // 0.05% headroom under the maxima
+  // What this liquidity actually needs at the price we are minting at (round up), plus 0.5%.
+  // These, not the wallet totals, are the maxima: a price moved between quote and mint then reverts.
+  const ceil = (n: bigint, d: bigint) => (n + d - 1n) / d
+  const need0 = ceil(liquidity * (sB - useSqrt) * Q96, useSqrt * sB)
+  const need1 = ceil(liquidity * (useSqrt - sA), Q96)
+  const amount0Max = (need0 * 1005n) / 1000n
+  const amount1Max = (need1 * 1005n) / 1000n
 
   console.log(`\nzZEC/ETH pool on Uniswap v4 · fee ${FEE / 10_000}% · spacing ${TICK_SPACING} · no hook`)
   console.log(`poolId       ${poolId}`)
-  console.log(`price        1 ZEC = ${ethPerZec.toFixed(5)} ETH ${initialized ? '(pool already initialized; using on-chain price)' : '(will initialize at this price)'}`)
+  console.log(`market       1 ZEC = ${ethPerZec.toFixed(5)} ETH ${initialized ? '(pool already initialized; minting at the ON-CHAIN price above)' : '(will initialize at this price, atomically with the mint)'}`)
   console.log(`seed         ${ethAmt} ETH + ${zecAmt} zZEC  -> liquidity ${liquidity}  (existing ${existingL})`)
+  console.log(`will use     ${ethers.formatEther(need0)} ETH + ${Number(need1) / 1e8} zZEC  (maxima +0.5%; the rest is refunded / untouched)`)
   console.log(`ticks        ${tickLower} .. ${tickUpper}`)
 
   if (!execute) { console.log('\nPlan only. Add --execute to sign.\n'); return }
 
   const ksPath = process.env.LP_KEYSTORE ?? new URL('../../contracts/.keystore.json', import.meta.url).pathname
-  const pass = process.env.LP_PASS ?? await new Promise<string>((res) => { const rl = createInterface({ input: process.stdin, output: process.stdout }); rl.question('keystore passphrase: ', (a) => { rl.close(); res(a) }) })
+  const pass = process.env.LP_PASS ?? await askHidden('keystore passphrase: ')
   const wallet = (await ethers.Wallet.fromEncryptedJson(readFileSync(ksPath, 'utf8'), pass)).connect(provider)
   const owner = process.env.LP_OWNER ?? wallet.address
   const [ethBal, zBal] = await Promise.all([provider.getBalance(wallet.address), erc20(zzec).balanceOf(wallet.address)])
@@ -106,10 +134,6 @@ async function main() {
   if (zBal < amount1) throw new Error('signer holds less zZEC than POOL_ZEC; mint to it first')
   if (ethBal < amount0 + ethers.parseEther('0.002')) throw new Error('signer holds less ETH than POOL_ETH plus gas')
 
-  if (!initialized) {
-    const tx = await (posm.connect(wallet) as ethers.Contract).initializePool(key, sqrtPriceX96)
-    console.log(`initialize   ${tx.hash}`); await tx.wait()
-  }
   // Permit2 path for the ERC-20 side
   const z = erc20(zzec).connect(wallet) as ethers.Contract
   if ((await z.allowance(wallet.address, V4.permit2)) < amount1) { const tx = await z.approve(V4.permit2, ethers.MaxUint256); console.log(`approve      ${tx.hash}`); await tx.wait() }
@@ -121,14 +145,22 @@ async function main() {
 
   const actions = ethers.solidityPacked(['uint8', 'uint8', 'uint8'], [ACT.MINT_POSITION, ACT.SETTLE_PAIR, ACT.SWEEP])
   const params = [
-    abi.encode([POOL_KEY_T, 'int24', 'int24', 'uint256', 'uint128', 'uint128', 'address', 'bytes'], [key, tickLower, tickUpper, liquidity, amount0, amount1, owner, '0x']),
+    abi.encode([POOL_KEY_T, 'int24', 'int24', 'uint256', 'uint128', 'uint128', 'address', 'bytes'], [key, tickLower, tickUpper, liquidity, amount0Max, amount1Max, owner, '0x']),
     abi.encode(['address', 'address'], [ETH, zzec]),
     abi.encode(['address', 'address'], [ETH, wallet.address]),
   ]
   const nextId = await posm.nextTokenId()
-  const tx = await (posm.connect(wallet) as ethers.Contract).modifyLiquidities(abi.encode(['bytes', 'bytes[]'], [actions, params]), Math.floor(Date.now() / 1000) + 1200, { value: amount0 })
-  console.log(`mint LP      ${tx.hash}`); await tx.wait()
+  const unlockData = abi.encode(['bytes', 'bytes[]'], [actions, params])
+  const deadline = Math.floor(Date.now() / 1000) + 1200
+  const p = posm.connect(wallet) as ethers.Contract
+  // Initialize and mint in ONE transaction, so nobody can move the empty pool's price in between.
+  const calls = initialized
+    ? [posm.interface.encodeFunctionData('modifyLiquidities', [unlockData, deadline])]
+    : [posm.interface.encodeFunctionData('initializePool', [key, sqrtPriceX96]), posm.interface.encodeFunctionData('modifyLiquidities', [unlockData, deadline])]
+  const tx = await p.multicall(calls, { value: amount0Max })
+  console.log(`${initialized ? 'mint LP     ' : 'init + mint '} ${tx.hash}`); await tx.wait()
   const [s, L] = await Promise.all([stateView.getSlot0(poolId), stateView.getLiquidity(poolId)])
+  if (s.sqrtPriceX96 === 0n || L === 0n) throw new Error('pool shows no price or no liquidity after the mint; investigate before retrying')
   console.log(`\nDONE  position #${nextId} -> ${owner}\n      pool liquidity ${L}  sqrtPrice ${s.sqrtPriceX96}  tick ${s.tick}\n      poolId ${poolId}\n`)
 }
 main().catch((e) => { console.error(e.shortMessage ?? e.message ?? e); process.exit(1) })
