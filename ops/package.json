@@ -16,7 +16,8 @@
     "watch:roles": "tsx src/watch-roles.ts",
     "burn": "tsx src/burn.ts",
     "peg": "tsx src/peg.ts",
-    "keeper": "tsx src/keeper.ts"
+    "keeper": "tsx src/keeper.ts",
+    "lp:exit": "tsx src/lp-exit.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",
