@@ -15,7 +15,8 @@
     "pool": "tsx src/pool.ts",
     "watch:roles": "tsx src/watch-roles.ts",
     "burn": "tsx src/burn.ts",
-    "peg": "tsx src/peg.ts"
+    "peg": "tsx src/peg.ts",
+    "keeper": "tsx src/keeper.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",

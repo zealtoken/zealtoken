@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.zealtoken.keeper</string>
+  <key>ProgramArguments</key><array><string>/Users/zeal/Documents/zealtoken.com/ops/launchd/keeper.sh</string></array>
+  <key>StartInterval</key><integer>60</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardErrorPath</key><string>/Users/zeal/Documents/zealtoken.com/ops/launchd/keeper.err</string>
+</dict></plist>
