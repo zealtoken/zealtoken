@@ -41,7 +41,15 @@ async function main() {
   if (want <= 0n) throw new Error('nothing to mint')
   if (want > headroom) throw new Error(`requested ${fmtZec(want)} exceeds attested headroom ${fmtZec(headroom)}`)
   if (want > liveHeadroom) throw new Error(`requested ${fmtZec(want)} exceeds LIVE headroom ${fmtZec(liveHeadroom)}; re-attest or wait for confirmations`)
-  const tx = await c.mint(to, want)
+  const desk = process.env.WRAP_DESK_ADDRESS
+  const minter = (await c.minter()) as string
+  let tx
+  if (desk && minter.toLowerCase() === desk.toLowerCase()) {
+    const ref = ethers.id(`fee-route:${new Date().toISOString().slice(0, 10)}:${want}`)
+    const d = new ethers.Contract(desk, ['function operatorMint(address,uint256,bytes32)'], await roleSigner('minter'))
+    tx = await d.operatorMint(to, want, ref)
+    console.log(`via WrapDesk.operatorMint ref ${ref}`)
+  } else tx = await c.mint(to, want)
   console.log(`mint ${fmtZec(want)} -> ${to}  ${tx.hash}`)
   await tx.wait()
   console.log('done')

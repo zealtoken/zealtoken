@@ -6,6 +6,7 @@ const ITEMS = [
   { href: '#foundry', label: 'The Foundry' },
   { href: '#furnace', label: 'The Furnace' },
   { href: '#market', label: 'Market' },
+  { href: '#wrap', label: 'Wrap' },
   { href: '#redeem', label: 'Redeem' },
   { href: '#proof', label: 'Proof' },
   { href: '#phases', label: 'Roadmap' },

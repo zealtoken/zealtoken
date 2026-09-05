@@ -22,7 +22,9 @@
     "furnace:pools:propose": "ACTION=propose hardhat run scripts/furnace-pools.ts --network rhMainnet",
     "furnace:pools:commit": "ACTION=commit hardhat run scripts/furnace-pools.ts --network rhMainnet",
     "furnace:pools:status": "ACTION=status hardhat run scripts/furnace-pools.ts --network rhMainnet",
-    "desk": "hardhat run scripts/deploy-desk.ts --network rhMainnet"
+    "desk": "hardhat run scripts/deploy-desk.ts --network rhMainnet",
+    "wrap:deploy": "hardhat run scripts/deploy-wrap.ts --network rhMainnet",
+    "zzec:minter": "hardhat run scripts/set-minter.ts --network rhMainnet"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

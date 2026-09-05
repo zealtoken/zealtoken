@@ -19,7 +19,8 @@
     "keeper": "tsx src/keeper.ts",
     "lp:exit": "tsx src/lp-exit.ts",
     "lp:collect": "tsx src/lp-collect.ts",
-    "desk": "tsx src/fulfill.ts"
+    "desk": "tsx src/fulfill.ts",
+    "wrap": "tsx src/wrap.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",
