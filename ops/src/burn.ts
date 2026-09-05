@@ -15,7 +15,8 @@ import { CHAIN, CONTRACTS } from './config.js'
 const V4 = { positionManager: '0x58daec3116aae6d93017baaea7749052e8a04fa7', stateView: '0xf3334192d15450cdd385c8b70e03f9a6bd9e673b' } as const
 const ZEAL = '0x9fA1C5E90A11294F83A9F135b81ad1b537A5FFdC'
 const ZEAL_POOL_ID = '0x95f9fcf8eb2d707d6c9c8175822c6005fcce759933e54f8d5ca6df458c8ccaf0'
-const ZZEC_POOL_ID = '0xe90144f308b35e54356aaf0050c8734e85bea118eaf6c347a5c7701b7f545f8a'
+// the zZEC market the Furnace's own leg prices against; env-driven so a migration is a config change
+const ZZEC_POOL_ID = ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(['tuple(address,address,uint24,int24,address)'], [[ethers.ZeroAddress, CONTRACTS.zzec, Number(process.env.POOL_FEE ?? 10_000), Number(process.env.POOL_TICK_SPACING ?? 200), process.env.POOL_HOOK ?? ethers.ZeroAddress]]))
 const ACT = { DECREASE_LIQUIDITY: 0x01, TAKE_PAIR: 0x11 } as const
 const ETH = ethers.ZeroAddress
 const provider = new ethers.JsonRpcProvider(CHAIN.rpc, CHAIN.id, { staticNetwork: true })

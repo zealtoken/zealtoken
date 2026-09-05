@@ -95,11 +95,15 @@ export const CONTRACTS = {
  * creator fees are redirected to the Furnace. Both are editable on the page.
  */
 export const ZZEC_MARKET = {
-  /** Uniswap v4 PoolId of the zZEC/ETH market (1% fee, spacing 200, no hook). */
-  poolId: '0xe90144f308b35e54356aaf0050c8734e85bea118eaf6c347a5c7701b7f545f8a',
+  /** Uniswap v4 PoolId of the zZEC/ETH market: 0.3% LP fee, tick spacing 60, ZealBurnHook attached. */
+  poolId: '0xa6d41767e205c89fe05d7ad78354af7bb98cbe9b0c3c60f8371b05e7087fdb84',
+  /** The hook that sends 0.70% of every swap's output straight to the Furnace. */
+  hook: '0x16642362837e2FDC02fF1ECF71f5629c094B0044',
+  lpFeePct: 0.3,
+  hookFeePct: 0.7,
   poolFeePct: 1.0,
-  /** Share of the zZEC pool's liquidity the Furnace holds; its fee share equals this. */
-  furnaceSharePct: 100,
+  /** Of the 1% a zZEC trader pays, this share goes to the Furnace via the hook; the rest to liquidity providers. */
+  furnaceSharePct: 70,
 } as const
 
 /**

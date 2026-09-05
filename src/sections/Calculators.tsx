@@ -226,9 +226,9 @@ export function FurnaceCalc() {
         <SmallInput label="pool fee" value={feePct} onChange={setFeePct} suffix="%" />
         <SmallInput label="share to Furnace" value={sharePct} onChange={setSharePct} suffix="%" />
         <p className="calc-note">
-          The {TOKEN.wrapper} market is a plain Uniswap v4 pool: its {ZZEC_MARKET.poolFeePct.toFixed(2)}% fee goes
-          to liquidity providers, and the Furnace earns the share of liquidity it holds. Defaults assume it
-          holds {ZZEC_MARKET.furnaceSharePct}%. Volume a small pool can carry is limited by its depth.
+          The {TOKEN.wrapper} market charges {ZZEC_MARKET.poolFeePct.toFixed(2)}% per trade: {ZZEC_MARKET.lpFeePct}% to
+          liquidity providers and {ZZEC_MARKET.hookFeePct}% taken by a hook contract straight to the Furnace, whoever
+          provides the liquidity. Volume a small pool can carry is limited by its depth.
         </p>
       </div>
 
