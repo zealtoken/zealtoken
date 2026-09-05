@@ -1,9 +1,10 @@
 import { ethers } from 'hardhat'
+import { unlock } from './lib/secure'
 /** ACTION=propose|commit|status WRAP_DESK=0x... npm run zzec:minter — rotate the ZZEC minter to the WrapDesk through the 48h timelock. */
 async function main() {
   const ZZEC = process.env.ZZEC_ADDRESS ?? '0x0b151Ff7a7c5250130EC16C275790961d558E402'
   const action = process.env.ACTION ?? 'status'
-  const [owner] = await ethers.getSigners()
+  const owner = action === 'status' ? undefined : await unlock(ethers.provider)
   const z = await ethers.getContractAt('ZZEC', ZZEC, owner)
   const pend = await z.pendingMinter()
   console.log(`ZZEC ${ZZEC}\nminter  ${await z.minter()}\npending ${pend.account} eta ${pend.eta ? new Date(Number(pend.eta) * 1000).toISOString() : '-'}\n`)
