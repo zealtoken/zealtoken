@@ -5,14 +5,15 @@ import { unlock } from './lib/secure'
 
 /**
  * Owner action on the Furnace: rotate its pool keys to the hooked zZEC market.
- *   HOOK_ADDRESS=0x... npm run furnace:pools -- propose   (48h timelock starts)
- *   npm run furnace:pools -- commit                       (after 48h, within 7 days)
- *   npm run furnace:pools -- status
+ *   npm run furnace:pools:propose   (48h timelock starts; hook address from deployments)
+ *   npm run furnace:pools:commit    (after 48h, within 7 days)
+ *   npm run furnace:pools:status
  */
 const ZEAL = '0x9fA1C5E90A11294F83A9F135b81ad1b537A5FFdC', ZZEC = '0x0b151Ff7a7c5250130EC16C275790961d558E402', PONS_HOOK = '0xE5e702641Ea86F4ae6cC3cDaeD2B886f976Be044', ZERO = ethers.ZeroAddress
 const KEY_T = 'tuple(address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks)'
 async function main() {
-  const cmd = process.argv.find((a) => ['propose', 'commit', 'status'].includes(a)) ?? 'status'
+  const cmd = (process.env.ACTION ?? 'status').toLowerCase()
+  if (!['propose', 'commit', 'status'].includes(cmd)) throw new Error('ACTION must be propose, commit or status')
   const file = join(__dirname, '..', 'deployments', `${network.name}.json`)
   const rec = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {}
   const furnaceAddr = process.env.FURNACE_ADDRESS ?? rec.contracts?.ZealFurnaceV4
