@@ -37,8 +37,8 @@ const PHASES = [
   {
     p: 'Phase 03',
     t: 'Redemption',
-    s: 'planned',
-    d: `Burn ${TOKEN.wrapper}, receive native ZEC. The peg means something the day this opens.`,
+    s: 'live',
+    d: `Burn ${TOKEN.wrapper}, receive native ZEC. Escrow first, paid from the reserve, Zcash transaction recorded on chain, or reclaim your ${TOKEN.wrapper} yourself after 7 days.`,
   },
   {
     p: 'Phase 04',
@@ -74,6 +74,8 @@ const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 05', t: 'Peg keeper live. A dedicated wallet with zZEC and ETH inventory checks the pool every minute and trades it back to the ZEC price outside a 1.5% band. First automated trade: a 5.7% premium closed to 0.6%.', href: `${CONTRACTS.explorer}/tx/0xe2002317546ad5bd6fdb4d090b1caf26e8c0c55c4b5f0b9f9bfbbc4f8a8c11d6`, label: 'tx' },
   { d: 'Sep 05', t: 'The burn hook. A Uniswap v4 hook on the zZEC market takes 0.7% of every swap and hands it to the Furnace, whoever provides the liquidity. Proven on a fork of the live chain, then deployed.', href: `${CONTRACTS.explorer}/address/0x16642362837e2FDC02fF1ECF71f5629c094B0044`, label: 'hook' },
   { d: 'Sep 05', t: 'The zZEC market moves to the hooked pool: 0.3% to liquidity providers, 0.7% to the burn. Same 1% for traders, every trade now burns $ZEAL.', href: `${CONTRACTS.explorer}/tx/0x135a097770c63e6cf7b9d1a680e93d5ae13bbebcadca902e869548c2eb5eb538`, label: 'tx' },
+  { d: 'Sep 05', t: 'Redemption desk deployed. Escrow zZEC with a transparent Zcash address; the operator pays native ZEC and records the Zcash transaction on chain before anything burns. Unpaid after 7 days, you reclaim it yourself. Nobody can stop that.', href: CONTRACTS.desk ? `${CONTRACTS.explorer}/address/${CONTRACTS.desk}` : undefined, label: 'desk' },
+  { d: 'Sep 05', t: 'Redeem form on this page. Connect a wallet, approve, request, watch your own queue. Phase 03 is open.', href: '#redeem', label: 'redeem' },
   { d: 'next', t: 'Pons routes $ZEAL fees to the Tap, and loop one turns too.' },
 ]
 

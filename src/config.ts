@@ -87,7 +87,7 @@ export const CONTRACTS = {
   /** zZEC fees in, burned $ZEAL out. No other exit. */
   furnace: '0x72C2f71dC3c0058974fd59039F9A79397bf87E70' as string | null,
   /** RedemptionDesk: escrow-first redemption. Set at the Phase 03 deploy. */
-  desk: null as string | null,
+  desk: '0x9A1f622C2267fCdBD664D259A27b057B53E9cA1a' as string | null,
   explorer: 'https://robinhoodchain.blockscout.com',
 }
 
