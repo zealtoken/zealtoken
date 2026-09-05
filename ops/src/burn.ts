@@ -103,7 +103,11 @@ async function main() {
   const minOut = ethers.parseEther((expect * 0.85).toFixed(18))
   if (ethIn === 0n) { console.log('nothing to ignite (no fees since last run)'); return }
   console.log(`ignite    expect ~${expect.toFixed(0)} ZEAL, floor ${ethers.formatEther(minOut)}`)
-  const tx3 = await (furnace.connect(wallet) as ethers.Contract).ignite(minOut)
+  // Dry run first: a zZEC pool with no liquidity (e.g. before a pool rotation commits) converts to 0.
+  const dry = (await (furnace.connect(wallet) as ethers.Contract).ignite.staticCall(0n)) as bigint
+  if (dry === 0n) { console.log('ignite    dry run returns 0 ZEAL: the Furnace zZEC pool has no depth yet (pool rotation pending). Skipping, nothing lost; funds stay in the Furnace.'); return }
+  if (dry < minOut) console.log(`ignite    dry run ${ethers.formatEther(dry)} ZEAL is under the floor; sending anyway with the dry-run figure as floor`)
+  const tx3 = await (furnace.connect(wallet) as ethers.Contract).ignite(dry < minOut ? dry * 97n / 100n : minOut)
   console.log(`ignite    ${tx3.hash}`); await tx3.wait()
   console.log(`\nDONE  burned total ${ethers.formatEther(await furnace.totalZealBurned())} ZEAL in ${await furnace.burnCount()} burns\n`)
 }
