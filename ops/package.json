@@ -20,7 +20,8 @@
     "lp:exit": "tsx src/lp-exit.ts",
     "lp:collect": "tsx src/lp-collect.ts",
     "desk": "tsx src/fulfill.ts",
-    "wrap": "tsx src/wrap.ts"
+    "wrap": "tsx src/wrap.ts",
+    "watch:desk": "tsx src/desk-watch.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",

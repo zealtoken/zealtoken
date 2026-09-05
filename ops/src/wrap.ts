@@ -1,5 +1,6 @@
 import { ethers } from 'ethers'
 import { spawnSync } from 'node:child_process'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { provider, roleSigner } from './chain.js'
 import { CONTRACTS, RESERVE } from './config.js'
 import { addressUtxos, chainTip } from './zcash-light.js'
@@ -19,6 +20,15 @@ const CONFIRMATIONS = Number(process.env.WRAP_CONFIRMATIONS ?? 3)
 const ABI = ['function requestCount() view returns (uint256)', 'function summary(uint256) view returns (address requester,uint256 amount,uint64 requestedAt,uint8 status,bytes32 zcashTxid,uint256 deposit)', 'function fulfill(uint256,bytes32)', 'function reject(uint256,string)', 'function operator() view returns (address)']
 const ZABI = ['function reserveZats() view returns (uint256)', 'function totalSupply() view returns (uint256)', 'function attestationIsFresh() view returns (bool)', 'function minter() view returns (address)']
 const fmt = (z: bigint) => (Number(z) / 1e8).toFixed(8)
+const ZCASH_BLOCK_SECONDS = 75
+const JOURNAL = new URL('../launchd/wrap.json', import.meta.url).pathname
+const LEDGER = process.env.REDEEM_LEDGER ?? './redemptions.json'
+/** ZEC already owed to burn-first redemptions that have not been paid yet (same ledger mint.ts uses). */
+function pendingPayoutsZats(): bigint {
+  if (!existsSync(LEDGER)) return 0n
+  const raw = JSON.parse(readFileSync(LEDGER, 'utf8')); const entries = raw.entries ?? raw
+  return Object.values(entries as Record<string, { txid: string; amountZats?: string }>).filter((e) => e.txid === 'PENDING').reduce((s, e) => s + BigInt(e.amountZats ?? '0'), 0n)
+}
 
 async function main() {
   if (!DESK || !ethers.isAddress(DESK)) throw new Error('WRAP_DESK_ADDRESS must be set in ops/.env')
@@ -44,8 +54,11 @@ async function main() {
   if (!open.length) return
   const [tip, utxos] = await Promise.all([chainTip(), addressUtxos(RESERVE.zcashTAddress)])
   const matches: { id: number; txid: string; amount: bigint; conf: number }[] = []
+  const nowS = Math.floor(Date.now() / 1000)
   for (const o of open) {
-    const hits = utxos.filter((u) => u.valueZat === o.deposit)
+    // Only outputs that could have been sent after the request opened count; an older UTXO of the same value is a coincidence, not a payment.
+    const minHeight = tip.height - Math.ceil((nowS - o.at) / ZCASH_BLOCK_SECONDS) - 30
+    const hits = utxos.filter((u) => u.valueZat === o.deposit && (u.height === 0 || u.height >= minHeight))
     const line = `#${o.id}  ${fmt(o.amount)} zZEC -> ${o.requester}  deposit ${fmt(o.deposit)} ZEC  opened ${new Date(o.at * 1000).toISOString().slice(0, 16)}`
     if (!hits.length) { console.log(`${line}  | not funded yet`); continue }
     const u = hits[0]; const conf = u.height ? tip.height - u.height + 1 : 0
@@ -60,18 +73,23 @@ async function main() {
 async function fulfil(desk: ethers.Contract, zzec: ethers.Contract, items: { id: number; txid: string; amount: bigint }[]) {
   const need = items.reduce((s, i) => s + i.amount, 0n)
   let [reserve, supply, fresh] = await Promise.all([zzec.reserveZats(), zzec.totalSupply(), zzec.attestationIsFresh()]) as [bigint, bigint, boolean]
-  if (!fresh || reserve < supply + need) {
+  const owed = pendingPayoutsZats()
+  if (owed > 0n) console.log(`in-flight redemption payouts ${fmt(owed)} ZEC are counted as already spent`)
+  if (!fresh || reserve < supply + need + owed) {
     console.log(`attestation ${fresh ? 'covers ' + fmt(reserve - supply) + ' headroom, need ' + fmt(need) : 'stale'}: re-attesting`)
     const r = spawnSync('npx', ['tsx', 'src/attest.ts'], { stdio: 'inherit', env: process.env })
     if (r.status !== 0) throw new Error('attest failed')
     ;[reserve, supply] = await Promise.all([zzec.reserveZats(), zzec.totalSupply()]) as [bigint, bigint]
-    if (reserve < supply + need) throw new Error(`attested reserve ${fmt(reserve)} cannot cover supply ${fmt(supply)} + ${fmt(need)}; deposits may still be unconfirmed`)
+    if (reserve < supply + need + owed) throw new Error(`attested reserve ${fmt(reserve)} cannot cover supply ${fmt(supply)} + ${fmt(need)} + owed ${fmt(owed)}; deposits may still be unconfirmed`)
   }
   const signer = await roleSigner('minter')
   const d = desk.connect(signer) as ethers.Contract
+  const journal: Record<string, unknown>[] = existsSync(JOURNAL) ? JSON.parse(readFileSync(JOURNAL, 'utf8')) : []
   for (const it of items) {
     const tx = await d.fulfill(it.id, it.txid)
     console.log(`fulfil #${it.id}  ${fmt(it.amount)} zZEC  zcash ${it.txid}  ${tx.hash}`); await tx.wait()
+    journal.push({ at: new Date().toISOString(), id: it.id, amountZats: it.amount.toString(), zcashTxid: it.txid, tx: tx.hash })
+    writeFileSync(JOURNAL, JSON.stringify(journal, null, 2))
   }
   console.log('done')
 }

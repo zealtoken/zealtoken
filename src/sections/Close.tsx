@@ -20,7 +20,7 @@ const PHASES = [
     p: 'Phase 00',
     t: 'Launch',
     s: 'live',
-    d: `$${TOKEN.symbol} launched on ${PONS.launchpad} on Sep 3 and graduated in under an hour. The Foundry and the Tap are deployed with verified source. Fee routing to the Tap waits on Pons proposing the recipient change, then a 3-day timelock.`,
+    d: `$${TOKEN.symbol} launched on ${PONS.launchpad} on Sep 3 and graduated in under an hour. The Foundry and the Tap are deployed with verified source. Fee routing to the Tap waits on Pons moving the creator-fee recipient; the request is filed and the credit accrues meanwhile.`,
   },
   {
     p: 'Phase 01',
@@ -32,7 +32,7 @@ const PHASES = [
     p: 'Phase 02',
     t: `${TOKEN.wrapper} mints`,
     s: 'live',
-    d: `${TOKEN.wrapper} and the Furnace deploy together. Liquidity is seeded and its fees pointed at the Furnace, so the first ${TOKEN.wrapper} trade is the first $${TOKEN.symbol} burn.`,
+    d: `${TOKEN.wrapper} and the Furnace deploy together. The market runs on Uniswap v4 with a hook that hands 0.7% of every trade to the Furnace, so every ${TOKEN.wrapper} trade is a $${TOKEN.symbol} burn.`,
   },
   {
     p: 'Phase 03',

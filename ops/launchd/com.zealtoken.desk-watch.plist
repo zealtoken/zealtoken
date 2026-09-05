@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.zealtoken.desk-watch</string>
+  <key>ProgramArguments</key><array><string>__OPS__/launchd/desk-watch.sh</string></array>
+  <key>StartInterval</key><integer>300</integer>
+  <key>RunAtLoad</key><true/>
+  <key>StandardOutPath</key><string>__OPS__/launchd/desk.out</string>
+  <key>StandardErrorPath</key><string>__OPS__/launchd/desk.err</string>
+</dict></plist>

@@ -9,9 +9,9 @@ rsync -a --delete --exclude 'launchd/*.log' --exclude 'launchd/*.out' --exclude 
 chmod 700 "$RT/.keys" 2>/dev/null || true
 # The LP/burn job signs with the deployer keystore; launchd cannot read ~/Documents, so keep a copy beside the role keys.
 if [ -f "$SRC/../contracts/.keystore.json" ]; then install -m 600 "$SRC/../contracts/.keystore.json" "$RT/.keys/deployer.json"; fi
-for job in attest watch-roles ${EXTRA_JOBS:-}; do
+for job in attest watch-roles keeper burn desk-watch ${EXTRA_JOBS:-}; do
   PLIST="$HOME/Library/LaunchAgents/com.zealtoken.$job.plist"
-  sed "s#\$HOME/Documents/zealtoken.com/ops#$RT#g; s#$HOME/Documents/zealtoken.com/ops#$RT#g" "$SRC/launchd/com.zealtoken.$job.plist" > "$PLIST"
+  sed "s#__OPS__#$RT#g" "$SRC/launchd/com.zealtoken.$job.plist" > "$PLIST"
   launchctl unload -w "$PLIST" 2>/dev/null || true
   launchctl load -w "$PLIST"
 done

@@ -37,7 +37,18 @@ const sv = new ethers.Contract(STATE_VIEW, ['function getSlot0(bytes32) view ret
 const ur = new ethers.Contract(UR, ['function execute(bytes commands,bytes[] inputs,uint256 deadline) payable'], provider)
 const permit2 = new ethers.Contract(PERMIT2, ['function approve(address,address,uint160,uint48)', 'function allowance(address,address,address) view returns (uint160,uint48,uint48)'], provider)
 const erc20 = (a: string) => new ethers.Contract(a, ['function balanceOf(address) view returns (uint256)', 'function allowance(address,address) view returns (uint256)', 'function approve(address,uint256) returns (bool)'], provider)
-const spot = async (p: string) => Number((await (await fetch(`https://api.coinbase.com/v2/prices/${p}/spot`)).json()).data.amount)
+const PRICE_FAILS = new URL('../launchd/keeper-pricefail', import.meta.url).pathname
+/** Spot price with retries and a second source. Coinbase first, CoinGecko as fallback. */
+async function spot(p: 'ZEC-USD' | 'ETH-USD'): Promise<number> {
+  const cg = p === 'ZEC-USD' ? 'zcash' : 'ethereum'
+  const tries: (() => Promise<number>)[] = [
+    async () => Number((await (await fetch(`https://api.coinbase.com/v2/prices/${p}/spot`, { signal: AbortSignal.timeout(6000) })).json()).data.amount),
+    async () => Number((await (await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${cg}&vs_currencies=usd`, { signal: AbortSignal.timeout(6000) })).json())[cg].usd),
+  ]
+  let last: unknown
+  for (let i = 0; i < 3; i++) for (const t of tries) { try { const v = await t(); if (Number.isFinite(v) && v > 0) return v } catch (e) { last = e } }
+  throw new Error(`price feed unavailable for ${p}: ${(last as Error)?.message ?? last}`)
+}
 
 type Plan = { side: 'sell' | 'buy'; amountIn: bigint; minOut: bigint; expectOut: bigint }
 
@@ -86,7 +97,17 @@ function encode(p: Plan): { data: string; value: bigint } {
 async function main() {
   const execute = process.argv.includes('--execute'), simulate = process.argv.includes('--simulate')
   const keeperAddr = process.env.KEEPER_ADDRESS ?? ''
-  const [s, L, zecUsd, ethUsd] = await Promise.all([sv.getSlot0(POOL_ID), sv.getLiquidity(POOL_ID), spot('ZEC-USD'), spot('ETH-USD')])
+  let zecUsd: number, ethUsd: number
+  try { [zecUsd, ethUsd] = await Promise.all([spot('ZEC-USD'), spot('ETH-USD')]); if (existsSync(PRICE_FAILS)) writeFileSync(PRICE_FAILS, '0') }
+  catch (e) {
+    // A price outage is not a keeper failure. Skip quietly; alert only once every 10 consecutive misses.
+    const n = (existsSync(PRICE_FAILS) ? Number(readFileSync(PRICE_FAILS, 'utf8')) || 0 : 0) + 1
+    writeFileSync(PRICE_FAILS, String(n))
+    console.log(`${new Date().toISOString()} price feeds unavailable (${n} in a row): skipping tick`)
+    if (n % 10 === 0) throw e
+    return
+  }
+  const [s, L] = await Promise.all([sv.getSlot0(POOL_ID), sv.getLiquidity(POOL_ID)])
   const sp = Number(s.sqrtPriceX96) / 2 ** 96
   const x = Number(L) / sp / 1e18, y = (Number(L) * sp) / 1e8, fair = zecUsd / ethUsd, pool = x / y
   const stamp = new Date().toISOString()

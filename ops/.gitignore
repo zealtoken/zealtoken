@@ -6,3 +6,6 @@ launchd/*.err
 launchd/roles-state.json
 launchd/keeper.json
 launchd/burn.log
+launchd/keeper-pricefail
+launchd/wrap.json
+launchd/desk-alerted

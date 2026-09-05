@@ -23,7 +23,8 @@ async function main() {
     const r = await desk.getRequest(i)
     const st = ['none', 'OPEN', 'fulfilled', 'reclaimed'][Number(r.status)]
     if (Number(r.status) === 1) open.push(i)
-    console.log(`#${i} ${st.padEnd(9)} ${Number(r.amount) / 1e8} zZEC -> ${r.zcashAddress}  from ${r.holder.slice(0, 10)}…  at ${new Date(Number(r.requestedAt) * 1000).toISOString().slice(0, 16)}${Number(r.status) === 2 ? '  txid ' + r.zcashTxid : ''}`)
+    const payBy = new Date((Number(r.requestedAt) + 7 * 86400 - 12 * 3600) * 1000).toISOString().slice(0, 16)
+    console.log(`#${i} ${st.padEnd(9)} ${Number(r.amount) / 1e8} zZEC -> ${r.zcashAddress}  from ${r.holder.slice(0, 10)}…  at ${new Date(Number(r.requestedAt) * 1000).toISOString().slice(0, 16)}${Number(r.status) === 1 ? '  PAY BEFORE ' + payBy : ''}${Number(r.status) === 2 ? '  txid ' + r.zcashTxid : ''}`)
   }
   console.log(`${open.length} open`)
   const id = process.env.FULFILL_ID, txid = process.env.ZEC_TXID
@@ -31,6 +32,9 @@ async function main() {
   if (!txid || !/^(0x)?[0-9a-fA-F]{64}$/.test(txid)) throw new Error('ZEC_TXID must be the 64-hex Zcash transaction id of the payout you already sent')
   const r = await desk.getRequest(Number(id))
   if (Number(r.status) !== 1) throw new Error(`#${id} is not open`)
+  // The holder can reclaim 7 days after requesting. Paying ZEC close to that line risks paying AND losing the escrow. Refuse inside the last 12h.
+  const left = Number(r.requestedAt) + 7 * 86400 - Math.floor(Date.now() / 1000)
+  if (left < 12 * 3600 && process.env.FULFILL_FORCE !== '1') throw new Error(`#${id} becomes reclaimable in ${(left / 3600).toFixed(1)}h. Do NOT pay it now; let the holder reclaim, or FULFILL_FORCE=1 if the ZEC is already sent and confirmed.`)
   console.log(`\nfulfilling #${id}: ${Number(r.amount) / 1e8} zZEC -> ${r.zcashAddress} paid in ${txid}`)
   const signer = await roleSigner('fulfiller' as never)
   if ((await desk.operator()).toLowerCase() !== signer.address.toLowerCase()) throw new Error('this key is not the desk operator')
