@@ -28,7 +28,7 @@ export function zzec(signer?: ethers.Signer) {
 
 /** A role key from the environment. Attestor and minter are separate on purpose. */
 export const KEYS_DIR = new URL('../.keys/', import.meta.url).pathname
-export type Role = 'attestor' | 'minter' | 'keeper'
+export type Role = 'attestor' | 'minter' | 'keeper' | 'fulfiller'
 export const keyPath = (role: Role) => `${KEYS_DIR}${role}.json`
 
 /**

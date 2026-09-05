@@ -18,7 +18,8 @@
     "peg": "tsx src/peg.ts",
     "keeper": "tsx src/keeper.ts",
     "lp:exit": "tsx src/lp-exit.ts",
-    "lp:collect": "tsx src/lp-collect.ts"
+    "lp:collect": "tsx src/lp-collect.ts",
+    "desk": "tsx src/fulfill.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",

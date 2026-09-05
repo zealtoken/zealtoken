@@ -23,7 +23,7 @@ function ask(q: string): Promise<string> {
 
 async function main() {
   mkdirSync(KEYS_DIR, { recursive: true })
-  const roles = (process.env.ROLES ?? 'attestor,minter').split(',') as ('attestor' | 'minter' | 'keeper')[]
+  const roles = (process.env.ROLES ?? 'attestor,minter').split(',') as ('attestor' | 'minter' | 'keeper' | 'fulfiller')[]
   for (const role of roles) {
     const file = keyPath(role)
     if (existsSync(file)) { console.log(`${role}: exists at ${file}, leaving it`); continue }

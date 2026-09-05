@@ -75,8 +75,11 @@ async function main() {
       running = false
     }
   }
+  const desk = (process.env.DESK_ADDRESS ?? '').toLowerCase()
   const enqueue = (id: bigint, from: string, amount: bigint, zaddr: string, block: number) => {
     const key = id.toString()
+    // Redemptions burned by the Desk were already paid (fulfil() runs after the ZEC is sent). Never pay them again.
+    if (desk && from.toLowerCase() === desk) { console.log(`#${key} burned by the Redemption Desk; already paid, skipping`); return }
     if (seen.has(key)) return
     seen.add(key)
     queue.push({ id, from, amount, zaddr, block })
