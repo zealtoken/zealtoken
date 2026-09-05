@@ -12,6 +12,7 @@ const ITEMS = [
   { href: '#phases', label: 'Roadmap' },
   { href: '#lore', label: 'Lore' },
   { href: '#faq', label: 'FAQ' },
+  { href: '/docs/', label: 'Docs' },
 ]
 
 export function Nav() {
