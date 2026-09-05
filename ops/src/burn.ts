@@ -1,6 +1,8 @@
 /**
- * Run the burn loop by hand, nothing locked: collect the zZEC/ETH position's
- * fees to the LP wallet, forward them to the Furnace, ignite.
+ * Run the burn loop by hand, nothing locked. The hook delivers 0.7% of every
+ * zZEC swap to the Furnace on its own; by default this only ignites what the
+ * Furnace already holds. The position's 0.3% LP fees stay with the owner
+ * unless COLLECT_LP_FEES=1, which collects and forwards them too.
  *
  *   LP_TOKEN_IDS=1829215,1835853 npm run burn               # plan
  *   LP_TOKEN_IDS=1829215,1835853 npm run burn -- --execute  # signs with the deployer keystore (LP owner + igniter)
@@ -68,8 +70,9 @@ async function main() {
   console.log(`LP #${tokenIds.join(', #')} owner ${lpOwner}  |  Furnace holds ${ethers.formatEther(ethHeldF)} ETH + ${Number(zzecHeldF) / 1e8} zZEC`)
   console.log(`prices  1 ETH = ${zealPerEth.toFixed(0)} ZEAL   1 zZEC = ${ethPerZzec.toFixed(5)} ETH`)
 
+  const collect = process.env.COLLECT_LP_FEES === '1'
   if (!execute) {
-    console.log(`\nPlan: collect fees from #${tokenIds.join(', #')} -> ${lpOwner}, forward ETH + zZEC to the Furnace, ignite.\nAdd --execute to sign (deployer keystore).\n`)
+    console.log(`\nPlan: ${collect ? `collect LP fees from #${tokenIds.join(', #')} -> ${lpOwner}, forward them to the Furnace, then ` : ''}ignite what the Furnace holds.\nAdd --execute to sign (deployer keystore).\n`)
     return
   }
   const ksPath = process.env.LP_KEYSTORE ?? new URL('../../contracts/.keystore.json', import.meta.url).pathname
@@ -79,19 +82,20 @@ async function main() {
   if (wallet.address.toLowerCase() !== lpOwner.toLowerCase()) throw new Error(`keystore ${wallet.address} does not own these positions`)
   if ((await furnace.igniter()).toLowerCase() !== wallet.address.toLowerCase()) throw new Error('keystore is not the Furnace igniter')
 
-  // 1. collect
-  const tx1 = await (posm.connect(wallet) as ethers.Contract).modifyLiquidities(unlockData, Math.floor(Date.now() / 1000) + 600)
-  console.log(`collect   ${tx1.hash}`); await tx1.wait()
-  const ethGot = (await provider.getBalance(wallet.address)) - ethNow // net of gas, so slightly under
-  const zzecGot: bigint = (await erc20(zzec).balanceOf(wallet.address)) - zzecNow
-  console.log(`collected ~${ethers.formatEther(ethGot > 0n ? ethGot : 0n)} ETH + ${Number(zzecGot) / 1e8} zZEC`)
-
-  // 2. forward everything collectable (keep gas)
-  const gasReserve = ethers.parseEther('0.003')
-  const bal = await provider.getBalance(wallet.address)
-  const ethSend = ethGot > 0n && bal > ethGot + gasReserve ? ethGot : 0n
-  if (ethSend > 0n) { const t = await wallet.sendTransaction({ to: furnaceAddr, value: ethSend }); console.log(`forward   ${t.hash} (${ethers.formatEther(ethSend)} ETH)`); await t.wait() }
-  if (zzecGot > 0n) { const t = await (erc20(zzec).connect(wallet) as ethers.Contract).transfer(furnaceAddr, zzecGot); console.log(`forward   ${t.hash} (${Number(zzecGot) / 1e8} zZEC)`); await t.wait() }
+  if (collect) {
+    // 1. collect the position's LP fees to the owner
+    const tx1 = await (posm.connect(wallet) as ethers.Contract).modifyLiquidities(unlockData, Math.floor(Date.now() / 1000) + 600)
+    console.log(`collect   ${tx1.hash}`); await tx1.wait()
+    const ethGot = (await provider.getBalance(wallet.address)) - ethNow // net of gas, so slightly under
+    const zzecGot: bigint = (await erc20(zzec).balanceOf(wallet.address)) - zzecNow
+    console.log(`collected ~${ethers.formatEther(ethGot > 0n ? ethGot : 0n)} ETH + ${Number(zzecGot) / 1e8} zZEC`)
+    // 2. forward them (keep gas)
+    const gasReserve = ethers.parseEther('0.003')
+    const bal = await provider.getBalance(wallet.address)
+    const ethSend = ethGot > 0n && bal > ethGot + gasReserve ? ethGot : 0n
+    if (ethSend > 0n) { const t = await wallet.sendTransaction({ to: furnaceAddr, value: ethSend }); console.log(`forward   ${t.hash} (${ethers.formatEther(ethSend)} ETH)`); await t.wait() }
+    if (zzecGot > 0n) { const t = await (erc20(zzec).connect(wallet) as ethers.Contract).transfer(furnaceAddr, zzecGot); console.log(`forward   ${t.hash} (${Number(zzecGot) / 1e8} zZEC)`); await t.wait() }
+  }
 
   // 3. ignite with a floor: 85% of the naive expectation (fee, impact bound, rounding).
   const ethIn = (await provider.getBalance(furnaceAddr)) + BigInt(Math.floor(Number(await erc20(zzec).balanceOf(furnaceAddr)) * ethPerZzec * 1e10))
