@@ -144,6 +144,14 @@ contract RedemptionDesk is Ownable2Step, ReentrancyGuard {
     function getRequest(uint256 id) external view returns (Request memory) { return _get(id); }
     function reclaimableAt(uint256 id) external view returns (uint64) { return _get(id).requestedAt + WINDOW; }
 
+    /// @dev Fixed-width view for thin clients that decode without an ABI library.
+    function summary(uint256 id) external view returns (address holder, uint256 amount, uint64 requestedAt, uint8 status, bytes32 zcashTxid) {
+        Request storage r = _get(id);
+        return (r.holder, r.amount, r.requestedAt, uint8(r.status), r.zcashTxid);
+    }
+
+    function zcashAddressOf(uint256 id) external view returns (string memory) { return _get(id).zcashAddress; }
+
     function _get(uint256 id) private view returns (Request storage) {
         if (id >= _requests.length) revert NoSuchRequest();
         return _requests[id];

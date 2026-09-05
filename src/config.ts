@@ -86,6 +86,8 @@ export const CONTRACTS = {
   zzec: '0x0b151Ff7a7c5250130EC16C275790961d558E402' as string | null,
   /** zZEC fees in, burned $ZEAL out. No other exit. */
   furnace: '0x72C2f71dC3c0058974fd59039F9A79397bf87E70' as string | null,
+  /** RedemptionDesk: escrow-first redemption. Set at the Phase 03 deploy. */
+  desk: null as string | null,
   explorer: 'https://robinhoodchain.blockscout.com',
 }
 
@@ -135,6 +137,7 @@ export const LINKS = {
   uniswapSwap: 'https://app.uniswap.org/swap?chain=robinhood&inputCurrency=NATIVE&outputCurrency=0x0b151Ff7a7c5250130EC16C275790961d558E402',
   uniswapAddLiquidity: 'https://app.uniswap.org/positions/create/v4?currencyA=NATIVE&currencyB=0x0b151Ff7a7c5250130EC16C275790961d558E402&chain=robinhood&feeTier=3000&tickSpacing=60&hook=0x16642362837e2FDC02fF1ECF71f5629c094B0044',
   zcashExplorer: 'https://mainnet.zcashexplorer.app/address/',
+  zcashTx: 'https://mainnet.zcashexplorer.app/transactions/',
   /** Public mirror under an anonymous org; null until it exists. Never link a personal account. */
   repo: 'https://github.com/zealtoken/zealtoken' as string | null,
   x: 'https://x.com/ZealTheMascot',

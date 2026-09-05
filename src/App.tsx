@@ -6,6 +6,7 @@ import { Furnace } from './sections/Furnace'
 import { FurnaceCalc } from './sections/Calculators'
 import { Proof } from './sections/Proof'
 import { Market } from './sections/Market'
+import { Redeem } from './sections/Redeem'
 import { Lore } from './sections/Lore'
 import { Close } from './sections/Close'
 
@@ -24,6 +25,7 @@ export default function App() {
           </div>
         </section>
         <Market />
+        <Redeem />
         <Proof />
         <Lore />
         <Close />

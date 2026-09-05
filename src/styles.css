@@ -1109,3 +1109,24 @@ p:last-child { margin-bottom: 0; }
 .mkt-link:hover { text-decoration: underline; }
 .mkt-note { margin-top: 26px; font-size: 12.5px; color: var(--fg-faint); line-height: 1.6; }
 @media (max-width: 760px) { .mkt-live { grid-template-columns: 1fr; } }
+
+/* redemption desk */
+.redeem-soon { display:flex; align-items:center; gap:16px; flex-wrap:wrap; padding:18px 20px; border:1px solid var(--line); border-radius:12px; }
+.redeem-soon p { margin:0; color: var(--fg-soft); }
+.redeem-grid { display:grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 28px; align-items:start; }
+.redeem-form { border:1px solid var(--line); border-radius:14px; padding: 22px; display:grid; gap:10px; }
+.redeem-acct { font-size:12px; color: var(--fg-faint); letter-spacing:.08em; }
+.redeem-l { font-size:11px; letter-spacing:.14em; text-transform:uppercase; color: var(--fg-soft); margin-top:6px; }
+.redeem-in { font-size:16px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background: transparent; color: var(--fg); width:100%; }
+.redeem-in:focus { outline:none; border-color: var(--green); }
+.redeem-msg { font-size:13px; color: var(--fg); line-height:1.5; }
+.redeem-fine { font-size:11.5px; color: var(--fg-faint); line-height:1.6; }
+.redeem-fine a { color: var(--green-text); text-decoration:none; }
+.redeem-lists { display:grid; gap:22px; }
+.redeem-h { font-size:11px; letter-spacing:.16em; text-transform:uppercase; color: var(--fg-soft); margin-bottom:8px; }
+.redeem-empty { font-size:13px; color: var(--fg-faint); }
+.redeem-row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 0; border-bottom:1px solid var(--line); font-size:13px; }
+.redeem-tx { color: var(--green-text); text-decoration:none; margin-left:auto; }
+.redeem-eta, .redeem-addr { color: var(--fg-faint); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+@media (max-width: 860px) { .redeem-grid { grid-template-columns: 1fr; } }
