@@ -24,7 +24,7 @@ async function main() {
   if (cmd === 'status') return
   const wallet = await unlock(ethers.provider)
   if ((await ro.owner()).toLowerCase() !== wallet.address.toLowerCase()) throw new Error('keystore is not the Furnace owner')
-  const c = ro.connect(wallet) as ethers.Contract
+  const c = ro.connect(wallet) as typeof ro
   if (cmd === 'propose') {
     const hook = process.env.HOOK_ADDRESS ?? rec.contracts?.ZealBurnHook
     if (!ethers.isAddress(hook)) throw new Error('HOOK_ADDRESS required')
