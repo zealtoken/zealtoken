@@ -47,9 +47,12 @@ export function Market() {
     }
     void run()
     const t = window.setInterval(run, 20_000)
+    const onVis = () => document.visibilityState === 'visible' && void run()
+    document.addEventListener('visibilitychange', onVis)
     return () => {
       ctrl.abort()
       window.clearInterval(t)
+      document.removeEventListener('visibilitychange', onVis)
     }
   }, [])
 
