@@ -44,3 +44,13 @@ if (process.argv[1]?.endsWith('zcash-light.ts')) {
   const [bal, tip] = await Promise.all([taddrBalanceZats(addr), chainTip()])
   console.log(`${addr}\n  balance ${(Number(bal) / 1e8).toFixed(8)} ZEC (${bal} zat)\n  tip     ${tip.chain} #${tip.height} ${tip.hash}`)
 }
+
+export type TaddrUtxo = { txid: string; index: number; valueZat: bigint; height: number }
+/** Unspent outputs on a transparent address (txid in display byte order). */
+export async function addressUtxos(address: string, host?: string): Promise<TaddrUtxo[]> {
+  const c = client(host) as unknown as { GetAddressUtxos: (arg: unknown, cb: (e: Error | null, r: { addressUtxos: { txid: Buffer; index: number; valueZat: string; height: string }[] }) => void) => void }
+  return new Promise((res, rej) => c.GetAddressUtxos({ addresses: [address], startHeight: 0, maxEntries: 0 }, (e, r) => {
+    if (e) return rej(e)
+    res((r.addressUtxos ?? []).map((u) => ({ txid: '0x' + Buffer.from(u.txid).reverse().toString('hex'), index: u.index, valueZat: BigInt(u.valueZat), height: Number(u.height) })))
+  }))
+}
