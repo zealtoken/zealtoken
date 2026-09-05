@@ -8,6 +8,7 @@
 import { ethers } from 'ethers'
 import { CHAIN, CONTRACTS, RESERVE } from './config.js'
 import { addressUtxos, chainTip } from './zcash-light.js'
+import { existsSync, readFileSync } from 'node:fs'
 
 const provider = new ethers.JsonRpcProvider(CHAIN.rpc, CHAIN.id, { staticNetwork: true })
 const ROLES: Record<string, string> = { attestor: '0xD395C10CF6328dC703d69dFFE7BB7c34D13E67Db', minter: '0xc678772403C67045fa0B2d882f04e24214f1F513', keeper: '0x19cece80126b79F76D8b8297B876310a56349738', fulfiller: '0xb652b03500440dF569a231F82f87E735930a5dE6', deployer: '0x1C083F2f85aCadae452C7512C45cD7c8a3ddbF03' }
@@ -48,6 +49,24 @@ async function main() {
         if (conf >= 3) alerts.push(`WRAP #${o.id}: funded ${fmt(o.deposit)} ZEC (${conf} conf) -> run WRAP_FULFILL=1 npm run wrap to mint ${fmt(o.amount)} zZEC`)
         else notes.push(`wrap #${o.id} funded, ${conf}/3 confirmations`)
       }
+    }
+  }
+  // Burn-first redemptions made directly on ZZEC (not through the desk) have no escrow and no on-chain record of payment.
+  // Anyone can call requestRedeem from the explorer; if nobody pays, a holder is out of pocket. Alert until the ledger records a txid.
+  {
+    const c = new ethers.Contract(CONTRACTS.zzec, ['event RedemptionRequested(uint256 indexed id, address indexed from, uint256 amount, string zcashAddress)'], provider)
+    const ledgerPath = process.env.REDEEM_LEDGER ?? './redemptions.json'
+    const raw = existsSync(ledgerPath) ? JSON.parse(readFileSync(ledgerPath, 'utf8')) : {}
+    const entries: Record<string, { txid: string }> = raw.entries ?? raw
+    const head = await provider.getBlockNumber()
+    const desk = (process.env.DESK_ADDRESS ?? '').toLowerCase()
+    const evs = await c.queryFilter(c.filters.RedemptionRequested(), Math.max(0, head - 2_000_000))
+    for (const ev of evs) {
+      const [id, from, amount, zaddr] = (ev as unknown as { args: [bigint, string, bigint, string] }).args
+      if (from.toLowerCase() === desk) continue
+      const e = entries[id.toString()]
+      if (e && e.txid && e.txid !== 'PENDING') continue
+      alerts.push(`DIRECT REDEEM #${id}: ${from} burned ${fmt(amount)} zZEC -> ${zaddr}; pay it, then record the txid in ${ledgerPath}`)
     }
   }
   // zZEC attestation freshness (the attest job has its own alert; this catches a dead scheduler)
