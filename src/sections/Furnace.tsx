@@ -7,14 +7,14 @@ const STEPS = [
   {
     n: '01',
     t: 'Collect',
-    d: `The Foundry seeds ${TOKEN.wrapper} liquidity. That position earns a fee on every ${TOKEN.wrapper} trade, and those fees flow to the Furnace.`,
-    k: 'LP fees → Furnace',
+    d: `A hook on the ${TOKEN.wrapper} market takes 0.7% of every swap, whoever provides the liquidity, and hands it to the Furnace inside the same transaction. The other 0.3% pays liquidity providers.`,
+    k: 'afterSwap: 0.7% → Furnace',
   },
   {
     n: '02',
     t: 'Ignite',
-    d: `ignite() swaps the fees for $${TOKEN.symbol} with a minimum output, so it cannot be sandwiched. The path must end in $${TOKEN.symbol}; the recipient is always the Furnace.`,
-    k: 'ignite(tokenIn, amountIn, minOut, path)',
+    d: `ignite() swaps what the Furnace holds into $${TOKEN.symbol}: ${TOKEN.wrapper} to ETH, ETH to $${TOKEN.symbol}, each leg capped at about 5% price impact and the whole run behind a minimum-output floor. The recipient is always the Furnace.`,
+    k: 'ignite(minZealOut)',
   },
   {
     n: '03',
