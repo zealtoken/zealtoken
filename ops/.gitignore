@@ -4,3 +4,4 @@ launchd/*.log
 launchd/*.out
 launchd/*.err
 launchd/roles-state.json
+launchd/keeper.json

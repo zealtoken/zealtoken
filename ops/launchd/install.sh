@@ -7,7 +7,7 @@ RT="$HOME/zeal-ops"
 mkdir -p "$RT/launchd"
 rsync -a --delete --exclude 'launchd/*.log' --exclude 'launchd/*.out' --exclude 'launchd/*.err' "$SRC/" "$RT/"
 chmod 700 "$RT/.keys" 2>/dev/null || true
-for job in attest watch-roles; do
+for job in attest watch-roles ${EXTRA_JOBS:-}; do
   PLIST="$HOME/Library/LaunchAgents/com.zealtoken.$job.plist"
   sed "s#\$HOME/Documents/zealtoken.com/ops#$RT#g; s#$HOME/Documents/zealtoken.com/ops#$RT#g" "$SRC/launchd/com.zealtoken.$job.plist" > "$PLIST"
   launchctl unload -w "$PLIST" 2>/dev/null || true

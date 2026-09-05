@@ -28,19 +28,20 @@ export function zzec(signer?: ethers.Signer) {
 
 /** A role key from the environment. Attestor and minter are separate on purpose. */
 export const KEYS_DIR = new URL('../.keys/', import.meta.url).pathname
-export const keyPath = (role: 'attestor' | 'minter') => `${KEYS_DIR}${role}.json`
+export type Role = 'attestor' | 'minter' | 'keeper'
+export const keyPath = (role: Role) => `${KEYS_DIR}${role}.json`
 
 /**
  * Unlock a role key. Order: encrypted keystore in ops/.keys (passphrase from
  * ATTESTOR_PASS / MINTER_PASS or an interactive prompt), else a raw *_KEY env
  * for hosts that inject secrets themselves.
  */
-export async function roleSigner(role: 'attestor' | 'minter'): Promise<ethers.Wallet> {
+export async function roleSigner(role: Role): Promise<ethers.Wallet> {
   const { existsSync, readFileSync } = await import('node:fs')
   const file = keyPath(role)
-  const envKey = process.env[role === 'attestor' ? 'ATTESTOR_KEY' : 'MINTER_KEY']
+  const envKey = process.env[`${role.toUpperCase()}_KEY`]
   if (existsSync(file)) {
-    let pass = process.env[role === 'attestor' ? 'ATTESTOR_PASS' : 'MINTER_PASS']
+    let pass = process.env[`${role.toUpperCase()}_PASS`]
     if (!pass) {
       if (!process.stdin.isTTY) throw new Error(`no ${role.toUpperCase()}_PASS and no TTY to prompt on`)
       const { createInterface } = await import('node:readline')
@@ -54,7 +55,7 @@ export async function roleSigner(role: 'attestor' | 'minter'): Promise<ethers.Wa
       })
     }
     const w = await ethers.Wallet.fromEncryptedJson(readFileSync(file, 'utf8'), pass)
-    delete process.env[role === 'attestor' ? 'ATTESTOR_PASS' : 'MINTER_PASS'] // shorten its lifetime in this process
+    delete process.env[`${role.toUpperCase()}_PASS`] // shorten its lifetime in this process
     return new ethers.Wallet(w.privateKey, provider)
   }
   if (envKey) {

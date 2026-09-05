@@ -23,7 +23,8 @@ function ask(q: string): Promise<string> {
 
 async function main() {
   mkdirSync(KEYS_DIR, { recursive: true })
-  for (const role of ['attestor', 'minter'] as const) {
+  const roles = (process.env.ROLES ?? 'attestor,minter').split(',') as ('attestor' | 'minter' | 'keeper')[]
+  for (const role of roles) {
     const file = keyPath(role)
     if (existsSync(file)) { console.log(`${role}: exists at ${file}, leaving it`); continue }
     const a = await ask(`passphrase for ${role} key: `)
