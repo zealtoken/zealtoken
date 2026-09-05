@@ -1138,3 +1138,38 @@ p:last-child { margin-bottom: 0; }
 .wrap-pay b { color: var(--fg); }
 .wrap-pay .copy { font: inherit; font-size:11px; letter-spacing:.08em; text-transform:uppercase; margin-left:8px; padding:2px 8px; border:1px solid var(--line); border-radius:999px; background:transparent; color: var(--green-text); cursor:pointer; }
 .wrap-note { font-size:11.5px; color: var(--fg-faint); margin-top:4px; }
+
+/* put ZEC to work */
+.ctb-strip { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px; margin: 0 0 28px; }
+.ctb-strip div { border:1px solid var(--line); border-radius:12px; padding:12px 14px; display:flex; flex-direction:column; gap:3px; background: var(--bg); }
+.ctb-strip span { font-size:10px; letter-spacing:.16em; text-transform:uppercase; color: var(--fg-faint); }
+.ctb-strip b { font-size:15px; color: var(--fg); font-weight:700; letter-spacing:-.01em; }
+.ctb-strip i { font-style:normal; font-size:10.5px; color: var(--fg-faint); }
+.ctb-grid { display:grid; grid-template-columns: 1fr 1fr; gap:22px; align-items:start; }
+.ctb-card { position:relative; border:1px solid var(--line); border-radius:18px; padding:26px 26px 22px; background: var(--bg); display:flex; flex-direction:column; gap:14px; }
+.ctb-n { position:absolute; top:22px; right:24px; font-size:12px; letter-spacing:.2em; color: var(--green-text); font-weight:700; }
+.ctb-card .h3 { margin:0; padding-right:40px; }
+.ctb-lede { margin:0; color: var(--fg-soft); line-height:1.55; }
+.ctb-list { margin:0; padding:0 0 0 18px; display:grid; gap:8px; color: var(--fg-soft); line-height:1.5; }
+.ctb-list b { color: var(--fg); }
+.ctb-widget { border:1px solid var(--line); border-radius:14px; padding:16px 16px 14px; background: var(--bg-2); display:grid; gap:10px; }
+.ctb-w-h { font-size:12px; letter-spacing:.06em; color: var(--fg-soft); }
+.ctb-w-h b { color: var(--fg); font-size:14px; }
+.ctb-assume { margin-top:6px; }
+.ctb-assume span { color: var(--fg-faint); font-size:11px; }
+.ctb-range { width:100%; accent-color: var(--green); height:28px; }
+.ctb-out { display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; margin-top:6px; }
+.ctb-out div { display:flex; flex-direction:column; gap:2px; }
+.ctb-out span { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color: var(--fg-faint); }
+.ctb-out b { font-size:14px; color: var(--fg); font-weight:700; }
+.ctb-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.ctb-risk { font-size:11.5px; line-height:1.55; color: var(--fg-faint); margin:0; border-top:1px solid var(--line); padding-top:12px; }
+.ctb-compare { margin-top:26px; overflow-x:auto; }
+.ctb-compare table { width:100%; border-collapse:collapse; font-size:12.5px; }
+.ctb-compare th, .ctb-compare td { text-align:left; padding:11px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+.ctb-compare th { font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color: var(--fg-faint); font-weight:600; }
+.ctb-compare td:first-child { color: var(--fg-faint); text-transform:uppercase; font-size:10.5px; letter-spacing:.14em; }
+.ctb-compare td:nth-child(4) { color: var(--green-text); font-weight:600; }
+.ctb-soon { display:flex; gap:14px; align-items:flex-start; margin-top:22px; font-size:12px; line-height:1.55; color: var(--fg-soft); border:1px dashed var(--line); border-radius:12px; padding:14px 16px; }
+@media (max-width: 960px) { .ctb-grid { grid-template-columns:1fr; } .ctb-strip { grid-template-columns:1fr 1fr; } }
+@media (max-width: 600px) { .ctb-out { grid-template-columns:1fr; } .ctb-strip { grid-template-columns:1fr; } }
