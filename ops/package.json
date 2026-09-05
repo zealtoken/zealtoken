@@ -17,7 +17,8 @@
     "burn": "tsx src/burn.ts",
     "peg": "tsx src/peg.ts",
     "keeper": "tsx src/keeper.ts",
-    "lp:exit": "tsx src/lp-exit.ts"
+    "lp:exit": "tsx src/lp-exit.ts",
+    "lp:collect": "tsx src/lp-collect.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",
