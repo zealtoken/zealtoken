@@ -19,8 +19,9 @@ import { roleSigner } from './chain.js'
 const UR = '0x8876789976decbfcbbbe364623c63652db8c0904'
 const PERMIT2 = '0x000000000022D473030F116dDEE9F6B43aC78BA3'
 const STATE_VIEW = '0xf3334192d15450cdd385c8b70e03f9a6bd9e673b'
-const POOL_ID = '0xe90144f308b35e54356aaf0050c8734e85bea118eaf6c347a5c7701b7f545f8a'
-const FEE = 10_000, SPACING = 200, ETH = ethers.ZeroAddress
+const ETH = ethers.ZeroAddress
+// The market the keeper defends. Defaults to the first zZEC/ETH pool; point POOL_* at the hooked market after migration.
+const FEE = Number(process.env.POOL_FEE ?? 10_000), SPACING = Number(process.env.POOL_TICK_SPACING ?? 200), HOOKS = process.env.POOL_HOOK ?? ETH
 const BAND = Number(process.env.PEG_BAND ?? 0.02) // act outside ±2%
 const TARGET = Number(process.env.PEG_TARGET ?? 0.005) // trade back to within ±0.5%
 const MAX_TRADE_ETH = ethers.parseEther(process.env.MAX_TRADE_ETH ?? '0.1')
@@ -31,6 +32,7 @@ const ACT = { SWAP_EXACT_IN_SINGLE: 0x06, SETTLE_ALL: 0x0c, TAKE_ALL: 0x0f } as 
 const provider = new ethers.JsonRpcProvider(CHAIN.rpc, CHAIN.id, { staticNetwork: true })
 const abi = ethers.AbiCoder.defaultAbiCoder()
 const KEY_T = 'tuple(address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks)'
+const POOL_ID = ethers.keccak256(abi.encode(['tuple(address,address,uint24,int24,address)'], [[ETH, CONTRACTS.zzec, FEE, SPACING, HOOKS]]))
 const sv = new ethers.Contract(STATE_VIEW, ['function getSlot0(bytes32) view returns (uint160 sqrtPriceX96,int24,uint24,uint24)', 'function getLiquidity(bytes32) view returns (uint128)'], provider)
 const ur = new ethers.Contract(UR, ['function execute(bytes commands,bytes[] inputs,uint256 deadline) payable'], provider)
 const permit2 = new ethers.Contract(PERMIT2, ['function approve(address,address,uint160,uint48)', 'function allowance(address,address,address) view returns (uint160,uint48,uint48)'], provider)
@@ -68,7 +70,7 @@ function plan(x: number, y: number, fair: number, zzecInv: bigint, ethInv: bigin
 }
 
 function encode(p: Plan): { data: string; value: bigint } {
-  const key = { currency0: ETH, currency1: CONTRACTS.zzec, fee: FEE, tickSpacing: SPACING, hooks: ETH }
+  const key = { currency0: ETH, currency1: CONTRACTS.zzec, fee: FEE, tickSpacing: SPACING, hooks: HOOKS }
   const zeroForOne = p.side === 'buy'
   const actions = ethers.solidityPacked(['uint8', 'uint8', 'uint8'], [ACT.SWAP_EXACT_IN_SINGLE, ACT.SETTLE_ALL, ACT.TAKE_ALL])
   const params = [

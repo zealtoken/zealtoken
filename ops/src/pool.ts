@@ -82,7 +82,9 @@ async function main() {
   const ethPerZec = await price()
 
   // ETH (address 0) sorts first, so currency0 = ETH (18 dp), currency1 = zZEC (8 dp).
-  const key = { currency0: ETH, currency1: zzec, fee: FEE, tickSpacing: TICK_SPACING, hooks: ETH }
+  const hooks = process.env.POOL_HOOK ?? ETH // the burn hook once the hooked market is live
+  if (!ethers.isAddress(hooks)) throw new Error('POOL_HOOK must be an address')
+  const key = { currency0: ETH, currency1: zzec, fee: FEE, tickSpacing: TICK_SPACING, hooks }
   const poolId = ethers.keccak256(abi.encode([POOL_KEY_T], [key]))
   // price = raw1 / raw0 = (1/ethPerZec) * 1e8 / 1e18
   const priceRaw = 1e8 / 1e18 / ethPerZec
@@ -116,7 +118,7 @@ async function main() {
   const amount0Max = (need0 * 1005n) / 1000n
   const amount1Max = (need1 * 1005n) / 1000n
 
-  console.log(`\nzZEC/ETH pool on Uniswap v4 · fee ${FEE / 10_000}% · spacing ${TICK_SPACING} · no hook`)
+  console.log(`\nzZEC/ETH pool on Uniswap v4 · fee ${FEE / 10_000}% · spacing ${TICK_SPACING} · hook ${hooks === ETH ? 'none' : hooks}`)
   console.log(`poolId       ${poolId}`)
   console.log(`market       1 ZEC = ${ethPerZec.toFixed(5)} ETH ${initialized ? '(pool already initialized; minting at the ON-CHAIN price above)' : '(will initialize at this price, atomically with the mint)'}`)
   console.log(`seed         ${ethAmt} ETH + ${zecAmt} zZEC  -> liquidity ${liquidity}  (existing ${existingL})`)
