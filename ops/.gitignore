@@ -5,3 +5,4 @@ launchd/*.out
 launchd/*.err
 launchd/roles-state.json
 launchd/keeper.json
+launchd/burn.log
