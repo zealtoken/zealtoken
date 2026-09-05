@@ -72,6 +72,8 @@ const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 04', t: 'First burn. zZEC trading fees collected, swapped to $ZEAL through the Furnace, and sent to the burn address. 571.8 $ZEAL gone. Loop two turns.', href: `${CONTRACTS.explorer}/tx/0x51a42aec6c299e78a187c3f8e62266b7a9872718dfd04e87b2160b16f1dd17a2`, label: 'tx' },
   { d: 'Sep 04', t: 'Reserve grows to 0.4263 ZEC, attested and minted the same evening. Second liquidity position: pool depth 3.6x, coverage still exactly 1.00.', href: `${CONTRACTS.explorer}/tx/0x5c13174ff89dc85e038cbb4f2ef195694753ba9ed871d4e995f8fe930b42524c`, label: 'tx' },
   { d: 'Sep 05', t: 'Peg keeper live. A dedicated wallet with zZEC and ETH inventory checks the pool every minute and trades it back to the ZEC price outside a 1.5% band. First automated trade: a 5.7% premium closed to 0.6%.', href: `${CONTRACTS.explorer}/tx/0xe2002317546ad5bd6fdb4d090b1caf26e8c0c55c4b5f0b9f9bfbbc4f8a8c11d6`, label: 'tx' },
+  { d: 'Sep 05', t: 'The burn hook. A Uniswap v4 hook on the zZEC market takes 0.7% of every swap and hands it to the Furnace, whoever provides the liquidity. Proven on a fork of the live chain, then deployed.', href: `${CONTRACTS.explorer}/address/0x16642362837e2FDC02fF1ECF71f5629c094B0044`, label: 'hook' },
+  { d: 'Sep 05', t: 'The zZEC market moves to the hooked pool: 0.3% to liquidity providers, 0.7% to the burn. Same 1% for traders, every trade now burns $ZEAL.', href: `${CONTRACTS.explorer}/tx/0x135a097770c63e6cf7b9d1a680e93d5ae13bbebcadca902e869548c2eb5eb538`, label: 'tx' },
   { d: 'next', t: 'Pons routes $ZEAL fees to the Tap, and loop one turns too.' },
 ]
 
