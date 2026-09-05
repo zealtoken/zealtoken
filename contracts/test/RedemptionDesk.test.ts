@@ -56,6 +56,6 @@ describe('RedemptionDesk', () => {
   it('the desk has no path to move escrow anywhere but back to the holder or into the burn', async () => {
     const { desk } = await loadFixture(deploy)
     const fns = desk.interface.fragments.filter((f) => f.type === 'function').map((f) => (f as unknown as { name: string }).name).sort()
-    expect(fns).to.deep.equal(['WINDOW', 'acceptOwnership', 'fulfill', 'getRequest', 'minAmount', 'operator', 'owner', 'pendingOwner', 'reclaim', 'reclaimableAt', 'renounceOwnership', 'request', 'requestCount', 'requestsPaused', 'setMinAmount', 'setOperator', 'setRequestsPaused', 'transferOwnership', 'zzec'])
+    expect(fns).to.deep.equal(['WINDOW', 'acceptOwnership', 'fulfill', 'getRequest', 'minAmount', 'operator', 'owner', 'pendingOwner', 'reclaim', 'reclaimableAt', 'renounceOwnership', 'request', 'requestCount', 'requestsPaused', 'setMinAmount', 'setOperator', 'setRequestsPaused', 'summary', 'transferOwnership', 'zcashAddressOf', 'zzec'])
   })
 })
