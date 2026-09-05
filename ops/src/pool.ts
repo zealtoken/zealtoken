@@ -161,7 +161,7 @@ async function main() {
       console.log('approvals not on chain yet: simulating with them overridden in')
     }
     try {
-      const gas = await provider.send('eth_estimateGas', [{ from, to: V4.positionManager, data, value: ethers.toBeHex(a0) }, 'latest', ...(Object.keys(overrides).length ? [overrides] : [])])
+      const gas = await provider.send('eth_estimateGas', [{ from, to: V4.positionManager, data, value: ethers.toQuantity(a0) }, 'latest', ...(Object.keys(overrides).length ? [overrides] : [])])
       console.log(`SIMULATION OK: the exact init+mint multicall succeeds from ${from}; gas ~${Number(gas)}\n`)
     } catch (e) {
       console.log('SIMULATION REVERTED:', (e as { shortMessage?: string; message?: string }).shortMessage ?? (e as Error).message, '\n'); process.exitCode = 1
