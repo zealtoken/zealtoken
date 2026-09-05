@@ -1094,3 +1094,18 @@ p:last-child { margin-bottom: 0; }
 /* every ledger tile links to the contract or address it is read from */
 .lg-src { color: inherit; text-decoration: none; border-bottom: 1px dotted rgba(255,255,255,0.35); }
 .lg-src:hover { color: var(--green-bright); border-bottom-color: var(--green-bright); }
+
+/* the zZEC market */
+.mkt-live { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 28px 0 34px; }
+.mkt-stat { border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+.mkt-n { font-family: var(--sans); font-weight: 900; font-size: clamp(26px, 3vw, 40px); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.mkt-u { font-size: 12px; margin-left: 8px; color: var(--fg-faint); letter-spacing: 0.1em; }
+.mkt-l { margin-top: 6px; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--fg-soft); }
+.mkt-h { margin-top: 4px; font-size: 12px; color: var(--fg-faint); }
+.mkt-cards .check p { margin-bottom: 16px; }
+.mkt-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.mkt-ca { font-size: 12px; color: var(--fg-faint); overflow-wrap: anywhere; }
+.mkt-link { color: var(--green-text); text-decoration: none; font-size: 13px; }
+.mkt-link:hover { text-decoration: underline; }
+.mkt-note { margin-top: 26px; font-size: 12.5px; color: var(--fg-faint); line-height: 1.6; }
+@media (max-width: 760px) { .mkt-live { grid-template-columns: 1fr; } }

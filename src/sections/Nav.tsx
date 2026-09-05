@@ -5,6 +5,7 @@ const ITEMS = [
   { href: '#gap', label: 'The Gap' },
   { href: '#foundry', label: 'The Foundry' },
   { href: '#furnace', label: 'The Furnace' },
+  { href: '#market', label: 'Market' },
   { href: '#proof', label: 'Proof' },
   { href: '#phases', label: 'Roadmap' },
   { href: '#lore', label: 'Lore' },
