@@ -96,7 +96,7 @@ async function main() {
   const ethIn = (await provider.getBalance(furnaceAddr)) + BigInt(Math.floor(Number(await erc20(zzec).balanceOf(furnaceAddr)) * ethPerZzec * 1e10))
   const expect = Number(ethIn) / 1e18 * zealPerEth
   const minOut = ethers.parseEther((expect * 0.85).toFixed(18))
-  if (ethIn === 0n) { console.log('nothing to ignite'); return }
+  if (ethIn === 0n) { console.log('nothing to ignite (no fees since last run)'); return }
   console.log(`ignite    expect ~${expect.toFixed(0)} ZEAL, floor ${ethers.formatEther(minOut)}`)
   const tx3 = await (furnace.connect(wallet) as ethers.Contract).ignite(minOut)
   console.log(`ignite    ${tx3.hash}`); await tx3.wait()
