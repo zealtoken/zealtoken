@@ -4,7 +4,7 @@ group: Running it
 ---
 # Operations runbook
 
-> **In one breath.** Five scheduled jobs on the operator's Mac keep the machine honest: attest the reserve every 6 hours, run the keeper every minute, burn once a day, watch for pending role changes every 5 minutes, and watch the desks every 5 minutes. Each unlocks its key from the macOS keychain, logs to a file, and sends a notification on failure or when a human needs to act. This page is what the operator reads at 3 a.m.
+> **In one breath.** Six scheduled jobs on the operator's Mac keep the machine honest: attest the reserve every 6 hours, run the keeper every minute, burn once a day, watch for pending role changes every 5 minutes, watch the desks every 5 minutes, and pay redemptions from the float every 5 minutes. Each unlocks its key from the macOS keychain, logs to a file, and sends a notification on failure or when a human needs to act. This page is what the operator reads at 3 a.m.
 
 ## The jobs
 
@@ -15,6 +15,7 @@ group: Running it
 | burn | daily 14:00 | deployer (igniter) | `zeal-burner` | `launchd/burn.log` | a burn ran, or failed |
 | watch-roles | 5 min | none (read-only) | | `launchd/roles.log`, state `roles-state.json` | any pending role, pool, or recipient change on ZZEC, the Tap, or Pons |
 | desk-watch | 5 min | none (read-only) | | `launchd/desk.log` | an open redemption (with pay-by), a funded wrap ready to mint, a direct burn-first redemption not yet paid, a role wallet under 0.004 ETH, an attestation over 9 h old |
+| desk-pay | 5 min | fulfiller + the float wallet | `zeal-fulfiller` | `launchd/desk-pay.log`, ledger `desk-ledger.json` | a payout was sent; the float is short; a send returned no txid (left PENDING, never retried) |
 
 Notifications go to macOS Notification Center and, when the keychain item `zeal-telegram` holds `BOT_TOKEN|CHAT_ID`, to Telegram.
 
@@ -23,11 +24,14 @@ Notifications go to macOS Notification Center and, when the keychain item `zeal-
 - Source of truth: `~/zeal/zealtoken.com` (a private git repository; the public mirror is rewritten before every push).
 - Runtime copy: `~/zeal-ops`, synced by `ops/launchd/install.sh`, because launchd cannot read the Documents folder. Re-run `install.sh` after any ops change.
 - Keys: `~/zeal-ops/.keys/<role>.json` (scrypt keystores) and `deployer.json` for the burn job.
+- The float: a zingo-cli wallet at `~/zeal-ops/.float` with its own seed, separate from the reserve key. It holds a small balance of the operator's own ZEC (about 0.1) and is the only thing the automatic payer can spend. Its transparent receiving address is `t1NUMouRcmKAtYmqfBJgcm5h3biHGm4zhem`; top-ups arriving there are shielded automatically before use. Limits: 0.05 ZEC per request, 0.25 ZEC per rolling day; anything larger is flagged for a manual payout.
 - Ledgers: `redemptions.json` (direct burn-first payouts), `launchd/keeper.json`, `launchd/wrap.json`.
 
 ## What to do on each alert
 
-**"REDEEM #n: pay X ZEC to t1… then fulfil; reclaimable in Nh."** Pay from the reserve wallet, wait for the txid, then `FULFILL_ID=n ZEC_TXID=<txid> npm run desk` from `~/zeal-ops`. Never pay inside the last 12 hours of the window; let the holder reclaim instead.
+**"REDEEM #n: pay X ZEC to t1… then fulfil."** Only appears for requests above the automatic limits, or if the payer is down. Pay from the float or the reserve wallet, wait for the txid, then `FULFILL_ID=n ZEC_TXID=<txid> npm run desk` from `~/zeal-ops`. The tool refuses inside the last 12 hours before a reclaim becomes possible.
+
+**"float has X ZEC, needs Y: TOP UP THE FLOAT."** Send ZEC to the float's transparent address. Since payouts burn zZEC while the reserve stays put, the reserve over-covers by the paid amount; move that excess from the reserve to the float to reimburse yourself.
 
 **"WRAP #n: funded X ZEC (k conf)."** `WRAP_FULFILL=1 npm run wrap`. It re-attests if needed and mints.
 

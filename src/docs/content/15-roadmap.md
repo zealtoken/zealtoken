@@ -4,7 +4,7 @@ group: Ahead
 ---
 # Roadmap and what comes next
 
-> **In one breath.** Phases 00 through 03 are live: launch, reserve, mint, redemption. The wrap desk opens on Sep 7. Phase 04 is the hard one, moving custody of the ZEC off a single key. Around it: a fee-route fix that depends on Pons, liquidity incentives paid in zZEC, a listing on up.only's DEX for depth, and zealz.fun, a launchpad for tokens paired with zZEC where every trade burns $ZEAL.
+> **In one breath.** Phases 00 through 03 are live: launch, reserve, mint, redemption with automatic payouts. The wrap desk opens on Sep 7. Phase 04 is the hard one, moving custody of the ZEC off a single key. Around it: a fee-route fix that depends on Pons, liquidity incentives paid in zZEC, a listing on up.only's DEX for depth, and zealz.fun, a launchpad for tokens paired with zZEC where every trade burns $ZEAL.
 
 ## Phases
 
@@ -13,7 +13,7 @@ group: Ahead
 | 00 Launch | live | $ZEAL on Pons, Foundry and Tap deployed and verified |
 | 01 Reserve opens | live | First ZEC at the published address, first attestation, first mint |
 | 02 zZEC mints | live | Wrapper and Furnace deployed, market on the hooked pool, burns running |
-| 03 Redemption | Sep 6 | Redemption Desk: escrow, automatic payout, txid recorded, then burn |
+| 03 Redemption | live | Redemption Desk: escrow, automatic payout from a hot float, txid recorded, then burn. First redemption paid Sep 6 |
 | 03b Wrap | Sep 7 | WrapDesk becomes minter; send ZEC, get zZEC |
 | 04 Hand off custody | the goal | Reserve moves to trust-minimized custody: a Zcash multisig first, then MPC such as NEAR Chain Signatures, or red·bridge when it ships |
 

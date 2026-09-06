@@ -30,6 +30,8 @@ One quirk of the hook: on **exact-output** swaps (you name how much zZEC you wan
 
 ## Providing liquidity
 
+The site's Liquidity Desk ("The Herd") lists every position in the pool live from Uniswap's own events, ranks providers by share with tiers (Foal, Zebra, Stallion, Herd Leader), shows the burns each one hosted and the fees each one earned, and adds a full-range position in one flow with the approvals handled inline. Concentrated ranges are one link away on Uniswap.
+
 Hold zZEC and ETH in equal value and [add both to the hooked pool](https://app.uniswap.org/positions/create/v4?currencyA=NATIVE&currencyB=0x0b151Ff7a7c5250130EC16C275790961d558E402&chain=robinhood&feeTier=3000&tickSpacing=60&hook=0x16642362837e2FDC02fF1ECF71f5629c094B0044). You earn 0.3% of every trade pro rata and can withdraw any time. The hook takes nothing from LPs; its cut comes from traders.
 
 Because zZEC can only exist against ZEC in the reserve, adding zZEC liquidity is the same act as adding reserves. The [WrapDesk](#/wrap) is how you turn ZEC into pool-ready zZEC.

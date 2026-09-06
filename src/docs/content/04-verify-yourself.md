@@ -57,6 +57,10 @@ The result is a hex integer in zatoshi. Divide by 100,000,000 for ZEC.
 
 Pool id `0xa6d41767e205c89fe05d7ad78354af7bb98cbe9b0c3c60f8371b05e7087fdb84` is `keccak256(abi.encode(currency0, currency1, fee, tickSpacing, hooks))` with `(0x0, zZEC, 3000, 60, hook)`. `getSlot0(poolId)` on StateView `0xf3334192d15450cdd385c8b70e03f9a6bd9e673b` returns the square-root price; `getLiquidity(poolId)` the active liquidity.
 
+## The site's own reads
+
+The site and these docs read the chain through `POST https://zealtoken.com/api/rpc`, a same-origin relay that forwards read-only JSON-RPC methods to the public node (which intermittently returns a malformed CORS header that browsers reject). It caches identical reads for eight seconds and holds no keys. You can call it yourself with the same bodies as the raw calls above, or go straight to the node.
+
 ## The live reserve endpoint
 
 `GET https://zealtoken.com/api/reserve` returns `{address, zats, zec, height, hash, source, at}`, read from lightwalletd when called. It holds no keys and accepts no parameters. Compare `hash` to the Zcash explorer's block at `height`.

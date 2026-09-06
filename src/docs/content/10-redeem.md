@@ -4,11 +4,11 @@ group: Using it
 ---
 # Redeeming zZEC for native ZEC
 
-> **In one breath.** Put your zZEC into the Redemption Desk with a transparent Zcash address. An automatic payer sends you real ZEC, usually within minutes, records the Zcash transaction on chain, and only then is your zZEC burned. If a payout ever failed, the contract lets you take your zZEC back yourself. No permission, no pause, ever. Opens **September 6, 2026**.
+> **In one breath.** Put your zZEC into the Redemption Desk with a transparent Zcash address. An automatic payer sends you real ZEC, usually within minutes, records the Zcash transaction on chain, and only then is your zZEC burned. If a payout ever failed, the contract lets you take your zZEC back yourself. No permission, no pause, ever. Open since **September 6, 2026**.
 
 ## Status
 
-The desk is deployed and verified. New requests are paused on chain until **2026-09-06 at 17:00 UTC**, when automatic payouts from a hot float wallet go live alongside it. Fulfil and reclaim are never pausable; the pause only gates new requests.
+Live since 2026-09-06 16:20 UTC. The first redemption went through end to end the same hour: request #0, 0.002 zZEC, paid automatically ([Zcash tx](https://mainnet.zcashexplorer.app/transactions/c9ebc77343ddf7e1a581c75992ca158d27834d838ffe8894d5f55177f57d8631)), then fulfilled and burned on chain ([tx](https://robinhoodchain.blockscout.com/tx/0xcac7757e70c71830cb5f27b1dd400de4ae234b0b32d1d936f0fec37445db88d6)). Fulfil and reclaim are never pausable; the owner can only pause new requests.
 
 ## Why escrow first
 

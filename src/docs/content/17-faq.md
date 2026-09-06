@@ -16,7 +16,7 @@ From Sep 7, 19:16 UTC, yes: open a request, send the exact deposit, receive zZEC
 
 ## Can I get my ZEC back?
 
-Yes, through the Redemption Desk. Escrow zZEC with a t-address and an automatic payer sends native ZEC, usually within minutes. Opens September 6, 2026. See [Redeeming](#/redeem).
+Yes, through the Redemption Desk. Escrow zZEC with a t-address and an automatic payer sends native ZEC, usually within minutes. Live since September 6, 2026. See [Redeeming](#/redeem).
 
 ## Is $ZEAL a tax token?
 

@@ -33,7 +33,7 @@ A supply that shrinks with every unit of activity: 0.7% of every zZEC trade and 
 | Reserve | Transparent Zcash address holding the ZEC | `t1UjkXzcEG4krP5hou3Mik4VUZN72i9nJTw` |
 | ZealFurnaceV4 | Fees → ETH → $ZEAL → burn | `0x72C2f71dC3c0058974fd59039F9A79397bf87E70` |
 | ZealBurnHook | 0.7% of every zZEC swap to the Furnace | `0x16642362837e2FDC02fF1ECF71f5629c094B0044` |
-| RedemptionDesk | Escrow zZEC, get native ZEC automatically · opens Sep 6 | `0x9A1f622C2267fCdBD664D259A27b057B53E9cA1a` |
+| RedemptionDesk | Escrow zZEC, get native ZEC automatically · live | `0x9A1f622C2267fCdBD664D259A27b057B53E9cA1a` |
 | WrapDesk | Send ZEC, get zZEC 1:1 · opens Sep 7 | `0xb53E3CD58668D1fC9082b51a7d74879733e9E118` |
 | zZEC/ETH pool | Uniswap v4, 0.3% LP fee, tick spacing 60, hooked | pool id `0xa6d4…db84` |
 

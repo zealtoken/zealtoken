@@ -32,6 +32,22 @@ group: Running it
 
 **Lesson.** Compare bytecode before trusting a "started" response.
 
+## 4. The node's broken CORS header (Sep 6)
+
+**What happened.** Robinhood Chain's public RPC intermittently returns the `Access-Control-Allow-Origin` header twice. Browsers reject such responses outright, so tiles on the site and charts in the docs randomly failed with "Failed to fetch" for a day.
+
+**Response.** All browser reads now go through a same-origin relay on the site that forwards read-only methods to the node, caches identical reads briefly, and backs off on rate limits; the browser falls back to the node directly if the relay is unhappy.
+
+**Lesson.** Treat a public RPC as an unreliable dependency and put one hop you control in front of it.
+
+## 5. Transparent funds are not spendable funds (Sep 6)
+
+**What happened.** The first automatic payout test failed with "insufficient balance" although the float wallet showed 0.1 ZEC. Zcash wallets cannot spend transparent coins directly; they must first be shielded into a private pool, and after the 2026 network upgrade that pool is a new one the wallet reports separately.
+
+**Response.** The payer now shields any transparent top-up on its own, counts every shielded pool as spendable, and the end-to-end test then passed: a real redemption was paid, recorded and burned within one run.
+
+**Lesson.** A balance on screen is not a balance you can spend. Prove the send.
+
 ## Smaller things fixed along the way
 
 - Uniswap quantities encoded with a leading-zero hex form produced opaque "missing revert data" errors; quantities now use canonical encoding.
