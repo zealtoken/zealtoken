@@ -117,9 +117,9 @@ contract ZealzFactory is ReentrancyGuard {
      * @notice Launch. Pay the launch fee; bring nothing else. The whole supply becomes a
      *         locked single-sided position and the pool opens at the bottom of it.
      */
-    /// @param totalBps the whole fee on every trade's zZEC leg, 50 (0.5%) to 500 (5%).
-    /// @param burnBps share to the Furnace (at least 25 = 0.25%).
-    /// @param creatorBps share to you (at most 50 = 0.5%). The platform keeps 0.25%; the rest goes to holders as claimable zZEC dividends.
+    /// @param totalBps the whole fee on every trade's zZEC leg, 100 (1%) to 500 (5%).
+    /// @param burnBps share to the Furnace (at least 50 = 0.5%).
+    /// @param creatorBps share to you (at most 50 = 0.5%). The platform keeps 0.5%; the rest goes to holders as claimable zZEC dividends.
     function launch(string calldata name, string calldata symbol, string calldata metadataURI, Curve curve, Opening opening, uint16 totalBps, uint16 burnBps, uint16 creatorBps)
         external nonReentrant returns (address token, bytes32 poolId, uint256 positionId)
     {

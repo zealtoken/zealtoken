@@ -54,12 +54,12 @@ contract ZealzHook is ReentrancyGuard {
     address public immutable zzec;
 
     /// @notice Every launched pool pays a fee on the zZEC side of every trade, chosen by the creator at
-    ///         launch between 0.5% and 5%. The platform's 0.25% is fixed; at least 0.25% goes to the
+    ///         launch between 1% and 5%. The platform's 0.5% is fixed; at least 0.5% goes to the
     ///         Furnace; at most 0.5% goes to the creator; whatever is left goes to holders as claimable zZEC dividends.
-    uint16 public constant MIN_TOTAL_BPS = 50;
+    uint16 public constant MIN_TOTAL_BPS = 100;
     uint16 public constant MAX_TOTAL_BPS = 500;
-    uint16 public constant TREASURY_BPS = 25;
-    uint16 public constant MIN_BURN_BPS = 25;
+    uint16 public constant TREASURY_BPS = 50;
+    uint16 public constant MIN_BURN_BPS = 50;
     uint16 public constant MAX_CREATOR_BPS = 50;
 
     struct Split { uint16 total; uint16 burn; uint16 creator; uint16 holders; }

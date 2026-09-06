@@ -29,11 +29,11 @@ describe('zealz.fun contracts (unit; the factory is exercised on a chain fork)',
     const pmSigner = await ethers.getImpersonatedSigner(pm.address); await ethers.provider.send('hardhat_setBalance', [pm.address, '0x56bc75e2d63100000']); await expect(hook.connect(pmSigner).afterSwap(stranger.address, key, { zeroForOne: true, amountSpecified: -1n, sqrtPriceLimitX96: 1n }, 0n, '0x')).to.be.revertedWithCustomError(hook, 'UnknownPool')
     await hook.connect(factory).register(key, tok, creator.address, false, 200, 100, 50)
     expect(await hook.creatorOf(ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(['tuple(address,address,uint24,int24,address)'], [[key.currency0, key.currency1, key.fee, key.tickSpacing, key.hooks]])))).to.equal(creator.address)
-    await expect(hook.connect(factory).register(key, tok, creator.address, true, 200, 24, 50)).to.be.revertedWithCustomError(hook, 'BadSplit') // burn below 0.25%
+    await expect(hook.connect(factory).register(key, tok, creator.address, true, 200, 49, 50)).to.be.revertedWithCustomError(hook, 'BadSplit') // burn below 0.5%
     await expect(hook.connect(factory).register(key, tok, creator.address, true, 200, 100, 51)).to.be.revertedWithCustomError(hook, 'BadSplit') // creator above 0.5%
     await expect(hook.connect(factory).register(key, tok, creator.address, true, 200, 150, 50)).to.be.revertedWithCustomError(hook, 'BadSplit') // shares exceed the total
     await expect(hook.connect(factory).register(key, tok, creator.address, true, 501, 25, 0)).to.be.revertedWithCustomError(hook, 'BadSplit') // total above 5%
-    await expect(hook.connect(factory).register(key, tok, creator.address, true, 49, 25, 0)).to.be.revertedWithCustomError(hook, 'BadSplit') // total below 0.5%
+    await expect(hook.connect(factory).register(key, tok, creator.address, true, 99, 50, 0)).to.be.revertedWithCustomError(hook, 'BadSplit') // total below 1%
   })
 
   it('hook: the 2% always comes off the zZEC leg, whichever side it is on', async () => {
@@ -44,7 +44,7 @@ describe('zealz.fun contracts (unit; the factory is exercised on a chain fork)',
     const sellZeroForOne = !zzecIs0 // token is currency0 when zZEC is currency1
     const dSell = zzecIs0 ? delta(1_000_000n, -5n) : delta(-5n, 1_000_000n)
     const pmSigner = await ethers.getImpersonatedSigner(pm.address); await ethers.provider.send('hardhat_setBalance', [pm.address, '0x56bc75e2d63100000']); const r1 = await hook.connect(pmSigner).afterSwap.staticCall(pm.address, key, { zeroForOne: sellZeroForOne, amountSpecified: -5n, sqrtPriceLimitX96: 1n }, dSell, '0x')
-    expect(r1[1]).to.equal(20_000n) // 2% of 1,000,000: 1% burn + 0.5% creator + 0.25% platform + 0.25% to holders
+    expect(r1[1]).to.equal(20_000n) // 2% of 1,000,000: 1% burn + 0.5% creator + 0.5% platform
     // a BUY: specified = zZEC in, output = token 1,000,000
     const dBuy = zzecIs0 ? delta(-5n, 1_000_000n) : delta(1_000_000n, -5n)
     const r2 = await hook.connect(pmSigner).afterSwap.staticCall(pm.address, key, { zeroForOne: zzecIs0, amountSpecified: -5n, sqrtPriceLimitX96: 1n }, dBuy, '0x')
