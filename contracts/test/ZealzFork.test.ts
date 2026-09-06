@@ -119,12 +119,12 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     console.log(`      sold half · Furnace received ${Number(furnaceGot) / 1e8} zZEC`)
 
     // ---- dividends: the trader holds the token, so the sell's to holders zZEC is theirs to claim
-    const rtok = new ethers.Contract(token, ['function dividendsOf(address) view returns (uint256)', 'function claimDividends() returns (uint256)', 'function distributedTotal() view returns (uint256)', 'function eligibleSupply() view returns (uint256)'], trader)
+    const rtok = new ethers.Contract(token, ['function dividendsOf(address) view returns (uint256)', 'function claimDividends() returns (uint256)', 'function claimFor(address) returns (uint256)', 'function distributedTotal() view returns (uint256)', 'function eligibleSupply() view returns (uint256)'], trader)
     const owed = await rtok.dividendsOf(TRADER)
     expect(owed).to.be.gt(0n)
     expect(await rtok.dividendsOf(POOL_MANAGER)).to.equal(0n) // the pool never earns dividends
     const zBefore = await erc(ZZEC).balanceOf(TRADER)
-    await (await rtok.claimDividends()).wait()
+    await (await rtok.connect(creator).claimFor(TRADER)).wait() // paid out by someone else, as the daily keeper will
     expect((await erc(ZZEC).balanceOf(TRADER)) - zBefore).to.equal(owed)
     console.log(`      dividends · ${Number(await rtok.distributedTotal()) / 1e8} zZEC distributed, trader claimed ${Number(owed) / 1e8} zZEC`)
 

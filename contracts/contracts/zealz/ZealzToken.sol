@@ -7,8 +7,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 
 /**
  * @notice A launched token: fixed supply, minted once to the factory, no owner, no tax on transfers.
- *         It carries a dividend ledger: the hook hands it zZEC on every trade and every holder
- *         can claim their pro-rata share. The pool, the hook and the factory are excluded, so
+ *         It carries a dividend ledger: the hook hands it zZEC on every trade, every holder's share
+ *         accrues pro rata, and anyone (a daily keeper, or the holder) can pay it out to them. The pool, the hook and the factory are excluded, so
  *         dividends only ever go to people holding the token in a wallet.
  */
 contract ZealzToken is ERC20 {
@@ -87,13 +87,33 @@ contract ZealzToken is ERC20 {
         return _accumulated(a) - withdrawn[a];
     }
 
-    function claimDividends() external returns (uint256 zats) {
-        if (excluded[msg.sender]) revert Excluded();
-        zats = dividendsOf(msg.sender);
+    function claimDividends() external returns (uint256 zats) { return _pay(msg.sender); }
+
+    /// @notice Pay a holder's dividends out to them. Anyone may call, so a keeper can pay every holder daily
+    ///         and nobody has to remember to claim. Funds only ever go to the holder.
+    function claimFor(address holder) external returns (uint256 zats) { return _pay(holder); }
+
+    /// @notice Pay many holders in one transaction; skips anyone with nothing owed instead of reverting.
+    function claimForMany(address[] calldata holders) external returns (uint256 total) {
+        for (uint256 i = 0; i < holders.length; i++) {
+            address h = holders[i];
+            if (excluded[h]) continue;
+            uint256 z = dividendsOf(h);
+            if (z == 0) continue;
+            withdrawn[h] += z;
+            IERC20(zzec).safeTransfer(h, z);
+            emit DividendsClaimed(h, z);
+            total += z;
+        }
+    }
+
+    function _pay(address holder) private returns (uint256 zats) {
+        if (excluded[holder]) revert Excluded();
+        zats = dividendsOf(holder);
         if (zats == 0) revert NothingToClaim();
-        withdrawn[msg.sender] += zats;
-        IERC20(zzec).safeTransfer(msg.sender, zats);
-        emit DividendsClaimed(msg.sender, zats);
+        withdrawn[holder] += zats;
+        IERC20(zzec).safeTransfer(holder, zats);
+        emit DividendsClaimed(holder, zats);
     }
 
     /// @notice A token nobody holds cannot pay dividends. If zZEC has waited 90 days for holders, anyone may send it to the Furnace.

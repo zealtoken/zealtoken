@@ -28,7 +28,7 @@ All four live in the public repository under `contracts/contracts/zealz/`.
 1. **The creator fills in a form.** Name, ticker, one line, an image, and social links. The image and text become the token's metadata URI, recorded on chain in the `Launched` event.
 2. **One transaction.** The creator pays the launch fee and confirms. Inside that transaction the factory mints the token, creates a Uniswap v4 pool for token/zZEC with the zealz hook attached, adds the full supply as liquidity, and transfers the resulting position NFT to the locker. The locker refuses any NFT that did not come from the factory.
 3. **The pool is live.** The token appears on zealz.fun's feed and is tradeable on Uniswap immediately. There is no waiting period, no target to hit, and no second phase.
-4. **Trading.** Buyers swap zZEC for the token. The pool's 0.3% LP fee accrues to the locked position. The hook takes its 2% of the zZEC leg on every swap and delivers every share in the same transaction, except the holders' share, which lands in the token's dividend ledger for them to claim.
+4. **Trading.** Buyers swap zZEC for the token. The pool's 0.3% LP fee accrues to the locked position. The hook takes its 2% of the zZEC leg on every swap and delivers every share in the same transaction, except the holders' share, which lands in the token's dividend ledger and is paid out to holders daily.
 5. **Forever.** The position never leaves the locker. Anyone can trigger a fee collection from it at any time, which pays the accrued LP fees out without touching the liquidity.
 
 
@@ -43,7 +43,7 @@ The hook takes a fee from the zZEC side of every trade. The creator sets it at l
 | Furnace (buys back and burns $ZEAL) | at least 0.5% | every launched token must feed the burn, at least as much as it pays the platform |
 | Creator | at most 0.5%, whatever the total | a bigger fee buys more burn or more dividends, never a bigger creator cut |
 | Platform | exactly 0.5%, whatever the total | runs zealz.fun, fixed in the hook; below what pump.fun keeps on its curve and what Clanker keeps of LP fees |
-| Holders (dividends) | whatever is left | claimable in zZEC by every wallet holding the token, pro rata |
+| Holders (dividends) | whatever is left | paid out in zZEC to every wallet holding the token, pro rata, by a daily keeper; claimable any time too |
 
 So a 2% token might be 0.5 burn, 0.5 creator, 0.5 platform, 0.5 holders. A 5% dividend token is 0.5 burn, no creator cut, 0.5 platform and 4% to holders. A 5% burn token sends 4% of every trade to the Furnace. The launch form offers those as presets (Balanced, Max burn, Dividend token, Burn token, Lean) and shows the trader's round-trip cost next to them: a 5% token costs about 5.3% per leg with the pool's LP fee, and the token page says so. Once set, the fee and split are written into the hook for that pool and can never change.
 
@@ -73,9 +73,11 @@ Two things follow. Every ETH buy on any launched token is first a zZEC buy on ou
 
 ## Dividends: holders paid in Zcash
 
-Every launched token carries a small ledger. When the hook sends it zZEC, the token spreads that amount across every eligible token in circulation, and each wallet's claimable balance grows in proportion to what it holds. Holders call one function to claim; nothing is pushed, nothing is taxed on transfers, and balances are tracked exactly across every transfer.
+Every launched token carries a small ledger. When the hook sends it zZEC, the token spreads that amount across every eligible token in circulation, and each wallet's share grows in proportion to what it holds. Balances are tracked exactly across every transfer, nothing is taxed on transfers, and your token balance never changes: it is a plain zZEC balance owed to you, not a rebase.
 
-Three addresses never earn dividends: the pool itself (which holds most of the supply), the hook (which holds unclaimed batch tokens) and the factory. That is what makes the number meaningful: dividends only go to people. They are plain claimable balances, not a rebase: your token balance never changes, your zZEC balance does when you claim. Distributions are held back until at least 1,000 tokens are in wallets, so the maths stays exact on the very first trades.
+Paying it out is automatic. Sending zZEC to every holder inside every trade is not possible on chain, because a single trade would have to pay thousands of wallets and its gas would grow with the holder count until trades failed. So the token exposes a permissionless payout: anyone can pay any holder what they are owed, and our daily job pays every holder of every token in batches. Holders do nothing and receive zZEC in their wallet once a day. Anyone who wants it sooner can claim any time. Payouts below 1,000 zats wait until they are worth the gas.
+
+Three addresses never earn dividends: the pool itself (which holds most of the supply), the hook (which holds unclaimed batch tokens) and the factory. That is what makes the number meaningful: dividends only go to people. Distributions are held back until at least 1,000 tokens are in wallets, so the maths stays exact on the very first trades, and if a token never gets holders its pending zZEC can be swept to the Furnace after 90 days.
 
 ## What the creator gets
 

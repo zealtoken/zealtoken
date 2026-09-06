@@ -13,3 +13,5 @@ npm run --silent burn -- --execute >> launchd/burn.log 2>&1 || { echo "$(date -u
 ./launchd/notify.sh "ZEAL burn" "$(grep -E "DONE|nothing to ignite" launchd/burn.log | tail -1 | cut -c1-160)"
 # launchpad: compound every locked position's LP fees (no-op until the factory deploys)
 npm run --silent compound >> launchd/burn.log 2>&1 || echo "$(date -u +%FT%TZ) compound FAILED; see launchd/burn.log" >&2
+# launchpad: pay every holder their zZEC dividends (no-op until the factory deploys)
+npm run --silent dividends >> launchd/burn.log 2>&1 || echo "$(date -u +%FT%TZ) dividends FAILED; see launchd/burn.log" >&2

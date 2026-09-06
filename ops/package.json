@@ -23,7 +23,8 @@
     "wrap": "tsx src/wrap.ts",
     "watch:desk": "tsx src/desk-watch.ts",
     "desk:pay": "tsx src/desk-pay.ts",
-    "compound": "tsx src/compound.ts"
+    "compound": "tsx src/compound.ts",
+    "dividends": "tsx src/dividends.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",

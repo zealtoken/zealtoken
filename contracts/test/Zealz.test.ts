@@ -87,6 +87,12 @@ describe('zealz.fun contracts (unit; the factory is exercised on a chain fork)',
     await t.connect(hookS).distribute(0n)
     expect(await t.pending()).to.equal(0n)
     expect(await t.dividendsOf(holder.address)).to.equal(999_999n) // magnified maths rounds down by a zat
+    // a stranger (the keeper) pays the holder out; the holder did nothing
+    const [, , , , stranger] = await ethers.getSigners()
+    await t.connect(stranger).claimForMany([holder.address, deployer.address, stranger.address]) // excluded and empty entries are skipped
+    expect(await zzec.balanceOf(holder.address)).to.equal(999_999n)
+    expect(await t.dividendsOf(holder.address)).to.equal(0n)
+    await expect(t.connect(stranger).claimFor(holder.address)).to.be.revertedWithCustomError(t, 'NothingToClaim')
     // and a token nobody holds: pending waits 90 days then goes to the Furnace
     const t2 = await (await ethers.getContractFactory('ZealzToken', deployer)).deploy('Dead', 'DEAD', 'ipfs://d', ethers.parseEther('1000000000'), deployer.address, { zzec: await zzec.getAddress(), hook: hookS.address, poolManager: deployer.address, furnace: furnace.address })
     await zzec.mint(await t2.getAddress(), 500n); await t2.connect(hookS).distribute(500n)
