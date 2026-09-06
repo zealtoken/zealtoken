@@ -48,7 +48,10 @@ async function floatBalanceZats(): Promise<bigint> {
   const { stdout } = await run(bin, [...args, '--waitsync', 'balance'], { maxBuffer: 4 << 20 })
   // zingo groups digits with underscores (10_007_000); strip them before parsing
   const pick = (k: string) => { const m = stdout.match(new RegExp(k + '"?\\s*:\\s*([\\d_]+)')); return m ? BigInt(m[1].replace(/_/g, '')) : 0n }
-  return pick('confirmed_transparent_balance') + pick('confirmed_sapling_balance') + pick('confirmed_orchard_balance')
+  // Transparent funds (a top-up sent to the t-address) cannot be spent until shielded. Shield them and let them confirm; only shielded funds count as spendable.
+  const t = pick('confirmed_transparent_balance')
+  if (t > 50_000n) { try { const { stdout: sh } = await run(bin, [...args, '--waitsync', 'quickshield'], { maxBuffer: 4 << 20 }); console.log(`float: shielding ${fmt(t)} ZEC of transparent top-up: ${(sh.match(/[0-9a-f]{64}/) ?? ['?'])[0]}`) } catch (e) { console.error('float: shield failed', (e as Error).message.slice(0, 160)) } }
+  return pick('confirmed_sapling_balance') + pick('confirmed_orchard_balance')
 }
 
 async function main() {
