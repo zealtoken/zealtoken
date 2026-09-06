@@ -24,6 +24,33 @@ type Req = { id: number; holder: string; amount: bigint; at: number; status: num
 type Desk = { min: bigint; paused: boolean; count: number; paid: number; paidAmount: bigint }
 const STATUS = ['', 'open', 'paid', 'reclaimed']
 
+
+/** The bridge, drawn: Robinhood Chain on the left, Zcash on the right, the desk in between. Dashes crawl in the flow direction. */
+function RedeemFlow({ paid }: { paid: number }) {
+  return (
+    <svg className="rd-flow" viewBox="0 0 900 190" role="img" aria-label="zZEC escrowed on Robinhood Chain, ZEC paid on Zcash, escrow burned">
+      <defs>
+        <marker id="rdarr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--green)" /></marker>
+        <linearGradient id="rdglow" x1="0" x2="1"><stop offset="0" stopColor="var(--green)" stopOpacity="0" /><stop offset=".5" stopColor="var(--green)" stopOpacity=".18" /><stop offset="1" stopColor="var(--green)" stopOpacity="0" /></linearGradient>
+      </defs>
+      <rect x="20" y="20" width="270" height="150" rx="18" className="rd-zone" /><text x="40" y="46" className="rd-zone-t">ROBINHOOD CHAIN</text>
+      <rect x="610" y="20" width="270" height="150" rx="18" className="rd-zone z" /><text x="630" y="46" className="rd-zone-t">ZCASH</text>
+      <rect x="300" y="50" width="300" height="90" rx="16" fill="url(#rdglow)" />
+      <g className="rd-node"><rect x="50" y="70" width="110" height="64" rx="12" /><text x="105" y="97" className="rd-n-t">your wallet</text><text x="105" y="116" className="rd-n-s">zZEC</text></g>
+      <g className="rd-node g"><rect x="180" y="70" width="100" height="64" rx="12" /><text x="230" y="97" className="rd-n-t">escrow</text><text x="230" y="116" className="rd-n-s">still yours</text></g>
+      <g className="rd-node g"><rect x="395" y="60" width="110" height="84" rx="14" /><text x="450" y="90" className="rd-n-t">the desk</text><text x="450" y="108" className="rd-n-s">records txid</text><text x="450" y="126" className="rd-n-s">then burns</text></g>
+      <g className="rd-node"><rect x="640" y="70" width="110" height="64" rx="12" /><text x="695" y="97" className="rd-n-t">reserve</text><text x="695" y="116" className="rd-n-s">t1Ujk…</text></g>
+      <g className="rd-node g"><rect x="760" y="70" width="100" height="64" rx="12" /><text x="810" y="97" className="rd-n-t">your t-addr</text><text x="810" y="116" className="rd-n-s">native ZEC</text></g>
+      <path d="M160 102 L180 102" className="rd-e" markerEnd="url(#rdarr)" />
+      <path d="M280 102 C 330 102, 340 102, 395 102" className="rd-e" markerEnd="url(#rdarr)" />
+      <path d="M750 102 L760 102" className="rd-e" markerEnd="url(#rdarr)" />
+      <path d="M505 80 C 560 80, 590 80, 640 90" className="rd-e" markerEnd="url(#rdarr)" /><text x="572" y="66" className="rd-e-t">operator pays</text>
+      <path d="M640 118 C 590 130, 560 130, 505 124" className="rd-e slow" markerEnd="url(#rdarr)" /><text x="572" y="152" className="rd-e-t">txid recorded</text>
+      <path d="M230 134 C 230 165, 300 172, 450 172 C 470 172, 470 172, 450 144" className="rd-e burn" markerEnd="url(#rdarr)" /><text x="330" y="186" className="rd-e-t">escrow burned only after payout · {paid} paid so far</text>
+    </svg>
+  )
+}
+
 export function Redeem() {
   const desk = CONTRACTS.desk
   const [info, setInfo] = useState<Desk | null>(null)
@@ -116,6 +143,13 @@ export function Redeem() {
           <div className="redeem-soon" data-reveal style={stagger(3)}><span className="tag tag-wait"><span className="dot" /> pending</span><p>The desk deploys with Phase 03.</p></div>
         ) : (
           <>
+            <div className="rd-badges" data-reveal style={stagger(3)}>
+              <span><b>no fee</b>1:1, the reserve pays the Zcash network fee</span>
+              <span><b>escrow, not burn</b>your zZEC is held, and burned only after you are paid</span>
+              <span><b>7-day reclaim</b>unconditional · no role can pause it</span>
+              <span><b>on-chain receipt</b>every payout's Zcash txid is recorded in the contract</span>
+            </div>
+            <div className="rd-flow-wrap" data-reveal style={stagger(3)}><RedeemFlow paid={info?.paid ?? 0} /></div>
             <div className="rd-strip mono" data-reveal style={stagger(3)}>
               <div><span>requests</span><b>{info?.count ?? '…'}</b></div>
               <div><span>paid out</span><b>{info ? `${zec(info.paidAmount)} ZEC` : '…'}</b><i>{info ? `${info.paid} redemptions` : ''}</i></div>
