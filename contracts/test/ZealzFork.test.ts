@@ -30,11 +30,11 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     const Hook = await ethers.getContractFactory('ZealzHook')
     const nonce = await ethers.provider.getTransactionCount(DEPLOYER)
     const factoryAddr = ethers.getCreateAddress({ from: DEPLOYER, nonce: nonce + 1 })
-    const initCode = ethers.concat([Hook.bytecode, abi.encode(['address', 'address', 'address', 'address', 'address', 'uint256', 'uint256', 'uint256'], [POOL_MANAGER, factoryAddr, FURNACE, treasury.address, ZZEC, 100, 50, 50])])
+    const initCode = ethers.concat([Hook.bytecode, abi.encode(['address', 'address', 'address', 'address', 'address'], [POOL_MANAGER, factoryAddr, FURNACE, treasury.address, ZZEC])])
     const { salt, address: hookAddr } = mineSalt(ethers.keccak256(initCode), 0x00ccn) // beforeSwap + afterSwap, both returning deltas
     await (await deployer.sendTransaction({ to: CREATE2, data: ethers.concat([salt, initCode]) })).wait()
     expect(await ethers.provider.getCode(hookAddr)).to.not.equal('0x')
-    const factory = await (await ethers.getContractFactory('ZealzFactory', deployer)).deploy(POSM, PERMIT2, ZZEC, hookAddr, treasury.address, 500_000n, openTick0, openTick1) // launch fee 0.005 zZEC
+    const factory = await (await ethers.getContractFactory('ZealzFactory', deployer)).deploy(POSM, PERMIT2, POOL_MANAGER, ZZEC, hookAddr, treasury.address, 500_000n, openTick0, openTick1) // launch fee 0.005 zZEC
     expect(await factory.getAddress()).to.equal(factoryAddr)
     const locker = await (await ethers.getContractFactory('ZealzLocker', deployer)).deploy(POSM, POOL_MANAGER, PERMIT2, factoryAddr)
     await factory.setLocker(await locker.getAddress())
@@ -45,7 +45,7 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     const treasuryZzec0 = await zzecW.balanceOf(treasury.address)
 
     // ---- launch, capital free
-    const tx = await factory.connect(creator).launch('Zebra Foundry', 'ZBRA', 'ipfs://zbra', 0, 0) // Gentle curve, Batch opening
+    const tx = await factory.connect(creator).launch('Zebra Foundry', 'ZBRA', 'ipfs://zbra', 0, 0, 100, 50) // Gentle curve, Batch opening, 1% burn / 0.5% creator / 0.25% platform / 0.25% reflected
     expect((await zzecW.balanceOf(treasury.address)) - treasuryZzec0).to.equal(500_000n) // launch fee landed in treasury as zZEC
     const rc = await tx.wait()
     const ev = rc!.logs.map((l) => { try { return factory.interface.parseLog(l) } catch { return null } }).find((e) => e?.name === 'Launched')!
@@ -118,6 +118,16 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     expect(furnaceGot).to.be.gt(0n)
     console.log(`      sold half · Furnace received ${Number(furnaceGot) / 1e8} zZEC`)
 
+    // ---- reflections: the trader holds the token, so the sell's reflected zZEC is theirs to claim
+    const rtok = new ethers.Contract(token, ['function reflectionsOf(address) view returns (uint256)', 'function claimReflections() returns (uint256)', 'function reflectedTotal() view returns (uint256)', 'function eligibleSupply() view returns (uint256)'], trader)
+    const owed = await rtok.reflectionsOf(TRADER)
+    expect(owed).to.be.gt(0n)
+    expect(await rtok.reflectionsOf(POOL_MANAGER)).to.equal(0n) // the pool never earns reflections
+    const zBefore = await erc(ZZEC).balanceOf(TRADER)
+    await (await rtok.claimReflections()).wait()
+    expect((await erc(ZZEC).balanceOf(TRADER)) - zBefore).to.equal(owed)
+    console.log(`      reflections · ${Number(await rtok.reflectedTotal()) / 1e8} zZEC distributed, trader claimed ${Number(owed) / 1e8} zZEC`)
+
     // ---- compound: fees back into the lock, liquidity only rises
     await (await locker.compound(positionId)).wait()
     const L1 = await posm.getPositionLiquidity(positionId)
@@ -125,7 +135,7 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     console.log(`      compounded · liquidity ${L0} -> ${L1} (+${((Number(L1 - L0) / Number(L0)) * 100).toFixed(4)}%)`)
 
     // ---- an INSTANT launch trades from the first block, no bids, no settlement
-    const rc2 = await (await factory.connect(creator).launch('Halo', 'HALO', 'ipfs://halo', 1, 1)).wait() // Steep, Instant
+    const rc2 = await (await factory.connect(creator).launch('Halo', 'HALO', 'ipfs://halo', 1, 1, 25, 0)).wait() // Steep, Instant, max reflections: 0.25% burn / 0 creator / 0.25% platform / 1.5% reflected // Steep, Instant
     const ev2 = rc2!.logs.map((l) => { try { return factory.interface.parseLog(l) } catch { return null } }).find((e) => e?.name === 'Launched')!
     const token2 = ev2.args.token as string, poolId2 = ev2.args.poolId as string, t2Is0 = token2.toLowerCase() < ZZEC.toLowerCase()
     expect(await hook.inOpening(poolId2)).to.equal(false)

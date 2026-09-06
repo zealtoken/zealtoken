@@ -6,6 +6,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {PoolKey, SwapParams} from "../ZealFurnaceV4.sol";
 
+interface IZealzToken { function reflect(uint256 zats) external; }
+
 interface IPoolManagerZ {
     function take(address currency, address to, uint256 amount) external;
     function unlock(bytes calldata data) external returns (bytes memory);
@@ -50,21 +52,29 @@ contract ZealzHook is ReentrancyGuard {
     address public immutable furnace;
     address public immutable treasury;
     address public immutable zzec;
-    uint256 public immutable totalBps;
-    uint256 public immutable burnBps;
-    uint256 public immutable creatorBps;
-    uint256 public immutable treasuryBps;
+
+    /// @notice Every launched pool pays 2% of the zZEC side of every trade. The platform's 0.25% is fixed;
+    ///         the creator chooses the rest at launch: at least 0.25% to the Furnace, at most 0.5% to
+    ///         themselves, and whatever is left is reflected to the token's holders in zZEC.
+    uint16 public constant TOTAL_BPS = 200;
+    uint16 public constant TREASURY_BPS = 25;
+    uint16 public constant MIN_BURN_BPS = 25;
+    uint16 public constant MAX_CREATOR_BPS = 50;
+
+    struct Split { uint16 burn; uint16 creator; uint16 reflect; }
+    mapping(bytes32 poolId => Split) public splitOf;
+    mapping(bytes32 poolId => address token) public tokenOf;
 
     struct Opening { uint64 launchedAt; uint64 window; bool settled; uint256 totalBids; uint256 tokensOut; PoolKey key; }
     mapping(bytes32 poolId => address creator) public creatorOf;
     mapping(bytes32 poolId => Opening) public openings;
     mapping(bytes32 poolId => mapping(address bidder => uint256 zats)) public bids;
 
-    event PoolRegistered(bytes32 indexed poolId, address indexed token, address indexed creator, uint64 launchedAt, uint64 openingWindow);
+    event PoolRegistered(bytes32 indexed poolId, address indexed token, address indexed creator, uint64 launchedAt, uint64 openingWindow, uint16 burnBps, uint16 creatorBps, uint16 reflectBps);
     event Bid(bytes32 indexed poolId, address indexed bidder, uint256 zats, uint256 totalBids);
     event OpeningSettled(bytes32 indexed poolId, uint256 zatsIn, uint256 tokensOut);
     event Claimed(bytes32 indexed poolId, address indexed bidder, uint256 tokens);
-    event FeeTaken(bytes32 indexed poolId, address indexed currency, uint256 toBurn, uint256 toCreator, uint256 toTreasury);
+    event FeeTaken(bytes32 indexed poolId, address indexed currency, uint256 toBurn, uint256 toCreator, uint256 toTreasury, uint256 toReflect);
 
     error NotPoolManager();
     error NotFactory();
@@ -79,26 +89,28 @@ contract ZealzHook is ReentrancyGuard {
     error NothingToClaim();
     error ExactInputOnly();
 
-    constructor(address poolManager_, address factory_, address furnace_, address treasury_, address zzec_, uint256 burnBps_, uint256 creatorBps_, uint256 treasuryBps_) {
+    constructor(address poolManager_, address factory_, address furnace_, address treasury_, address zzec_) {
         if (poolManager_ == address(0) || factory_ == address(0) || furnace_ == address(0) || treasury_ == address(0) || zzec_ == address(0)) revert ZeroAddress();
-        uint256 total = burnBps_ + creatorBps_ + treasuryBps_;
-        if (total == 0 || total > 500) revert BadSplit(); // never more than 5% of a trade
         poolManager = poolManager_; factory = factory_; furnace = furnace_; treasury = treasury_; zzec = zzec_;
-        burnBps = burnBps_; creatorBps = creatorBps_; treasuryBps = treasuryBps_; totalBps = total;
     }
 
     /// @param batchOpening true = the first OPENING_WINDOW is a batch (bids, one settlement price); false = instant trading.
-    function register(PoolKey calldata key, address token, address creator, bool batchOpening) external {
+    /// @param burnBps share of every trade's zZEC to the Furnace, at least MIN_BURN_BPS.
+    /// @param creatorBps share to the creator, at most MAX_CREATOR_BPS. The remainder after the platform's cut is reflected to holders.
+    function register(PoolKey calldata key, address token, address creator, bool batchOpening, uint16 burnBps, uint16 creatorBps) external {
         if (msg.sender != factory) revert NotFactory();
         if (creator == address(0)) revert ZeroAddress();
+        if (burnBps < MIN_BURN_BPS || creatorBps > MAX_CREATOR_BPS || burnBps + creatorBps + TREASURY_BPS > TOTAL_BPS) revert BadSplit();
         bytes32 id = keccak256(abi.encode(key));
         creatorOf[id] = creator;
+        tokenOf[id] = token;
+        splitOf[id] = Split(burnBps, creatorBps, TOTAL_BPS - TREASURY_BPS - burnBps - creatorBps);
         Opening storage o = openings[id];
         o.launchedAt = uint64(block.timestamp);
         o.window = batchOpening ? OPENING_WINDOW : 0;
         o.key = key;
         if (!batchOpening) o.settled = true; // nothing to settle on an instant launch
-        emit PoolRegistered(id, token, creator, uint64(block.timestamp), o.window);
+        emit PoolRegistered(id, token, creator, uint64(block.timestamp), o.window, burnBps, creatorBps, splitOf[id].reflect);
     }
 
     // ------------------------------------------------------------ the opening
@@ -166,12 +178,14 @@ contract ZealzHook is ReentrancyGuard {
         // The pool manager does not run a hook's callbacks on the hook's own swap, so the
         // batch pays its 2% here, straight from the bids it holds: the same split as any buy.
         {
-            uint256 toBurn = (zats * burnBps) / BPS; uint256 toCreator = (zats * creatorBps) / BPS; uint256 toTreasury = (zats * treasuryBps) / BPS;
+            Split memory sp = splitOf[poolId];
+            uint256 toBurn = (zats * sp.burn) / BPS; uint256 toCreator = (zats * sp.creator) / BPS; uint256 toTreasury = (zats * TREASURY_BPS) / BPS; uint256 toReflect = (zats * sp.reflect) / BPS;
             if (toBurn != 0) IERC20(zzec).safeTransfer(furnace, toBurn);
             if (toCreator != 0) IERC20(zzec).safeTransfer(creatorOf[poolId], toCreator);
             if (toTreasury != 0) IERC20(zzec).safeTransfer(treasury, toTreasury);
-            emit FeeTaken(poolId, zzec, toBurn, toCreator, toTreasury);
-            zats -= toBurn + toCreator + toTreasury;
+            if (toReflect != 0) { address tk = tokenOf[poolId]; IERC20(zzec).safeTransfer(tk, toReflect); IZealzToken(tk).reflect(toReflect); }
+            emit FeeTaken(poolId, zzec, toBurn, toCreator, toTreasury, toReflect);
+            zats -= toBurn + toCreator + toTreasury + toReflect;
         }
         int256 d = pm.swap(key, SwapParams(zzecIs0, -int256(zats), zzecIs0 ? MIN_SQRT_PRICE + 1 : MAX_SQRT_PRICE - 1), "");
         int128 zIn = zzecIs0 ? _amount0(d) : _amount1(d);
@@ -215,16 +229,18 @@ contract ZealzHook is ReentrancyGuard {
         return (AFTER_SWAP_SELECTOR, int128(uint128(total)));
     }
 
-    /// @dev Split `amt` of zZEC (1% Furnace, 0.5% creator, 0.5% treasury) and pay it straight from the PoolManager. Returns the total taken.
+    /// @dev Split `amt` of zZEC by the pool's split and pay it straight from the PoolManager. Returns the total taken.
     function _payShares(bytes32 id, address creator, uint256 amt) private returns (uint256 total) {
-        uint256 toBurn = (amt * burnBps) / BPS; uint256 toCreator = (amt * creatorBps) / BPS; uint256 toTreasury = (amt * treasuryBps) / BPS;
-        total = toBurn + toCreator + toTreasury;
+        Split memory sp = splitOf[id];
+        uint256 toBurn = (amt * sp.burn) / BPS; uint256 toCreator = (amt * sp.creator) / BPS; uint256 toTreasury = (amt * TREASURY_BPS) / BPS; uint256 toReflect = (amt * sp.reflect) / BPS;
+        total = toBurn + toCreator + toTreasury + toReflect;
         if (total == 0) return 0;
         IPoolManagerZ pm = IPoolManagerZ(poolManager);
         if (toBurn != 0) pm.take(zzec, furnace, toBurn);
         if (toCreator != 0) pm.take(zzec, creator, toCreator);
         if (toTreasury != 0) pm.take(zzec, treasury, toTreasury);
-        emit FeeTaken(id, zzec, toBurn, toCreator, toTreasury);
+        if (toReflect != 0) { address tk = tokenOf[id]; pm.take(zzec, tk, toReflect); IZealzToken(tk).reflect(toReflect); }
+        emit FeeTaken(id, zzec, toBurn, toCreator, toTreasury, toReflect);
     }
 
     function _amount0(int256 d) private pure returns (int128 a) { assembly { a := sar(128, d) } }
