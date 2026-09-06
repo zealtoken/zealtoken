@@ -22,7 +22,8 @@
     "desk": "tsx src/fulfill.ts",
     "wrap": "tsx src/wrap.ts",
     "watch:desk": "tsx src/desk-watch.ts",
-    "desk:pay": "tsx src/desk-pay.ts"
+    "desk:pay": "tsx src/desk-pay.ts",
+    "compound": "tsx src/compound.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",

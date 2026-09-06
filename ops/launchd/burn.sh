@@ -11,3 +11,5 @@ export LP_TOKEN_IDS="${LP_TOKEN_IDS:-1909208}"
 echo "$(date -u +%FT%TZ) burn run" >> launchd/burn.log
 npm run --silent burn -- --execute >> launchd/burn.log 2>&1 || { echo "$(date -u +%FT%TZ) burn FAILED; see launchd/burn.log" >&2; ./launchd/notify.sh "ZEAL burn FAILED" "$(tail -1 launchd/burn.log | cut -c1-180)"; exit 1; }
 ./launchd/notify.sh "ZEAL burn" "$(grep -E "DONE|nothing to ignite" launchd/burn.log | tail -1 | cut -c1-160)"
+# launchpad: compound every locked position's LP fees (no-op until the factory deploys)
+npm run --silent compound >> launchd/burn.log 2>&1 || echo "$(date -u +%FT%TZ) compound FAILED; see launchd/burn.log" >&2

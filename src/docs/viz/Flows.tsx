@@ -94,16 +94,17 @@ export function LaunchFlow() {
 }
 export function LaunchFees() {
   return (
-    <Frame title="One trade on a launched token" note="the pool's 0.3% stays in the locked position · the hook's 2% is split three ways, fixed in code">
-      <Diagram h={250} nodes={[
-        { id: 'sw', x: 70, y: 125, t: 'swap', s: 'zZEC ⇄ token', w: 110 },
-        { id: 'lp', x: 240, y: 45, t: '0.3% LP fee', s: 'locked position', w: 140 },
-        { id: 'hk', x: 240, y: 160, t: '2% hook', s: 'of the output', w: 130, g: true },
-        { id: 'fu', x: 450, y: 60, t: '1% → Furnace', s: 'zZEC side · burns $ZEAL', w: 170, g: true },
-        { id: 'cr', x: 450, y: 145, t: '0.5% → creator', s: 'forever, no claim step', w: 170 },
-        { id: 'tr', x: 450, y: 225, t: '0.5% → treasury', s: '', w: 170 },
-        { id: 'bn', x: 660, y: 60, t: '0x…dEaD', s: 'on the next ignition', w: 150, g: true },
-      ]} edges={[{ a: 'sw', b: 'lp' }, { a: 'sw', b: 'hk' }, { a: 'hk', b: 'fu' }, { a: 'hk', b: 'cr' }, { a: 'hk', b: 'tr' }, { a: 'fu', b: 'bn' }]} />
+    <Frame title="One trade on a launched token" note="the pool's 0.3% compounds into the locked position · the hook's 2% of the zZEC leg is split four ways, fixed by the creator at launch">
+      <Diagram h={320} nodes={[
+        { id: 'sw', x: 70, y: 160, t: 'swap', s: 'zZEC ⇄ token', w: 110 },
+        { id: 'lp', x: 240, y: 55, t: '0.3% LP fee', s: 'compounds into the lock', w: 150 },
+        { id: 'hk', x: 240, y: 195, t: '2% hook', s: 'of the zZEC leg', w: 130, g: true },
+        { id: 'fu', x: 450, y: 45, t: '≥ 0.25% → Furnace', s: 'burns $ZEAL', w: 180, g: true },
+        { id: 'rf', x: 450, y: 125, t: 'rest → holders', s: 'reflected in zZEC, claimable', w: 180, g: true },
+        { id: 'cr', x: 450, y: 205, t: '≤ 0.5% → creator', s: 'forever, no claim step', w: 180 },
+        { id: 'tr', x: 450, y: 285, t: '0.25% → platform', s: 'fixed', w: 180 },
+        { id: 'bn', x: 670, y: 45, t: '0x…dEaD', s: 'on the next ignition', w: 150, g: true },
+      ]} edges={[{ a: 'sw', b: 'lp' }, { a: 'sw', b: 'hk' }, { a: 'hk', b: 'fu' }, { a: 'hk', b: 'rf' }, { a: 'hk', b: 'cr' }, { a: 'hk', b: 'tr' }, { a: 'fu', b: 'bn' }]} />
     </Frame>
   )
 }
