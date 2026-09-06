@@ -12,7 +12,7 @@ group: Start here
 
 **1. The burn hook on the zZEC market.** Every swap in the zZEC/ETH pool pays 1%. Liquidity providers keep 0.3%. The other 0.7% is taken by the hook and sent to the Furnace, whoever provided the liquidity and whoever made the trade. The Furnace turns it into $ZEAL and sends it to the dead address. This is protocol revenue that can only ever be spent one way.
 
-**2. Every launch on zealz.fun.** Tokens launched there trade against zZEC, and their hook sends 1% of every trade's output to the same Furnace. A hundred launched tokens are a hundred pools feeding the burn, and the burn does not care whether any of them succeed.
+**2. Every launch on [zealz.fun](#/launchpad).** Tokens launched there trade against zZEC, and their hook sends 1% of every trade's output to the same Furnace. A hundred launched tokens are a hundred pools feeding the burn, and the burn does not care whether any of them succeed.
 
 **3. The Foundry's 25% liquidity bucket.** Once Pons re-points the creator-fee recipient to the Tap, a quarter of every $ZEAL fee becomes zZEC liquidity the protocol owns. Protocol-owned liquidity hosts trades, and every trade it hosts burns.
 

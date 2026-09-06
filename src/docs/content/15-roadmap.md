@@ -31,7 +31,7 @@ The reserve and the pool are the same ZEC, since no zZEC exists without ZEC behi
 
 ## zealz.fun
 
-A launchpad for tokens paired with zZEC instead of ETH. Design decisions so far: liquidity is locked forever in a locker contract at launch; tokens go straight into a Uniswap v4 pool with a zealz hook (no bonding curve); fair launch with no creator allocation; the hook splits 2% of output, on the zZEC side 1% to the Furnace, 0.5% to the creator, 0.5% to treasury. Contracts are written and unit-tested except for the factory's initial-price math, which needs Q64.96 fixed-point work before deployment. [zealz.fun](https://zealz.fun) shows the coming-soon page.
+A launchpad for tokens paired with zZEC instead of ETH. Design decisions so far: liquidity is locked forever in a locker contract at launch; tokens go straight into a Uniswap v4 pool with a zealz hook (no bonding curve); fair launch with no creator allocation; the hook splits 2% of output, on the zZEC side 1% to the Furnace, 0.5% to the creator, 0.5% to treasury. Contracts are written and unit-tested except for the factory's initial-price math, which needs Q64.96 fixed-point work before deployment. [zealz.fun](https://zealz.fun) shows the coming-soon page. The full design is on [zealz.fun, the launchpad](#/launchpad).
 
 ## up.only
 

@@ -82,3 +82,28 @@ export function Flywheel() {
     </Frame>
   )
 }
+
+export function LaunchFlow() {
+  return <States title="A launch, in one transaction" note="the creator signs once · everything to the right of the fee happens inside that transaction · nothing can be undone" states={[
+    { id: 'c', x: 80, y: 90, t: 'Creator', s: 'name · image · fee', w: 130 },
+    { id: 't', x: 270, y: 90, t: 'Token minted', s: '1,000,000,000 · no owner', w: 160 },
+    { id: 'p', x: 470, y: 90, t: 'Pool opened', s: 'token / zZEC · zealz hook', w: 170 },
+    { id: 'l', x: 670, y: 90, t: 'Locked', s: 'position → locker, forever', w: 160, g: true },
+    { id: 'f', x: 470, y: 195, t: 'Live on Uniswap', s: 'and on the zealz.fun feed', w: 190, g: true },
+  ]} edges={[{ a: 'c', b: 't', t: 'launch()' }, { a: 't', b: 'p' }, { a: 'p', b: 'l', t: '100% of supply' }, { a: 'p', b: 'f' }]} />
+}
+export function LaunchFees() {
+  return (
+    <Frame title="One trade on a launched token" note="the pool's 0.3% stays in the locked position · the hook's 2% is split three ways, fixed in code">
+      <Diagram h={250} nodes={[
+        { id: 'sw', x: 70, y: 125, t: 'swap', s: 'zZEC ⇄ token', w: 110 },
+        { id: 'lp', x: 240, y: 45, t: '0.3% LP fee', s: 'locked position', w: 140 },
+        { id: 'hk', x: 240, y: 160, t: '2% hook', s: 'of the output', w: 130, g: true },
+        { id: 'fu', x: 450, y: 60, t: '1% → Furnace', s: 'zZEC side · burns $ZEAL', w: 170, g: true },
+        { id: 'cr', x: 450, y: 145, t: '0.5% → creator', s: 'forever, no claim step', w: 170 },
+        { id: 'tr', x: 450, y: 225, t: '0.5% → treasury', s: '', w: 170 },
+        { id: 'bn', x: 660, y: 60, t: '0x…dEaD', s: 'on the next ignition', w: 150, g: true },
+      ]} edges={[{ a: 'sw', b: 'lp' }, { a: 'sw', b: 'hk' }, { a: 'hk', b: 'fu' }, { a: 'hk', b: 'cr' }, { a: 'hk', b: 'tr' }, { a: 'fu', b: 'bn' }]} />
+    </Frame>
+  )
+}
