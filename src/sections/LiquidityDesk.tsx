@@ -89,6 +89,8 @@ export function LiquidityDesk() {
     return { liquidity, need0, need1, amount0Max: (need0 * 1005n) / 1000n, amount1Max: (need1 * 1005n) / 1000n, shareAfter, moveBefore, moveAfter }
   }, [pool, ethWei])
   const rankAfter = quote ? 1 + rows.filter((r) => r.owner !== account?.toLowerCase() && r.share > quote.shareAfter).length : null
+  // the most ETH the wallet's zZEC can pair at the pool price (0.5% headroom for the maxima)
+  const maxEthForZzec = pool && pool.priceEth > 0 ? (Number(bal.zzec) / 1e8) * pool.priceEth * 0.994 : 0
 
   const connect = async () => {
     const p = eth(); if (!p) { setMsg({ kind: 'err', text: 'No wallet found. Install a browser wallet with Robinhood Chain added.' }); return }
@@ -129,7 +131,7 @@ export function LiquidityDesk() {
   }
 
   return (
-    <section className="band" id="liquidity">
+    <section className="band band-ink ld-band" id="liquidity">
       <div className="wrap">
         <div className="sec-head">
           <p className="eyebrow" data-reveal>Liquidity desk</p>
@@ -176,7 +178,8 @@ export function LiquidityDesk() {
                 <div className="rd-acct mono"><span className="dot" />{short(account)}<em>{fmt(Number(bal.eth) / 1e18, 4)} ETH · {fmt(Number(bal.zzec) / 1e8, 4)} {TOKEN.wrapper}</em></div>
                 {mine && <div className="ld-mine mono">{mine.tier.emoji} you are a <b>{mine.tier.name}</b> with {fmt(mine.share, 1)}% of the pool</div>}
                 <label className="redeem-l mono">ETH to add</label>
-                <div className="rd-amt"><input className="mono" inputMode="decimal" value={ethIn} onChange={(e) => setEthIn(e.target.value)} placeholder="0.05" /><span className="mono rd-unit">ETH</span>{['0.02', '0.05', '0.1', '0.25'].map((q) => <button key={q} type="button" className="rd-max mono" onClick={() => setEthIn(q)}>{q}</button>)}</div>
+                <div className="rd-amt"><input className="mono" inputMode="decimal" value={ethIn} onChange={(e) => setEthIn(e.target.value)} placeholder="0.05" /><span className="mono rd-unit">ETH</span></div>
+                <div className="ld-chips">{['0.02', '0.05', '0.1', '0.25'].map((q) => <button key={q} type="button" className="rd-max mono" onClick={() => setEthIn(q)}>{q} ETH</button>)}{maxEthForZzec > 0 && <button type="button" className="rd-max mono hi" onClick={() => setEthIn(maxEthForZzec.toFixed(4))}>max for my {TOKEN.wrapper} · {fmt(maxEthForZzec, 4)}</button>}</div>
                 <div className="rd-sub mono">{quote ? <>pairs with <b>{fmt(Number(quote.need1) / 1e8, 6)} {TOKEN.wrapper}</b> at the pool price{prices ? ` · about $${((Number(quote.need0) / 1e18) * prices.eth * 2).toFixed(0)} total` : ''}</> : 'enter an amount'}</div>
                 {quote && (
                   <div className="ld-impact">
@@ -190,7 +193,7 @@ export function LiquidityDesk() {
                   </div>
                 )}
                 <button className="btn btn-primary btn-lg rd-go" type="button" disabled={!!busy || !quote} onClick={addLiquidity}>{busy ?? (quote ? `Add ${fmt(Number(quote.need0) / 1e18, 4)} ETH + ${fmt(Number(quote.need1) / 1e8, 4)} ${TOKEN.wrapper}` : 'enter an amount')}</button>
-                {quote && quote.amount1Max > bal.zzec && <p className="rd-sub mono">short on {TOKEN.wrapper}: <a href="#wrap">wrap ZEC</a> or <a href={LINKS.uniswapSwap} target="_blank" rel="noreferrer">buy it on Uniswap ↗</a></p>}
+                {quote && quote.amount1Max > bal.zzec && <p className="rd-sub ld-short">You hold {fmt(Number(bal.zzec) / 1e8, 4)} {TOKEN.wrapper}, this needs {fmt(Number(quote.amount1Max) / 1e8, 4)}. Use the max chip above, <a href="#wrap">wrap more ZEC</a>, or <a href={LINKS.uniswapSwap} target="_blank" rel="noreferrer">buy {TOKEN.wrapper} on Uniswap ↗</a>.</p>}
               </>
             )}
             {msg && <p className={`rd-msg mono ${msg.kind}`}>{msg.text}</p>}
