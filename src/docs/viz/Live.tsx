@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CONTRACTS, ZZEC_MARKET } from '../../config'
 import { Frame } from './Frame'
-import { T, blockTime, call, css, getLogs, num, w } from './rpc'
+import { T, blockTimes, call, css, getLogs, num, w } from './rpc'
 
 const ZZEC = CONTRACTS.zzec!, FURNACE = CONTRACTS.furnace!
 const fmt = (n: number, d = 4) => n.toLocaleString('en-US', { maximumFractionDigits: d })
@@ -65,7 +65,7 @@ export function AttestChart() {
 /** Burn history from Ignited + Burned events. */
 export function BurnChart() {
   const [rows, setRows] = useState<{ t: number; zeal: number; eth: number; zzec: number; tx: string }[] | null>(null)
-  useEffect(() => { (async () => { try { const ls = await getLogs(FURNACE, T.ignited); const out = []; for (const l of ls) out.push({ t: await blockTime(l.blockNumber), zzec: num(w(l.data, 0), 8), eth: num(w(l.data, 1), 18), zeal: num(w(l.data, 2), 18), tx: l.transactionHash }); setRows(out) } catch { setRows([]) } })() }, [])
+  useEffect(() => { (async () => { try { const ls = await getLogs(FURNACE, T.ignited); const times = await blockTimes(ls.map((l) => l.blockNumber)); setRows(ls.map((l) => ({ t: times[l.blockNumber.toLowerCase()] ?? 0, zzec: num(w(l.data, 0), 8), eth: num(w(l.data, 1), 18), zeal: num(w(l.data, 2), 18), tx: l.transactionHash }))) } catch { setRows([]) } })() }, [])
   const max = rows ? Math.max(...rows.map((r) => r.zeal), 1) : 1
   const total = rows ? rows.reduce((s, r) => s + r.zeal, 0) : 0
   return (
