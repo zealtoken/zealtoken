@@ -116,9 +116,19 @@ contract ZealzHook is ReentrancyGuard {
     function beforeSwap(address sender, PoolKey calldata key, SwapParams calldata params, bytes calldata hookData) external returns (bytes4, int256, uint24) {
         if (msg.sender != poolManager) revert NotPoolManager();
         bytes32 id = keccak256(abi.encode(key));
-        if (creatorOf[id] == address(0)) revert UnknownPool();
-        if (!inOpening(id) || sender == address(this)) return (BEFORE_SWAP_SELECTOR, 0, 0);
+        address creator = creatorOf[id];
+        if (creator == address(0)) revert UnknownPool();
         bool zzecIs0 = key.currency0 == zzec;
+        if (!inOpening(id) || sender == address(this)) {
+            // The fee always comes off the zZEC leg. When zZEC is the specified amount (an
+            // exact-input buy, or an exact-output sell) it is taken here, before the swap;
+            // when zZEC is the unspecified amount, afterSwap takes it from the result.
+            bool specifiedIs0 = (params.amountSpecified < 0) == params.zeroForOne;
+            if (specifiedIs0 != zzecIs0) return (BEFORE_SWAP_SELECTOR, 0, 0);
+            uint256 amt = params.amountSpecified < 0 ? uint256(-params.amountSpecified) : uint256(params.amountSpecified);
+            uint256 total = _payShares(id, creator, amt);
+            return (BEFORE_SWAP_SELECTOR, int256(int128(uint128(total))) << 128, 0);
+        }
         bool isBuy = params.zeroForOne == zzecIs0; // zZEC is the input
         if (!isBuy) revert OpeningInProgress();
         if (params.amountSpecified >= 0) revert ExactInputOnly();
@@ -153,13 +163,23 @@ contract ZealzHook is ReentrancyGuard {
         PoolKey memory key = openings[poolId].key;
         bool zzecIs0 = key.currency0 == zzec;
         IPoolManagerZ pm = IPoolManagerZ(poolManager);
+        // The pool manager does not run a hook's callbacks on the hook's own swap, so the
+        // batch pays its 2% here, straight from the bids it holds: the same split as any buy.
+        {
+            uint256 toBurn = (zats * burnBps) / BPS; uint256 toCreator = (zats * creatorBps) / BPS; uint256 toTreasury = (zats * treasuryBps) / BPS;
+            if (toBurn != 0) IERC20(zzec).safeTransfer(furnace, toBurn);
+            if (toCreator != 0) IERC20(zzec).safeTransfer(creatorOf[poolId], toCreator);
+            if (toTreasury != 0) IERC20(zzec).safeTransfer(treasury, toTreasury);
+            emit FeeTaken(poolId, zzec, toBurn, toCreator, toTreasury);
+            zats -= toBurn + toCreator + toTreasury;
+        }
         int256 d = pm.swap(key, SwapParams(zzecIs0, -int256(zats), zzecIs0 ? MIN_SQRT_PRICE + 1 : MAX_SQRT_PRICE - 1), "");
         int128 zIn = zzecIs0 ? _amount0(d) : _amount1(d);
         int128 tOut = zzecIs0 ? _amount1(d) : _amount0(d);
         pm.sync(zzec);
         IERC20(zzec).safeTransfer(poolManager, uint256(uint128(-zIn)));
         pm.settle();
-        // the fee hook (afterSwap) has already taken its share of the output; the rest comes here for the bidders
+        // the fee came off the zZEC input in beforeSwap; every token that came out belongs to the bidders
         uint256 tokens = uint256(uint128(tOut));
         pm.take(zzecIs0 ? key.currency1 : key.currency0, address(this), tokens);
         return abi.encode(tokens);
@@ -186,30 +206,25 @@ contract ZealzHook is ReentrancyGuard {
         address creator = creatorOf[id];
         if (creator == address(0)) revert UnknownPool();
         bool specifiedIsCurrency0 = (params.amountSpecified < 0) == params.zeroForOne;
+        bool zzecIs0 = key.currency0 == zzec;
+        if (specifiedIsCurrency0 == zzecIs0) return (AFTER_SWAP_SELECTOR, 0); // zZEC was specified: beforeSwap already took the fee
         int128 unspecified = specifiedIsCurrency0 ? _amount1(delta) : _amount0(delta);
         if (unspecified < 0) unspecified = -unspecified;
         if (unspecified == 0) return (AFTER_SWAP_SELECTOR, 0);
-        address currency = specifiedIsCurrency0 ? key.currency1 : key.currency0;
-        uint256 total = _payShares(id, currency, creator, uint256(uint128(unspecified)));
+        uint256 total = _payShares(id, creator, uint256(uint128(unspecified)));
         return (AFTER_SWAP_SELECTOR, int128(uint128(total)));
     }
 
-    /// @dev Split `out` of `currency` and pay it straight from the PoolManager. Returns the total taken.
-    function _payShares(bytes32 id, address currency, address creator, uint256 out) private returns (uint256 total) {
-        uint256 toBurn; uint256 toCreator; uint256 toTreasury;
-        if (currency == zzec) {
-            toBurn = (out * burnBps) / BPS; toCreator = (out * creatorBps) / BPS; toTreasury = (out * treasuryBps) / BPS;
-        } else {
-            uint256 half = (out * burnBps) / BPS / 2; // token output: the burn's share is split between creator and treasury
-            toCreator = (out * creatorBps) / BPS + half; toTreasury = (out * treasuryBps) / BPS + half;
-        }
+    /// @dev Split `amt` of zZEC (1% Furnace, 0.5% creator, 0.5% treasury) and pay it straight from the PoolManager. Returns the total taken.
+    function _payShares(bytes32 id, address creator, uint256 amt) private returns (uint256 total) {
+        uint256 toBurn = (amt * burnBps) / BPS; uint256 toCreator = (amt * creatorBps) / BPS; uint256 toTreasury = (amt * treasuryBps) / BPS;
         total = toBurn + toCreator + toTreasury;
         if (total == 0) return 0;
         IPoolManagerZ pm = IPoolManagerZ(poolManager);
-        if (toBurn != 0) pm.take(currency, furnace, toBurn);
-        if (toCreator != 0) pm.take(currency, creator, toCreator);
-        if (toTreasury != 0) pm.take(currency, treasury, toTreasury);
-        emit FeeTaken(id, currency, toBurn, toCreator, toTreasury);
+        if (toBurn != 0) pm.take(zzec, furnace, toBurn);
+        if (toCreator != 0) pm.take(zzec, creator, toCreator);
+        if (toTreasury != 0) pm.take(zzec, treasury, toTreasury);
+        emit FeeTaken(id, zzec, toBurn, toCreator, toTreasury);
     }
 
     function _amount0(int256 d) private pure returns (int128 a) { assembly { a := sar(128, d) } }

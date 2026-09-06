@@ -34,13 +34,19 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     const { salt, address: hookAddr } = mineSalt(ethers.keccak256(initCode), 0x00ccn) // beforeSwap + afterSwap, both returning deltas
     await (await deployer.sendTransaction({ to: CREATE2, data: ethers.concat([salt, initCode]) })).wait()
     expect(await ethers.provider.getCode(hookAddr)).to.not.equal('0x')
-    const factory = await (await ethers.getContractFactory('ZealzFactory', deployer)).deploy(POSM, PERMIT2, ZZEC, hookAddr, treasury.address, ethers.parseEther('0.001'), openTick0, openTick1)
+    const factory = await (await ethers.getContractFactory('ZealzFactory', deployer)).deploy(POSM, PERMIT2, ZZEC, hookAddr, treasury.address, 500_000n, openTick0, openTick1) // launch fee 0.005 zZEC
     expect(await factory.getAddress()).to.equal(factoryAddr)
     const locker = await (await ethers.getContractFactory('ZealzLocker', deployer)).deploy(POSM, POOL_MANAGER, PERMIT2, factoryAddr)
     await factory.setLocker(await locker.getAddress())
+    // the creator pays the launch fee in zZEC: fund them from the trader wallet and approve the factory
+    const zzecW = new ethers.Contract(ZZEC, ['function transfer(address,uint256) returns (bool)', 'function approve(address,uint256) returns (bool)', 'function balanceOf(address) view returns (uint256)'], trader)
+    await (await zzecW.transfer(creator.address, 1_000_000n)).wait()
+    await (await zzecW.connect(creator).approve(factoryAddr, 1_000_000n)).wait()
+    const treasuryZzec0 = await zzecW.balanceOf(treasury.address)
 
     // ---- launch, capital free
-    const tx = await factory.connect(creator).launch('Zebra Foundry', 'ZBRA', 'ipfs://zbra', 0, 0, { value: ethers.parseEther('0.001') }) // Gentle curve, Batch opening
+    const tx = await factory.connect(creator).launch('Zebra Foundry', 'ZBRA', 'ipfs://zbra', 0, 0) // Gentle curve, Batch opening
+    expect((await zzecW.balanceOf(treasury.address)) - treasuryZzec0).to.equal(500_000n) // launch fee landed in treasury as zZEC
     const rc = await tx.wait()
     const ev = rc!.logs.map((l) => { try { return factory.interface.parseLog(l) } catch { return null } }).find((e) => e?.name === 'Launched')!
     const token = ev.args.token as string, positionId = ev.args.positionId as bigint, poolId = ev.args.poolId as string
@@ -79,6 +85,7 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     const s0b = await sv.getSlot0(poolId); expect(s0b[1]).to.equal(s0[1]) // pool untouched during the opening
     await expect(hook.settle(poolId)).to.be.revertedWithCustomError(hook, 'OpeningNotOver')
     await network.provider.send('evm_increaseTime', [601]); await network.provider.send('evm_mine', [])
+    const furnaceBeforeSettle = await erc(ZZEC).balanceOf(FURNACE)
     expect(await hook.inOpening(poolId)).to.equal(false)
     await (await hook.settle(poolId)).wait()
     const tokensOut = (await hook.openings(poolId)).tokensOut; expect(tokensOut).to.be.gt(0n)
@@ -88,17 +95,20 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     await expect(hook.connect(trader).claim(poolId)).to.be.revertedWithCustomError(hook, 'NothingToClaim')
     console.log(`      opening: 2 bids (0.003 + 0.001 zZEC) settled in one swap -> ${ethers.formatEther(tokensOut)} ZBRA; trader claimed ${ethers.formatEther(claimedA)}`)
 
+    expect((await erc(ZZEC).balanceOf(FURNACE)) - furnaceBeforeSettle).to.equal(4_000n) // the settlement swap paid 1% of the 0.004 zZEC batch to the Furnace
+
     // ---- after the opening: normal trades through the Universal Router
     const buyIn = 1_000_000n // 0.01 zZEC
-    const tokBefore = await erc(token).balanceOf(TRADER), creatorTokBefore = await erc(token).balanceOf(creator.address)
+    const tokBefore = await erc(token).balanceOf(TRADER), creatorZ0 = await erc(ZZEC).balanceOf(creator.address), furnaceZ0 = await erc(ZZEC).balanceOf(FURNACE)
     const sOpen = await sv.getSlot0(poolId)
     await swap(!tokenIs0, buyIn)
     const got = (await erc(token).balanceOf(TRADER)) - tokBefore
     expect(got).to.be.gt(0n)
-    const creatorCut = (await erc(token).balanceOf(creator.address)) - creatorTokBefore
-    expect(creatorCut).to.be.gt(0n) // 0.5% of a buy's token output goes to the creator
+    const creatorCut = (await erc(ZZEC).balanceOf(creator.address)) - creatorZ0, furnaceCutBuy = (await erc(ZZEC).balanceOf(FURNACE)) - furnaceZ0
+    expect(creatorCut).to.equal(buyIn / 200n) // 0.5% of the zZEC paid on a buy goes to the creator, in zZEC
+    expect(furnaceCutBuy).to.equal(buyIn / 100n) // and 1% to the Furnace: buys burn too
     const s1 = await sv.getSlot0(poolId)
-    console.log(`      bought ${ethers.formatEther(got)} ZBRA for 0.01 zZEC · creator got ${ethers.formatEther(creatorCut)} · tick ${sOpen[1]} -> ${s1[1]}`)
+    console.log(`      bought ${ethers.formatEther(got)} ZBRA for 0.01 zZEC · creator got ${Number(creatorCut) / 1e8} zZEC · Furnace ${Number(furnaceCutBuy) / 1e8} zZEC · tick ${sOpen[1]} -> ${s1[1]}`)
     expect(tokenIs0 ? s1[1] > sOpen[1] : s1[1] < sOpen[1]).to.equal(true) // price of the token rose
 
     // ---- sell half back: the zZEC output pays the Furnace 1%
@@ -115,7 +125,7 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     console.log(`      compounded · liquidity ${L0} -> ${L1} (+${((Number(L1 - L0) / Number(L0)) * 100).toFixed(4)}%)`)
 
     // ---- an INSTANT launch trades from the first block, no bids, no settlement
-    const rc2 = await (await factory.connect(creator).launch('Halo', 'HALO', 'ipfs://halo', 1, 1, { value: ethers.parseEther('0.001') })).wait() // Steep, Instant
+    const rc2 = await (await factory.connect(creator).launch('Halo', 'HALO', 'ipfs://halo', 1, 1)).wait() // Steep, Instant
     const ev2 = rc2!.logs.map((l) => { try { return factory.interface.parseLog(l) } catch { return null } }).find((e) => e?.name === 'Launched')!
     const token2 = ev2.args.token as string, poolId2 = ev2.args.poolId as string, t2Is0 = token2.toLowerCase() < ZZEC.toLowerCase()
     expect(await hook.inOpening(poolId2)).to.equal(false)

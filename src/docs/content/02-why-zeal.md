@@ -4,7 +4,7 @@ group: Start here
 ---
 # Why this is good for $ZEAL
 
-> **In one breath.** $ZEAL is a memecoin whose supply shrinks every time the wrapper is used. Every zZEC trade hands 0.7% to the Furnace, which buys $ZEAL and burns it. Every token launched on zealz.fun pays 1% of every sell into the same Furnace. The reserve, the market, the launchpad: all of it exists to give $ZEAL a permanent, mechanical bid and a permanently shrinking supply. Burns scale with usage, so they start small and grow with the machine.
+> **In one breath.** $ZEAL is a memecoin whose supply shrinks every time the wrapper is used. Every zZEC trade hands 0.7% to the Furnace, which buys $ZEAL and burns it. Every token launched on zealz.fun pays 1% of every trade into the same Furnace. The reserve, the market, the launchpad: all of it exists to give $ZEAL a permanent, mechanical bid and a permanently shrinking supply. Burns scale with usage, so they start small and grow with the machine.
 
 {{viz:flywheel}}
 
@@ -12,7 +12,7 @@ group: Start here
 
 **1. The burn hook on the zZEC market.** Every swap in the zZEC/ETH pool pays 1%. Liquidity providers keep 0.3%. The other 0.7% is taken by the hook and sent to the Furnace, whoever provided the liquidity and whoever made the trade. The Furnace turns it into $ZEAL and sends it to the dead address. This is protocol revenue that can only ever be spent one way.
 
-**2. Every launch on [zealz.fun](#/launchpad).** Tokens launched there trade against zZEC, and their hook sends 1% of every sell's zZEC to the same Furnace. A hundred launched tokens are a hundred pools feeding the burn, and the burn does not care whether any of them succeed.
+**2. Every launch on [zealz.fun](#/launchpad).** Tokens launched there trade against zZEC, and their hook sends 1% of the zZEC side of every trade to the same Furnace. A hundred launched tokens are a hundred pools feeding the burn, and the burn does not care whether any of them succeed.
 
 **3. The Foundry's 25% liquidity bucket.** Once Pons re-points the creator-fee recipient to the Tap, a quarter of every $ZEAL fee becomes zZEC liquidity the protocol owns. Protocol-owned liquidity hosts trades, and every trade it hosts burns.
 
@@ -33,7 +33,7 @@ Not a claim on the reserve. Not equity. Not a share of fees paid to holders. Hol
 ## What would make the burns larger
 
 - **Volume on the zZEC market.** More trades, more hook takes. Depth attracts volume, which is why [providing liquidity](#/market-and-keeper) matters to $ZEAL holders even if they never touch zZEC.
-- **Launches on zealz.fun.** Each one is a new pool paying 1% of every sell to the Furnace.
+- **Launches on zealz.fun.** Each one is a new pool paying 1% of every trade to the Furnace.
 - **The Pons re-point.** It unlocks the 25% bucket and turns future $ZEAL fees into protocol-owned depth.
 - **Reserve growth.** More ZEC wrapped means more zZEC to trade. Wrap requests open on Sep 7.
 

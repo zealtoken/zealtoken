@@ -61,7 +61,8 @@ contract ZealzFactory is ReentrancyGuard {
     address public immutable hook;
     address public immutable treasury;
     address public immutable deployer;
-    uint256 public immutable launchFeeWei;
+    /// @notice Launch fee in zZEC (8 decimals), paid to treasury. Every creator goes through the wrapper.
+    uint256 public immutable launchFeeZats;
     /// @notice Opening tick when the token is currency0 (price = zZEC per token) and when it is currency1 (price = token per zZEC).
     int24 public immutable openTickToken0;
     int24 public immutable openTickToken1;
@@ -79,16 +80,15 @@ contract ZealzFactory is ReentrancyGuard {
     error LockerAlreadySet();
     error NotDeployer();
     error LockerUnset();
-    error FeeNotPaid();
     error PositionNotLocked();
     error BadTick();
 
-    constructor(IPositionManagerF positionManager_, IPermit2F permit2_, address zzec_, address hook_, address treasury_, uint256 launchFeeWei_, int24 openTickToken0_, int24 openTickToken1_) {
+    constructor(IPositionManagerF positionManager_, IPermit2F permit2_, address zzec_, address hook_, address treasury_, uint256 launchFeeZats_, int24 openTickToken0_, int24 openTickToken1_) {
         if (address(positionManager_) == address(0) || address(permit2_) == address(0) || zzec_ == address(0) || hook_ == address(0) || treasury_ == address(0)) revert ZeroAddress();
         if (openTickToken0_ % TICK_SPACING != 0 || openTickToken1_ % TICK_SPACING != 0) revert BadTick();
         if (openTickToken0_ + GENTLE_WIDTH > TickMath.MAX_TICK || openTickToken1_ - GENTLE_WIDTH < TickMath.MIN_TICK) revert BadTick();
         positionManager = positionManager_; permit2 = permit2_; zzec = zzec_; hook = hook_; treasury = treasury_;
-        launchFeeWei = launchFeeWei_; deployer = msg.sender;
+        launchFeeZats = launchFeeZats_; deployer = msg.sender;
         openTickToken0 = openTickToken0_; openTickToken1 = openTickToken1_;
     }
 
@@ -115,10 +115,10 @@ contract ZealzFactory is ReentrancyGuard {
      *         locked single-sided position and the pool opens at the bottom of it.
      */
     function launch(string calldata name, string calldata symbol, string calldata metadataURI, Curve curve, Opening opening)
-        external payable nonReentrant returns (address token, bytes32 poolId, uint256 positionId)
+        external nonReentrant returns (address token, bytes32 poolId, uint256 positionId)
     {
         if (locker == address(0)) revert LockerUnset();
-        if (msg.value != launchFeeWei) revert FeeNotPaid();
+        if (launchFeeZats != 0) IERC20(zzec).safeTransferFrom(msg.sender, treasury, launchFeeZats);
 
         token = address(new ZealzToken(name, symbol, metadataURI, SUPPLY, address(this)));
         PoolKey memory key;
@@ -160,11 +160,10 @@ contract ZealzFactory is ReentrancyGuard {
         liquidity = (liquidity * 9999) / 10_000;
     }
 
-    /// @dev Rounding dust of the supply and the launch fee go to the treasury; nothing stays here.
+    /// @dev Rounding dust of the supply goes to the treasury; nothing stays here.
     function _sweep(address token) private {
         uint256 dust = IERC20(token).balanceOf(address(this));
         if (dust != 0) IERC20(token).safeTransfer(treasury, dust);
-        if (msg.value != 0) { (bool ok,) = payable(treasury).call{value: msg.value}(""); require(ok, "fee"); }
     }
 
     function _approve(address t, uint256 amount) private {

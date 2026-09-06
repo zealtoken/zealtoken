@@ -30,7 +30,7 @@ describe('zealz.fun contracts (unit; the factory is exercised on a chain fork)',
     await expect(H.deploy(pm.address, factory.address, furnace.address, treasury.address, zzec, 400, 100, 100)).to.be.revertedWithCustomError(H, 'BadSplit')
   })
 
-  it('hook: zZEC output splits burn/creator/treasury; token output splits creator/treasury only', async () => {
+  it('hook: the 2% always comes off the zZEC leg, whichever side it is on', async () => {
     const { hook, key, tok, zzec, factory, creator, pm } = await hookFixture()
     await hook.connect(factory).register(key, tok, creator.address, false)
     const zzecIs0 = key.currency0.toLowerCase() === zzec.toLowerCase()
@@ -42,7 +42,13 @@ describe('zealz.fun contracts (unit; the factory is exercised on a chain fork)',
     // a BUY: specified = zZEC in, output = token 1,000,000
     const dBuy = zzecIs0 ? delta(-5n, 1_000_000n) : delta(1_000_000n, -5n)
     const r2 = await hook.connect(pmSigner).afterSwap.staticCall(pm.address, key, { zeroForOne: zzecIs0, amountSpecified: -5n, sqrtPriceLimitX96: 1n }, dBuy, '0x')
-    expect(r2[1]).to.equal(20_000n) // still 2%, all to creator + treasury
+    expect(r2[1]).to.equal(0n) // token output: nothing here, the fee came off the zZEC input in beforeSwap
+    // the same BUY seen by beforeSwap: zZEC specified 1,000,000 in -> 2% taken before the pool sees it
+    const r3 = await hook.connect(pmSigner).beforeSwap.staticCall(pm.address, key, { zeroForOne: zzecIs0, amountSpecified: -1_000_000n, sqrtPriceLimitX96: 1n }, '0x')
+    expect(r3[1] >> 128n).to.equal(20_000n)
+    // a SELL seen by beforeSwap: token specified -> nothing here
+    const r4 = await hook.connect(pmSigner).beforeSwap.staticCall(pm.address, key, { zeroForOne: sellZeroForOne, amountSpecified: -5n, sqrtPriceLimitX96: 1n }, '0x')
+    expect(r4[1]).to.equal(0n)
   })
 
   it('locker: accepts only factory deposits via the position manager and refuses unknown positions', async () => {
