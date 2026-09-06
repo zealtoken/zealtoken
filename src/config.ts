@@ -191,4 +191,4 @@ export const STATIONS = {
 } as const
 
 /** Redemption opens to the public at this moment (UTC). Until then the desk refuses new requests and the site shows a countdown. */
-export const REDEEM_OPENS_AT = Date.UTC(2026, 8, 6, 17, 0, 0)
+export const REDEEM_OPENS_AT = Date.UTC(2026, 8, 6, 16, 20, 0) // opened early: tested end to end at 16:20 UTC

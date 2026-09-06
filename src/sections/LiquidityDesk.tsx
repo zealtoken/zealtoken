@@ -37,6 +37,7 @@ type Pool = { sqrt: bigint; L: bigint; ethDepth: number; zzecDepth: number; pric
 export function LiquidityDesk() {
   const [pool, setPool] = useState<Pool | null>(null)
   const [positions, setPositions] = useState<Pos[] | null>(null)
+  const [readErr, setReadErr] = useState<string | null>(null)
   const [prices, setPrices] = useState<{ zec: number; eth: number } | null>(null)
   const [account, setAccount] = useState<string | null>(null)
   const [bal, setBal] = useState<{ eth: bigint; zzec: bigint }>({ eth: 0n, zzec: 0n })
@@ -60,7 +61,7 @@ export function LiquidityDesk() {
     } else setPositions([])
     if (account && CONTRACTS.zzec) { const [z] = await readBatchRaw([{ to: CONTRACTS.zzec, data: SEL.balanceOf + encAddress(account) }]); const e = (await eth()!.request({ method: 'eth_getBalance', params: [account, 'latest'] })) as string; setBal({ eth: hexToBig(e), zzec: hexToBig(z) }) }
   }, [account])
-  useEffect(() => { void load().catch(() => {}); const t = window.setInterval(() => void load().catch(() => {}), 30_000); return () => window.clearInterval(t) }, [load])
+  useEffect(() => { const go = () => load().then(() => setReadErr(null)).catch((e: Error) => setReadErr(e.message)); void go(); const t = window.setInterval(go, 30_000); return () => window.clearInterval(t) }, [load])
   useEffect(() => { const spot = async (p: string) => Number(((await (await fetch(`https://api.coinbase.com/v2/prices/${p}/spot`)).json()) as { data: { amount: string } }).data.amount); Promise.all([spot('ZEC-USD'), spot('ETH-USD')]).then(([zec, eth]) => setPrices({ zec, eth })).catch(() => {}) }, [])
 
   // leaderboard rows: aggregate by owner
@@ -153,7 +154,7 @@ export function LiquidityDesk() {
               <span className="mono">the herd · live from Uniswap v4</span>
               <span className="mono">{pool ? `${fmt(pool.ethDepth, 3)} ETH + ${fmt(pool.zzecDepth, 3)} ${TOKEN.wrapper} in the pool` : 'reading…'}</span>
             </div>
-            {rows.length === 0 && <div className="redeem-empty mono">{positions ? 'no positions yet · be the first' : 'reading positions…'}</div>}
+            {rows.length === 0 && <div className="redeem-empty mono">{positions ? 'no positions yet · be the first' : readErr ? `could not read positions (${readErr.slice(0, 60)}) · retrying` : 'reading positions…'}</div>}
             {rows.map((r, i) => (
               <div className={`ld-row ${r.owner === account?.toLowerCase() ? 'me' : ''}`} key={r.owner}>
                 <span className="ld-rank mono">#{i + 1}</span>
