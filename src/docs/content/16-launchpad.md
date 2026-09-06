@@ -18,7 +18,7 @@ Every other launchpad prices tokens in the chain's gas coin. zealz.fun prices th
 |---|---|---|
 | **ZealzToken** | A plain ERC-20 with a fixed supply of 1,000,000,000, minted once to the factory. No owner, no mint function, no tax, no hooks. | None. It is the simplest token that can exist. |
 | **ZealzFactory** | Creates the token, opens the zZEC pool at the bottom of a single-sided range that holds the entire supply, hands the position to the locker, records the launch. The creator brings no capital. | None after deployment. Anyone may call `launch()`. |
-| **ZealzHook** | Two jobs. On a batch launch, for the first ten minutes every buy is a bid: the hook holds the zZEC, the pool is untouched, sells are refused, and when the window closes one swap executes for the whole batch so everyone in it pays the same price. On an instant launch there is no window and trading starts in the first block. After that (or from the start) it takes 2% of the zZEC side of every swap and splits it the way the creator chose at launch: at least 0.25% to the Furnace, at most 0.5% to the creator, 0.25% to the platform, and whatever is left reflected to the token's holders in zZEC. The fee is always taken from the zZEC leg, so a buy pays it from the zZEC going in and a sell from the zZEC coming out. Nobody is ever paid in the launched token. | The total, the platform share and the window length are constants. Each pool's split and opening type are fixed at launch and cannot be changed. Only the factory can register pools. The only funds it ever holds are open bids and unclaimed batch tokens, movable only by their owners. |
+| **ZealzHook** | Two jobs. On a batch launch, for the first ten minutes every buy is a bid: the hook holds the zZEC, the pool is untouched, sells are refused, and when the window closes one swap executes for the whole batch so everyone in it pays the same price. On an instant launch there is no window and trading starts in the first block. After that (or from the start) it takes the creator's fee, anywhere from 0.5% to 5%, from the zZEC side of every swap and splits it the way the creator chose at launch: at least 0.25% to the Furnace, at most 0.5% to the creator, 0.25% to the platform, and whatever is left reflected to the token's holders in zZEC. The fee is always taken from the zZEC leg, so a buy pays it from the zZEC going in and a sell from the zZEC coming out. Nobody is ever paid in the launched token. | The fee range, the platform share, the minimum burn, the creator cap and the window length are constants. Each pool's fee, split and opening type are fixed at launch and cannot be changed. Only the factory can register pools. The only funds it ever holds are open bids and unclaimed batch tokens, movable only by their owners. |
 | **ZealzLocker** | Holds every launch's position NFT forever. Anyone can call `compound()`: it collects the position's LP fees and adds them straight back as liquidity in the same range, so the floor only rises. Cannot decrease liquidity, transfer the NFT, or be upgraded. | None. It has no owner. |
 
 All four live in the public repository under `contracts/contracts/zealz/`.
@@ -33,18 +33,19 @@ All four live in the public repository under `contracts/contracts/zealz/`.
 
 
 
-## The split, chosen by the creator
+## The fee and the split, chosen by the creator
 
-The hook takes 2% of the zZEC side of every trade. That number is a constant. What the creator chooses at launch is how it is divided, within these rules:
+The hook takes a fee from the zZEC side of every trade. The creator sets it at launch, anywhere from 0.5% to 5%, and chooses how it is divided, within these rules:
 
 | Share | Rule | Why |
 |---|---|---|
+| Total fee | 0.5% to 5% | 0.5% is the two minimums added up; 5% is the ceiling above which routers start refusing the pool and a token reads as a honeypot |
 | Furnace (burns $ZEAL) | at least 0.25% | every launched token must feed the burn |
-| Creator | at most 0.5% | enough to make launching worthwhile, not enough to make it the point |
-| Platform | exactly 0.25% | runs zealz.fun, fixed in the hook |
+| Creator | at most 0.5%, whatever the total | a bigger fee buys more burn or more reflections, never a bigger creator cut |
+| Platform | exactly 0.25%, whatever the total | runs zealz.fun, fixed in the hook |
 | Holders (reflections) | whatever is left | paid in zZEC to every wallet holding the token, pro rata |
 
-The launch form offers presets: Balanced (0.75 burn, 0.5 creator, 0.25 platform, 0.5 holders), Max burn (1.25 burn, 0.5 creator), Max reflections (0.25 burn, no creator cut, 1.5% to holders) and Community (no creator cut, the rest split between burn and holders). Once set, the split is written into the hook for that pool and can never change.
+So a 2% token might be 0.75 burn, 0.5 creator, 0.25 platform, 0.5 holders. A 5% reflection token is 0.25 burn, no creator cut, 0.25 platform and 4.5% to holders. A 5% burn token sends 4.25% of every trade to the Furnace. The launch form offers those as presets (Balanced, Max burn, Reflection token, Burn token, Lean) and shows the trader's round-trip cost next to them: a 5% token costs about 5.3% per leg with the pool's LP fee, and the token page says so. Once set, the fee and split are written into the hook for that pool and can never change.
 
 {{viz:launchfees}}
 
@@ -85,7 +86,7 @@ Three addresses never earn reflections: the pool itself (which holds most of the
 
 ## What $ZEAL gets
 
-- **At least 0.25% and up to 1.25% of every trade of every launched token**, converted to $ZEAL and burned by the Furnace on the next ignition. The creator sets the number.
+- **At least 0.25% and up to 4.25% of every trade of every launched token**, converted to $ZEAL and burned by the Furnace on the next ignition. The creator sets the number.
 - **zZEC demand.** Every buyer needs zZEC, which means buying it on the market or wrapping ZEC, both of which pull ZEC into the reserve.
 - **Permanently locked liquidity.** The positions that buyers trade into can never be withdrawn, and they grow with every compound.
 
@@ -129,6 +130,7 @@ To be clear about what this is and is not: a graduated pump.fun token sits in a 
 | ZealzToken, ZealzHook, ZealzLocker, ZealzFactory | written and unit-tested; the full lifecycle passes on a fork of Robinhood Chain: capital-free launch, buy and sell through the real Universal Router with the hook paying the creator and the Furnace, then a compound that raised the locked liquidity |
 | Batch opening | built into the hook and passing on the fork: two bids, one settlement swap that pays the same 2% as any buy, pro-rata claims, sells refused during the window |
 | Instant opening | passing on the fork: a second launch with the instant flag trades in its first block with no bids and no settlement |
+| Variable fee | passing on the fork: a 5% token pays 0.25% to the Furnace, 0.25% to the platform and reflects 4.5% |
 | Shielded buys and memo launches | next: both ride the wrap desk's tagged-deposit path |
 | Hook deployment | needs a mined address (Uniswap v4 encodes hook permissions in the address) |
 | zealz.fun interface | built: feed, token pages, launch form with live preview, explainer. On a preview link with clearly labelled sample data until the factory deploys. |

@@ -9,7 +9,7 @@ import {PoolKey} from "../ZealFurnaceV4.sol";
 import {ZealzToken} from "./ZealzToken.sol";
 import {TickMath} from "./lib/TickMath.sol";
 
-interface IZealzHook { function register(PoolKey calldata key, address token, address creator, bool batchOpening, uint16 burnBps, uint16 creatorBps) external; }
+interface IZealzHook { function register(PoolKey calldata key, address token, address creator, bool batchOpening, uint16 totalBps, uint16 burnBps, uint16 creatorBps) external; }
 interface IPositionManagerF {
     function initializePool(PoolKey calldata key, uint160 sqrtPriceX96) external payable returns (int24);
     function modifyLiquidities(bytes calldata unlockData, uint256 deadline) external payable;
@@ -69,11 +69,11 @@ contract ZealzFactory is ReentrancyGuard {
 
     address public locker; // set once, right after deployment
 
-    struct Launch { address token; address creator; bytes32 poolId; uint256 positionId; Curve curve; Opening opening; uint64 at; uint16 burnBps; uint16 creatorBps; }
+    struct Launch { address token; address creator; bytes32 poolId; uint256 positionId; Curve curve; Opening opening; uint64 at; uint16 totalBps; uint16 burnBps; uint16 creatorBps; }
     Launch[] public launches;
     mapping(address token => uint256 index) public indexOf; // index + 1
 
-    event Launched(uint256 indexed index, address indexed token, address indexed creator, bytes32 poolId, uint256 positionId, uint8 curve, uint8 opening, uint16 burnBps, uint16 creatorBps);
+    event Launched(uint256 indexed index, address indexed token, address indexed creator, bytes32 poolId, uint256 positionId, uint8 curve, uint8 opening, uint16 totalBps, uint16 burnBps, uint16 creatorBps);
     event LockerSet(address locker);
 
     error ZeroAddress();
@@ -117,9 +117,10 @@ contract ZealzFactory is ReentrancyGuard {
      * @notice Launch. Pay the launch fee; bring nothing else. The whole supply becomes a
      *         locked single-sided position and the pool opens at the bottom of it.
      */
-    /// @param burnBps share of every trade's zZEC to the Furnace (at least 25 = 0.25%).
+    /// @param totalBps the whole fee on every trade's zZEC leg, 50 (0.5%) to 500 (5%).
+    /// @param burnBps share to the Furnace (at least 25 = 0.25%).
     /// @param creatorBps share to you (at most 50 = 0.5%). The platform keeps 0.25%; the rest is reflected to holders in zZEC.
-    function launch(string calldata name, string calldata symbol, string calldata metadataURI, Curve curve, Opening opening, uint16 burnBps, uint16 creatorBps)
+    function launch(string calldata name, string calldata symbol, string calldata metadataURI, Curve curve, Opening opening, uint16 totalBps, uint16 burnBps, uint16 creatorBps)
         external nonReentrant returns (address token, bytes32 poolId, uint256 positionId)
     {
         if (locker == address(0)) revert LockerUnset();
@@ -127,20 +128,20 @@ contract ZealzFactory is ReentrancyGuard {
 
         token = address(new ZealzToken(name, symbol, metadataURI, SUPPLY, address(this), zzec, hook, poolManager));
         PoolKey memory key;
-        (key, positionId) = _openAndSeed(token, curve, opening, burnBps, creatorBps);
+        (key, positionId) = _openAndSeed(token, curve, opening, totalBps, burnBps, creatorBps);
         _sweep(token);
         poolId = keccak256(abi.encode(key));
-        launches.push(Launch(token, msg.sender, poolId, positionId, curve, opening, uint64(block.timestamp), burnBps, creatorBps));
+        launches.push(Launch(token, msg.sender, poolId, positionId, curve, opening, uint64(block.timestamp), totalBps, burnBps, creatorBps));
         indexOf[token] = launches.length;
-        emit Launched(launches.length - 1, token, msg.sender, poolId, positionId, uint8(curve), uint8(opening), burnBps, creatorBps);
+        emit Launched(launches.length - 1, token, msg.sender, poolId, positionId, uint8(curve), uint8(opening), totalBps, burnBps, creatorBps);
     }
 
 
     /// @dev Register, initialize at the range edge, mint the single-sided position, and lock it.
-    function _openAndSeed(address token, Curve curve, Opening opening, uint16 burnBps, uint16 creatorBps) private returns (PoolKey memory key, uint256 positionId) {
+    function _openAndSeed(address token, Curve curve, Opening opening, uint16 totalBps, uint16 burnBps, uint16 creatorBps) private returns (PoolKey memory key, uint256 positionId) {
         (int24 tl, int24 tu, bool tokenIs0) = rangeFor(token, curve);
         key = PoolKey(tokenIs0 ? token : zzec, tokenIs0 ? zzec : token, LP_FEE, TICK_SPACING, hook);
-        IZealzHook(hook).register(key, token, msg.sender, opening == Opening.Batch, burnBps, creatorBps);
+        IZealzHook(hook).register(key, token, msg.sender, opening == Opening.Batch, totalBps, burnBps, creatorBps);
         uint160 sA = TickMath.getSqrtPriceAtTick(tl);
         uint160 sB = TickMath.getSqrtPriceAtTick(tu);
         // Open exactly at the edge that makes the position 100% token: at tickLower when the token is

@@ -53,15 +53,16 @@ contract ZealzHook is ReentrancyGuard {
     address public immutable treasury;
     address public immutable zzec;
 
-    /// @notice Every launched pool pays 2% of the zZEC side of every trade. The platform's 0.25% is fixed;
-    ///         the creator chooses the rest at launch: at least 0.25% to the Furnace, at most 0.5% to
-    ///         themselves, and whatever is left is reflected to the token's holders in zZEC.
-    uint16 public constant TOTAL_BPS = 200;
+    /// @notice Every launched pool pays a fee on the zZEC side of every trade, chosen by the creator at
+    ///         launch between 0.5% and 5%. The platform's 0.25% is fixed; at least 0.25% goes to the
+    ///         Furnace; at most 0.5% goes to the creator; whatever is left is reflected to holders in zZEC.
+    uint16 public constant MIN_TOTAL_BPS = 50;
+    uint16 public constant MAX_TOTAL_BPS = 500;
     uint16 public constant TREASURY_BPS = 25;
     uint16 public constant MIN_BURN_BPS = 25;
     uint16 public constant MAX_CREATOR_BPS = 50;
 
-    struct Split { uint16 burn; uint16 creator; uint16 reflect; }
+    struct Split { uint16 total; uint16 burn; uint16 creator; uint16 reflect; }
     mapping(bytes32 poolId => Split) public splitOf;
     mapping(bytes32 poolId => address token) public tokenOf;
 
@@ -70,7 +71,7 @@ contract ZealzHook is ReentrancyGuard {
     mapping(bytes32 poolId => Opening) public openings;
     mapping(bytes32 poolId => mapping(address bidder => uint256 zats)) public bids;
 
-    event PoolRegistered(bytes32 indexed poolId, address indexed token, address indexed creator, uint64 launchedAt, uint64 openingWindow, uint16 burnBps, uint16 creatorBps, uint16 reflectBps);
+    event PoolRegistered(bytes32 indexed poolId, address indexed token, address indexed creator, uint64 launchedAt, uint64 openingWindow, uint16 totalBps, uint16 burnBps, uint16 creatorBps, uint16 reflectBps);
     event Bid(bytes32 indexed poolId, address indexed bidder, uint256 zats, uint256 totalBids);
     event OpeningSettled(bytes32 indexed poolId, uint256 zatsIn, uint256 tokensOut);
     event Claimed(bytes32 indexed poolId, address indexed bidder, uint256 tokens);
@@ -95,22 +96,23 @@ contract ZealzHook is ReentrancyGuard {
     }
 
     /// @param batchOpening true = the first OPENING_WINDOW is a batch (bids, one settlement price); false = instant trading.
+    /// @param totalBps the whole fee on the zZEC leg, MIN_TOTAL_BPS..MAX_TOTAL_BPS.
     /// @param burnBps share of every trade's zZEC to the Furnace, at least MIN_BURN_BPS.
     /// @param creatorBps share to the creator, at most MAX_CREATOR_BPS. The remainder after the platform's cut is reflected to holders.
-    function register(PoolKey calldata key, address token, address creator, bool batchOpening, uint16 burnBps, uint16 creatorBps) external {
+    function register(PoolKey calldata key, address token, address creator, bool batchOpening, uint16 totalBps, uint16 burnBps, uint16 creatorBps) external {
         if (msg.sender != factory) revert NotFactory();
         if (creator == address(0)) revert ZeroAddress();
-        if (burnBps < MIN_BURN_BPS || creatorBps > MAX_CREATOR_BPS || burnBps + creatorBps + TREASURY_BPS > TOTAL_BPS) revert BadSplit();
+        if (totalBps < MIN_TOTAL_BPS || totalBps > MAX_TOTAL_BPS || burnBps < MIN_BURN_BPS || creatorBps > MAX_CREATOR_BPS || burnBps + creatorBps + TREASURY_BPS > totalBps) revert BadSplit();
         bytes32 id = keccak256(abi.encode(key));
         creatorOf[id] = creator;
         tokenOf[id] = token;
-        splitOf[id] = Split(burnBps, creatorBps, TOTAL_BPS - TREASURY_BPS - burnBps - creatorBps);
+        splitOf[id] = Split(totalBps, burnBps, creatorBps, totalBps - TREASURY_BPS - burnBps - creatorBps);
         Opening storage o = openings[id];
         o.launchedAt = uint64(block.timestamp);
         o.window = batchOpening ? OPENING_WINDOW : 0;
         o.key = key;
         if (!batchOpening) o.settled = true; // nothing to settle on an instant launch
-        emit PoolRegistered(id, token, creator, uint64(block.timestamp), o.window, burnBps, creatorBps, splitOf[id].reflect);
+        emit PoolRegistered(id, token, creator, uint64(block.timestamp), o.window, totalBps, burnBps, creatorBps, splitOf[id].reflect);
     }
 
     // ------------------------------------------------------------ the opening

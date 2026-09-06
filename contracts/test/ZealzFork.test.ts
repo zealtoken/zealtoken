@@ -45,7 +45,7 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     const treasuryZzec0 = await zzecW.balanceOf(treasury.address)
 
     // ---- launch, capital free
-    const tx = await factory.connect(creator).launch('Zebra Foundry', 'ZBRA', 'ipfs://zbra', 0, 0, 100, 50) // Gentle curve, Batch opening, 1% burn / 0.5% creator / 0.25% platform / 0.25% reflected
+    const tx = await factory.connect(creator).launch('Zebra Foundry', 'ZBRA', 'ipfs://zbra', 0, 0, 200, 100, 50) // Gentle, Batch, 2% total: 1% burn / 0.5% creator / 0.25% platform / 0.25% reflected
     expect((await zzecW.balanceOf(treasury.address)) - treasuryZzec0).to.equal(500_000n) // launch fee landed in treasury as zZEC
     const rc = await tx.wait()
     const ev = rc!.logs.map((l) => { try { return factory.interface.parseLog(l) } catch { return null } }).find((e) => e?.name === 'Launched')!
@@ -135,7 +135,7 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     console.log(`      compounded · liquidity ${L0} -> ${L1} (+${((Number(L1 - L0) / Number(L0)) * 100).toFixed(4)}%)`)
 
     // ---- an INSTANT launch trades from the first block, no bids, no settlement
-    const rc2 = await (await factory.connect(creator).launch('Halo', 'HALO', 'ipfs://halo', 1, 1, 25, 0)).wait() // Steep, Instant, max reflections: 0.25% burn / 0 creator / 0.25% platform / 1.5% reflected // Steep, Instant
+    const rc2 = await (await factory.connect(creator).launch('Halo', 'HALO', 'ipfs://halo', 1, 1, 500, 25, 0)).wait() // Steep, Instant, 5% total: 0.25% burn / 0 creator / 0.25% platform / 4.5% reflected // Steep, Instant
     const ev2 = rc2!.logs.map((l) => { try { return factory.interface.parseLog(l) } catch { return null } }).find((e) => e?.name === 'Launched')!
     const token2 = ev2.args.token as string, poolId2 = ev2.args.poolId as string, t2Is0 = token2.toLowerCase() < ZZEC.toLowerCase()
     expect(await hook.inOpening(poolId2)).to.equal(false)
@@ -146,8 +146,13 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
       const data = new ethers.Interface(['function execute(bytes,bytes[],uint256) payable']).encodeFunctionData('execute', [ethers.solidityPacked(['uint8'], [0x10]), [abi.encode(['bytes', 'bytes[]'], [acts, params])], Math.floor(Date.now() / 1000) + 3600 * 24 * 365])
       await (await trader.sendTransaction({ to: UR, data })).wait()
     }
+    const fz0 = await erc(ZZEC).balanceOf(FURNACE), tz0 = await erc(ZZEC).balanceOf(treasury.address)
     await swap2(!t2Is0, 200_000n)
     expect(await erc(token2).balanceOf(TRADER)).to.be.gt(0n) // bought straight away
+    expect((await erc(ZZEC).balanceOf(FURNACE)) - fz0).to.equal(500n) // 0.25% of 200,000 on a 5% token
+    expect((await erc(ZZEC).balanceOf(treasury.address)) - tz0).to.equal(500n) // platform 0.25%, fixed whatever the total
+    const rt2 = new ethers.Contract(token2, ['function pending() view returns (uint256)', 'function reflectedTotal() view returns (uint256)'], ethers.provider)
+    expect((await rt2.pending()) + (await rt2.reflectedTotal())).to.equal(9_000n) // 4.5% reflected (held as pending until holders exist, since the fee is taken before the buyer holds anything)
     console.log(`      instant launch: bought ${ethers.formatEther(await erc(token2).balanceOf(TRADER))} HALO in the first block`)
   })
 })

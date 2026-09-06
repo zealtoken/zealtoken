@@ -24,19 +24,21 @@ describe('zealz.fun contracts (unit; the factory is exercised on a chain fork)',
 
   it('hook: only the factory registers, only the pool manager calls, unknown pools revert, bad splits revert', async () => {
     const { hook, key, tok, factory, creator, stranger, pm, H, furnace, treasury, zzec } = await hookFixture()
-    await expect(hook.connect(stranger).register(key, tok, creator.address, true, 100, 50)).to.be.revertedWithCustomError(hook, 'NotFactory')
+    await expect(hook.connect(stranger).register(key, tok, creator.address, true, 200, 100, 50)).to.be.revertedWithCustomError(hook, 'NotFactory')
     await expect(hook.connect(stranger).afterSwap(stranger.address, key, { zeroForOne: true, amountSpecified: -1n, sqrtPriceLimitX96: 1n }, 0n, '0x')).to.be.revertedWithCustomError(hook, 'NotPoolManager')
     const pmSigner = await ethers.getImpersonatedSigner(pm.address); await ethers.provider.send('hardhat_setBalance', [pm.address, '0x56bc75e2d63100000']); await expect(hook.connect(pmSigner).afterSwap(stranger.address, key, { zeroForOne: true, amountSpecified: -1n, sqrtPriceLimitX96: 1n }, 0n, '0x')).to.be.revertedWithCustomError(hook, 'UnknownPool')
-    await hook.connect(factory).register(key, tok, creator.address, false, 100, 50)
+    await hook.connect(factory).register(key, tok, creator.address, false, 200, 100, 50)
     expect(await hook.creatorOf(ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(['tuple(address,address,uint24,int24,address)'], [[key.currency0, key.currency1, key.fee, key.tickSpacing, key.hooks]])))).to.equal(creator.address)
-    await expect(hook.connect(factory).register(key, tok, creator.address, true, 24, 50)).to.be.revertedWithCustomError(hook, 'BadSplit') // burn below 0.25%
-    await expect(hook.connect(factory).register(key, tok, creator.address, true, 100, 51)).to.be.revertedWithCustomError(hook, 'BadSplit') // creator above 0.5%
-    await expect(hook.connect(factory).register(key, tok, creator.address, true, 150, 50)).to.be.revertedWithCustomError(hook, 'BadSplit') // over 2%
+    await expect(hook.connect(factory).register(key, tok, creator.address, true, 200, 24, 50)).to.be.revertedWithCustomError(hook, 'BadSplit') // burn below 0.25%
+    await expect(hook.connect(factory).register(key, tok, creator.address, true, 200, 100, 51)).to.be.revertedWithCustomError(hook, 'BadSplit') // creator above 0.5%
+    await expect(hook.connect(factory).register(key, tok, creator.address, true, 200, 150, 50)).to.be.revertedWithCustomError(hook, 'BadSplit') // shares exceed the total
+    await expect(hook.connect(factory).register(key, tok, creator.address, true, 501, 25, 0)).to.be.revertedWithCustomError(hook, 'BadSplit') // total above 5%
+    await expect(hook.connect(factory).register(key, tok, creator.address, true, 49, 25, 0)).to.be.revertedWithCustomError(hook, 'BadSplit') // total below 0.5%
   })
 
   it('hook: the 2% always comes off the zZEC leg, whichever side it is on', async () => {
     const { hook, key, tok, zzec, factory, creator, pm } = await hookFixture()
-    await hook.connect(factory).register(key, tok, creator.address, false, 100, 50)
+    await hook.connect(factory).register(key, tok, creator.address, false, 200, 100, 50)
     const zzecIs0 = key.currency0.toLowerCase() === zzec.toLowerCase()
     // a SELL of token for zZEC: specified = token in (negative), output = zZEC 1,000,000 raw
     const sellZeroForOne = !zzecIs0 // token is currency0 when zZEC is currency1
