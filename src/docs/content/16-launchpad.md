@@ -65,6 +65,12 @@ So over a round trip of 1 zZEC in and roughly 1 zZEC out:
 
 The trader's total cost is about 2.3% per leg, in the same range as any launchpad, but where it goes is fixed in code and shown on the token page.
 
+## Buying with ETH
+
+Nobody needs zZEC in their wallet to buy. The token page takes ETH by default and routes it through our own ETH/zZEC market and into the token in one transaction, using the Universal Router's multi-hop swap. During a batch opening the same route lands as a bid credited to the sender. Proven on the fork: an ETH buy of an instant launch, and an ETH bid into an opening.
+
+Two things follow. Every ETH buy on any launched token is first a zZEC buy on our market, so it pays that market's 0.7% burn hook and pushes zZEC above its peg, which arbitrage closes by wrapping more ZEC into the reserve. And the ETH/zZEC market's depth is the ceiling on how comfortably anyone can ape: every ETH buy on every token passes through it, and the token page shows the price impact of that hop separately so nobody is surprised. Deepening that market is what the Herd desk is for.
+
 ## Dividends: holders paid in Zcash
 
 Every launched token carries a small ledger. When the hook sends it zZEC, the token spreads that amount across every eligible token in circulation, and each wallet's claimable balance grows in proportion to what it holds. Holders call one function to claim; nothing is pushed, nothing is taxed on transfers, and balances are tracked exactly across every transfer.
@@ -131,6 +137,7 @@ To be clear about what this is and is not: a graduated pump.fun token sits in a 
 | Batch opening | built into the hook and passing on the fork: two bids, one settlement swap that pays the same 2% as any buy, pro-rata claims, sells refused during the window |
 | Instant opening | passing on the fork: a second launch with the instant flag trades in its first block with no bids and no settlement |
 | Variable fee | passing on the fork: a 5% token pays 0.5% to the Furnace, 0.5% to the platform and 4% to holders |
+| Buying with ETH | passing on the fork: ETH to zZEC to token in one router transaction, and the same route as a bid during an opening; the site's calldata builder is byte-checked against ethers |
 | Shielded buys and memo launches | next: both ride the wrap desk's tagged-deposit path |
 | Hook deployment | needs a mined address (Uniswap v4 encodes hook permissions in the address) |
 | zealz.fun interface | built: feed, token pages, launch form with live preview, explainer. On a preview link with clearly labelled sample data until the factory deploys. |

@@ -40,8 +40,8 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     await factory.setLocker(await locker.getAddress())
     // the creator pays the launch fee in zZEC: fund them from the trader wallet and approve the factory
     const zzecW = new ethers.Contract(ZZEC, ['function transfer(address,uint256) returns (bool)', 'function approve(address,uint256) returns (bool)', 'function balanceOf(address) view returns (uint256)'], trader)
-    await (await zzecW.transfer(creator.address, 1_000_000n)).wait()
-    await (await zzecW.connect(creator).approve(factoryAddr, 1_000_000n)).wait()
+    await (await zzecW.transfer(creator.address, 2_000_000n)).wait()
+    await (await zzecW.connect(creator).approve(factoryAddr, 2_000_000n)).wait()
     const treasuryZzec0 = await zzecW.balanceOf(treasury.address)
 
     // ---- launch, capital free
@@ -175,5 +175,37 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     const rt2 = new ethers.Contract(token2, ['function pending() view returns (uint256)', 'function distributedTotal() view returns (uint256)'], ethers.provider)
     expect((await rt2.pending()) + (await rt2.distributedTotal())).to.equal(8_000n) // 4% to holders // 4.5% to holders (held as pending until holders exist, since the fee is taken before the buyer holds anything)
     console.log(`      instant launch: bought ${ethers.formatEther(await erc(token2).balanceOf(TRADER))} HALO in the first block`)
+
+    // ---- APE WITH ETH: one transaction, ETH -> zZEC (our market, burn hook) -> token (zealz hook), through the Universal Router
+    const BURN_HOOK = '0x16642362837e2FDC02fF1ECF71f5629c094B0044'
+    const PATH_T = 'tuple(address intermediateCurrency,uint24 fee,int24 tickSpacing,address hooks,bytes hookData)'
+    const twoHop = async (tokenOut: string, ethIn: bigint) => {
+      const acts = ethers.solidityPacked(['uint8', 'uint8', 'uint8'], [0x07, 0x0c, 0x0f]) // SWAP_EXACT_IN, SETTLE_ALL, TAKE_ALL
+      const params = [
+        abi.encode([`tuple(address currencyIn,${PATH_T}[] path,uint256[] minHopPriceX36,uint128 amountIn,uint128 amountOutMinimum)`], [{ currencyIn: ethers.ZeroAddress, path: [
+          { intermediateCurrency: ZZEC, fee: 3000, tickSpacing: 60, hooks: BURN_HOOK, hookData: '0x' },
+          { intermediateCurrency: tokenOut, fee: 3000, tickSpacing: 60, hooks: hookAddr, hookData: '0x' },
+        ], minHopPriceX36: [], amountIn: ethIn, amountOutMinimum: 0n }]),
+        abi.encode(['address', 'uint256'], [ethers.ZeroAddress, ethIn]),
+        abi.encode(['address', 'uint256'], [tokenOut, 0n]),
+      ]
+      const data = new ethers.Interface(['function execute(bytes,bytes[],uint256) payable']).encodeFunctionData('execute', [ethers.solidityPacked(['uint8'], [0x10]), [abi.encode(['bytes', 'bytes[]'], [acts, params])], Math.floor(Date.now() / 1000) + 3600 * 24 * 365])
+      await (await trader.sendTransaction({ to: UR, data, value: ethIn })).wait()
+    }
+    { const h0 = await erc(token2).balanceOf(TRADER), f0 = await erc(ZZEC).balanceOf(FURNACE)
+      await twoHop(token2, ethers.parseEther('0.005'))
+      const got = (await erc(token2).balanceOf(TRADER)) - h0, fGot = (await erc(ZZEC).balanceOf(FURNACE)) - f0
+      expect(got).to.be.gt(0n); expect(fGot).to.be.gt(0n) // both hooks paid the Furnace on the way through
+      console.log(`      ape with ETH · 0.005 ETH -> zZEC -> ${ethers.formatEther(got)} HALO in one tx · Furnace +${Number(fGot) / 1e8} zZEC`) }
+    // and during a batch opening the same route becomes a bid, credited to the sender
+    const rc3 = await (await factory.connect(creator).launch('Orchard', 'ORCH', 'ipfs://orch', 0, 0, 200, 75, 50)).wait()
+    const ev3 = rc3!.logs.map((l) => { try { return factory.interface.parseLog(l) } catch { return null } }).find((e) => e?.name === 'Launched')!
+    const token3 = ev3.args.token as string, poolId3 = ev3.args.poolId as string
+    expect(await hook.inOpening(poolId3)).to.equal(true)
+    await twoHop(token3, ethers.parseEther('0.002'))
+    const bid3 = await hook.bids(poolId3, TRADER)
+    expect(bid3).to.be.gt(0n)
+    expect(await erc(token3).balanceOf(TRADER)).to.equal(0n) // nothing bought yet: it is a bid
+    console.log(`      ape with ETH into an opening · 0.002 ETH became a bid of ${Number(bid3) / 1e8} zZEC`)
   })
 })
