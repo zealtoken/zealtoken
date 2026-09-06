@@ -46,7 +46,8 @@ async function floatBalanceZats(): Promise<bigint> {
   if (process.env.ZINGO_DATA) args.push('--data-dir', process.env.ZINGO_DATA)
   // zingo-cli prints a bracketed key: value list, not JSON. Read the confirmed lines.
   const { stdout } = await run(bin, [...args, '--waitsync', 'balance'], { maxBuffer: 4 << 20 })
-  const pick = (k: string) => { const m = stdout.match(new RegExp(k + '"?\\s*:\\s*(\\d+)')); return m ? BigInt(m[1]) : 0n }
+  // zingo groups digits with underscores (10_007_000); strip them before parsing
+  const pick = (k: string) => { const m = stdout.match(new RegExp(k + '"?\\s*:\\s*([\\d_]+)')); return m ? BigInt(m[1].replace(/_/g, '')) : 0n }
   return pick('confirmed_transparent_balance') + pick('confirmed_sapling_balance') + pick('confirmed_orchard_balance')
 }
 
