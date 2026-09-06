@@ -26,7 +26,7 @@ export function Machine3D() {
   const host = useRef<HTMLDivElement>(null)
   const [labels, setLabels] = useState<{ id: string; x: number; y: number; z: number }[]>([])
   useEffect(() => {
-    const el = host.current!; const W = el.clientWidth, H = el.clientHeight
+    const el = host.current!; let W = el.clientWidth || 600, H = el.clientHeight || 380
     const green = new THREE.Color(css('--green-bright', '#00c805')), paper = new THREE.Color(css('--bg', '#f7f7f4'))
     const dark = paper.getHSL({ h: 0, s: 0, l: 0 }).l < 0.5
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.setSize(W, H); el.appendChild(renderer.domElement)
@@ -77,8 +77,11 @@ export function Machine3D() {
       setLabels(STATIONS.map((s) => { tmp.set(s.pos[0], 1.15, s.pos[2]).project(cam); return { id: s.id, x: (tmp.x * 0.5 + 0.5) * W, y: (-tmp.y * 0.5 + 0.5) * H, z: tmp.z } }))
       raf = requestAnimationFrame(frame)
     }
+    // The article lays out after fonts and the sidebar settle; follow the host's real size.
+    const ro = new ResizeObserver(() => { const nw = el.clientWidth, nh = el.clientHeight; if (!nw || !nh || (nw === W && nh === H)) return; W = nw; H = nh; renderer.setSize(W, H); cam.aspect = W / H; cam.updateProjectionMatrix() })
+    ro.observe(el)
     raf = requestAnimationFrame(frame)
-    return () => { cancelAnimationFrame(raf); renderer.domElement.removeEventListener('pointerdown', down); removeEventListener('pointermove', move); removeEventListener('pointerup', up); renderer.dispose(); el.removeChild(renderer.domElement) }
+    return () => { ro.disconnect(); cancelAnimationFrame(raf); renderer.domElement.removeEventListener('pointerdown', down); removeEventListener('pointermove', move); removeEventListener('pointerup', up); renderer.dispose(); el.removeChild(renderer.domElement) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   return (
