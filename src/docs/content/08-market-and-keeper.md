@@ -8,6 +8,8 @@ group: Using it
 
 ## The pool
 
+{{viz:pool}}
+
 | Parameter | Value |
 |---|---|
 | Pool id | `0xa6d41767e205c89fe05d7ad78354af7bb98cbe9b0c3c60f8371b05e7087fdb84` |

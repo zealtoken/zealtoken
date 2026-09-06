@@ -16,6 +16,8 @@ Zcash is not an EVM chain, so no contract on Robinhood Chain can see a Zcash pay
 
 ## How matching works without trusting anyone's word
 
+{{viz:wrapstates}}
+
 Zcash transparent outputs cannot carry a memo, so the desk encodes the request into the **amount**. Amounts are in steps of 0.001 ZEC, and each request gets a deposit of `amount + (id + 1)` zatoshi. Request 0 for 1 ZEC asks for exactly 1.00000001 ZEC, request 1 asks for 1.00000002, and so on. A payment of that exact value to the reserve address can only belong to that request. The extra zatoshi stay in the reserve as coverage.
 
 The operator's tool scans the reserve address's unspent outputs (via lightwalletd's `GetAddressUtxos`), keeps only outputs at least as recent as the request, and matches on value. Three confirmations are required.

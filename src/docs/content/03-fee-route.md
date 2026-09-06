@@ -8,6 +8,8 @@ group: The machine
 
 ## The path, station by station
 
+{{viz:feeroute}}
+
 1. **Trade.** Someone buys or sells $ZEAL on the Pons V2 pool (a Uniswap v4 pool with Pons's own hook attached, pool id `0x95f9…caf0`).
 2. **Fee.** Pons's hook takes 1% of the trade. 30% stays with Pons for running the launchpad; 70% is the creator share.
 3. **Escrow.** Pons does not push the creator share anywhere. It credits it inside its `V2FeeEscrow` contract (`0xd3AF…Ac9e`) under the current creator-fee recipient's address. Only that address can claim, because the escrow pays `msg.sender`.

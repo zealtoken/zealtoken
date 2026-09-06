@@ -21,6 +21,8 @@ group: Start here
 
 ## The reserve
 
+{{viz:coverage}}
+
 [t1UjkXzcEG4krP5hou3Mik4VUZN72i9nJTw on the Zcash explorer](https://mainnet.zcashexplorer.app/address/t1UjkXzcEG4krP5hou3Mik4VUZN72i9nJTw). Compare its balance to `reserveZats()` on ZZEC and to `zZEC` `totalSupply()`. Coverage is the first divided by the second.
 
 ## Raw calls

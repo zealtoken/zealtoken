@@ -8,6 +8,8 @@ group: The machine
 
 ## The hook
 
+{{viz:tradesplit}}
+
 ZealBurnHook (`0x16642362837e2FDC02fF1ECF71f5629c094B0044`) is a Uniswap v4 hook with only `afterSwap` enabled. After each swap it computes 0.7% (70 bps) of the swap's unspecified side and `take`s it from the PoolManager straight to the Furnace. It never holds funds, has no owner, and no setters: share and destination are immutable. Swaps where the Furnace itself is the sender are exempt, so the burn does not tax itself. Lifetime takes are public as `totalTaken0` (ETH) and `totalTaken1` (zZEC).
 
 Because the hook is part of the pool's identity, **whoever** provides liquidity, every trade burns. Liquidity from strangers is as good for $ZEAL as our own.
@@ -27,9 +29,13 @@ Every day at 14:00 local the burn job dry-runs `ignite` and, if it would produce
 
 ## Why route through ETH
 
+{{viz:hook}}
+
 The zZEC pool is zZEC/ETH and the $ZEAL pool is $ZEAL/ETH. ETH is the common leg. Both pools are quoted in native ETH, which is also why the Furnace can insist that `currency0` is ETH in both keys.
 
 ## Numbers so far
+
+{{viz:burns}}
 
 Two burns totalling about 9,752 $ZEAL, from the first LP fees and the migration. The counters on the ledger are `totalZealBurned`, `burnCount`, `totalEthConsumed`, and `totalZzecConsumed`, all public.
 

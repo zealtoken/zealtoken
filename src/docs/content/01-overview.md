@@ -8,6 +8,8 @@ group: Start here
 
 ## The two loops
 
+{{viz:machine3d}}
+
 **Loop 01, the Foundry.** $ZEAL launched on the Pons launchpad. Pons charges a 1% fee on every $ZEAL trade and pays 70% of it to the token's creator-fee recipient. Our recipient is a contract with one exit, and that exit is the Foundry, which splits everything 60 / 25 / 15: sixty percent becomes native ZEC in the reserve, twenty-five percent seeds zZEC liquidity, fifteen percent runs operations. No wallet in that path can redirect a cent. See [The fee route](#/fee-route).
 
 **Loop 02, the Furnace.** zZEC trades on a Uniswap v4 pool against ETH. A hook attached to that pool takes 0.7% of every swap and hands it to the Furnace. The Furnace can do exactly one thing with what it holds: sell it for ETH, buy $ZEAL, and send that $ZEAL to the burn address. See [The Furnace and the burn hook](#/furnace-and-hook).
@@ -15,6 +17,8 @@ group: Start here
 Between them sits zZEC itself: a plain ERC-20 with 8 decimals whose supply can never exceed the last attested ZEC balance of the reserve. See [The zZEC wrapper](#/zzec).
 
 ## What is live today
+
+{{viz:coverage}}
 
 | Piece | What it does | Address |
 |---|---|---|

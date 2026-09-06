@@ -8,6 +8,8 @@ group: Using it
 
 ## Why escrow first
 
+{{viz:redeemstates}}
+
 The zZEC contract's own `requestRedeem` burns first and trusts the operator to pay. That is the failure mode every wrapper is remembered for. The desk inverts the order: your tokens sit in escrow, visible, until a payout is recorded. The operator cannot move escrowed zZEC anywhere except into the burn, and only by recording a Zcash transaction id against your request. If the operator disappears, `reclaim()` is yours after the window and nobody can block it.
 
 ## Step by step, as a holder

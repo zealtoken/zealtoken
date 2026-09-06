@@ -12,6 +12,8 @@ A shielded reserve would be private, which for a wrapper means unauditable. The 
 
 ## The attestation job, step by step
 
+{{viz:attestations}}
+
 1. Read the Zcash chain tip (height and hash) from lightwalletd (`zec.rocks:443`), and confirm it is mainnet.
 2. Read the confirmed transparent balance of the reserve address with `GetTaddressBalance`. Unconfirmed outputs are not counted.
 3. Read the tip again. If it moved, repeat, so the balance and the proof hash describe the same block.

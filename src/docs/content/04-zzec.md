@@ -20,6 +20,8 @@ That the attested number matches the real Zcash balance, and that a redemption i
 
 ## Attestations and coverage
 
+{{viz:coverage}}
+
 `attest(reserveZats, proofRef)` records the balance and the block hash it was read at. It is allowed to report a reserve **below** supply, because blocking honest bad news would be worse than publishing it. In that case the contract emits `CoverageBreach` and `coverageBps()` reads under 10,000. The ledger shows coverage on every poll.
 
 ## Why 8 decimals

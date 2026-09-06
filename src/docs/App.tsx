@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { marked } from 'marked'
 import { LINKS, TOKEN } from '../config'
+import { VIZ } from './viz'
 
 /**
  * The docs: markdown pages compiled into the bundle, rendered client-side with
@@ -44,7 +45,10 @@ export function DocsApp() {
   }, [pages])
 
   const page = pages.find((p) => p.slug === route) ?? pages[0]
-  const html = useMemo(() => marked.parse(page.body) as string, [page])
+  // Split the page on {{viz:name}} lines: markdown segments render as HTML, viz names mount React components in place.
+  type Seg = { viz: string } | { html: string }
+  const segments = useMemo<Seg[]>(() => page.body.split(/^\{\{viz:([a-z0-9-]+)\}\}$/m).map((part, i): Seg => (i % 2 ? { viz: part } : { html: marked.parse(part) as string })), [page])
+  const html = segments.map((s) => ('html' in s ? s.html : '')).join('')
 
   useEffect(() => {
     const el = article.current; if (!el) return
@@ -87,7 +91,9 @@ export function DocsApp() {
         </aside>
         <main className="docs-main">
           <div className="docs-crumb mono">{page.group} / {page.title}</div>
-          <article ref={article} className="docs-article" dangerouslySetInnerHTML={{ __html: html }} />
+          <article ref={article} className="docs-article">
+            {segments.map((seg, i) => ('viz' in seg ? (() => { const V = VIZ[seg.viz]; return V ? <V key={i} /> : <p key={i} className="mono">[unknown visual: {seg.viz}]</p> })() : <div key={i} dangerouslySetInnerHTML={{ __html: seg.html }} />))}
+          </article>
           <nav className="docs-pager">
             {(() => { const i = pages.indexOf(page); const prev = pages[i - 1], next = pages[i + 1]; return (<>
               {prev ? <a href={`#/${prev.slug}`}>← {prev.title}</a> : <span />}
