@@ -155,8 +155,7 @@ export function Redeem() {
             <span className="green">Get native ZEC.</span>
           </h2>
           <p className="lede" data-reveal style={stagger(2)}>
-            Your {TOKEN.wrapper} waits in escrow, not in a burn. The operator pays real ZEC to your address, records the Zcash
-            transaction on chain, and only then is the escrow burned. Payouts run automatically, usually within minutes. If one
+            Your {TOKEN.wrapper} waits in escrow, not in a burn. The desk pays real ZEC to your address, records the Zcash transaction on chain, and only then is the escrow burned. Payouts run automatically, usually within minutes. If one
             ever failed, the contract lets you take your {TOKEN.wrapper} back yourself. No permission, no pause, ever.
           </p>
         </div>
