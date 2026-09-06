@@ -112,7 +112,9 @@ Sniping is the first-block problem every launchpad pretends to solve. With a bat
 
 ## The floor only goes up
 
-The pool's 0.3% LP fee accrues to the locked position. Anyone can call `compound()` on the locker: it collects those fees and adds them back as liquidity in the same range. Fees sit uncollected until someone compounds, so depth rises with every compound rather than every trade; the burner job will call it daily for every launched pool once the contracts deploy. It can never fall: the locker has no withdraw. The hard floor is the bottom tick of the range, fixed at launch. What ratchets upward is the zZEC behind every price level above it.
+The pool's 0.3% LP fee accrues to the locked position. Anyone can call `compound()` on the locker: it collects those fees and adds them back as liquidity in the same range. Fees sit uncollected until someone compounds, so depth rises with every compound rather than every trade; the burner job will call it daily for every launched pool once the contracts deploy. It can never fall: the locker has no withdraw. The hard floor is the bottom tick of the range, fixed at launch. What ratchets upward is the zZEC the pool offers at every price level above it.
+
+To be clear about what this is and is not: a graduated pump.fun token sits in a constant-product pool whose LP fees also stay in the pool, so its liquidity grows the same way. Concentrated-liquidity launchpads such as Clanker and Zora pay their LP fees out instead, so those positions never grow. Compounding is how our lock behaves, not something no one else has; the parts of this launchpad that are genuinely different are the Zcash pair, reflections to holders, the creator's split, the batch opening and, next, shielded buys.
 
 ## Open decisions
 
