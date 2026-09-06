@@ -38,7 +38,7 @@ const PHASES = [
     p: 'Phase 03',
     t: 'Redemption',
     s: 'Sep 06',
-    d: `Burn ${TOKEN.wrapper}, receive native ZEC. Escrow first, paid from the reserve, Zcash transaction recorded on chain, or reclaim your ${TOKEN.wrapper} yourself after 7 days.`,
+    d: `Burn ${TOKEN.wrapper}, receive native ZEC. Escrow first, paid automatically from a float, Zcash transaction recorded on chain before anything burns. Opens Sep 6.`,
   },
   {
     p: 'Phase 04',

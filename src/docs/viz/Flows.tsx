@@ -57,12 +57,12 @@ export function WrapStates() {
   ]} edges={[{ a: 'o', b: 'f', t: 'you send ZEC' }, { a: 'f', b: 'c' }, { a: 'c', b: 'm', t: 'attest → mint' }, { a: 'o', b: 'x' }, { a: 'f', b: 'r' }]} />
 }
 export function RedeemStates() {
-  return <States title="A redemption, start to finish" note="your zZEC is escrowed, not burned · the burn happens only after a Zcash txid is recorded · reclaim is yours after 7 days" states={[
+  return <States title="A redemption, start to finish" note="your zZEC is escrowed, not burned · an automatic payer sends the ZEC · the burn happens only after the Zcash txid is recorded" states={[
     { id: 'o', x: 80, y: 80, t: 'Open', s: 'zZEC in escrow', w: 130 },
     { id: 'p', x: 300, y: 80, t: 'Paid', s: 'ZEC sent to your t-address', w: 170 },
     { id: 'f', x: 540, y: 80, t: 'Fulfilled', s: 'txid on chain · escrow burned', w: 180, g: true },
-    { id: 'r', x: 300, y: 190, t: 'Reclaimed', s: 'after 7 days, by you, unconditionally', w: 230 },
-  ]} edges={[{ a: 'o', b: 'p', t: 'operator pays' }, { a: 'p', b: 'f', t: 'fulfill(id, txid)' }, { a: 'o', b: 'r', t: 'nothing arrived' }]} />
+    { id: 'r', x: 300, y: 190, t: 'Reclaimed', s: 'if a payout ever failed · by you', w: 230 },
+  ]} edges={[{ a: 'o', b: 'p', t: 'automatic payer' }, { a: 'p', b: 'f', t: 'fulfill(id, txid)' }, { a: 'o', b: 'r', t: 'payout failed' }]} />
 }
 
 export function Flywheel() {

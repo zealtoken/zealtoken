@@ -4,7 +4,7 @@ group: Using it
 ---
 # Redeeming zZEC for native ZEC
 
-> **In one breath.** Put your zZEC into the Redemption Desk with a transparent Zcash address. The operator pays you real ZEC from the reserve, then records the Zcash transaction on chain, and only then is your zZEC burned. If nothing has arrived after 7 days, you take your zZEC back yourself. No permission, no pause, ever.
+> **In one breath.** Put your zZEC into the Redemption Desk with a transparent Zcash address. An automatic payer sends you real ZEC, usually within minutes, records the Zcash transaction on chain, and only then is your zZEC burned. If a payout ever failed, the contract lets you take your zZEC back yourself. No permission, no pause, ever. Opens **September 6, 2026**.
 
 ## Status
 
@@ -22,17 +22,18 @@ The zZEC contract's own `requestRedeem` burns first and trusts the operator to p
 2. Enter the amount (minimum 0.001 zZEC) and your **transparent** Zcash address (starts with `t1` or `t3`, 35 characters). Shielded addresses are refused because a payment to one cannot be shown to have happened.
 3. Approve the desk to move your zZEC, then confirm the request. Your zZEC moves into the desk.
 4. Watch your request in the list. When it shows **paid**, the Zcash transaction is linked. Shield the ZEC on the Zcash side if you want privacy.
-5. If it still shows **open** after 7 days, press **reclaim**. Your zZEC returns to your wallet.
+5. If a payout ever failed and the request stayed **open**, a **reclaim** button appears and your zZEC returns to your wallet.
 
-## Step by step, as the operator
+## Behind the scenes: the automatic payer
 
-The watchdog notifies the operator of every open request with a **pay-by** time (7 days after the request, minus a 12-hour safety margin).
+Payouts are automatic. Every five minutes the payer reads the desk, pays each open request from a hot float wallet within its limits, and fulfils on chain. Requests above the automatic limits are flagged to the operator with a pay-by time.
 
-1. Pay the exact amount in native ZEC from the reserve wallet to the requester's t-address.
-2. Wait for the Zcash transaction id.
-3. Record it: `FULFILL_ID=<id> ZEC_TXID=<txid> npm run desk`. The desk marks the request fulfilled, burns the escrow through ZZEC's `requestRedeem` (so it is recorded on the wrapper too), and stores the txid.
+1. A hot float wallet, separate from the reserve key and funded from the operator's own ZEC, holds a small balance.
+2. Every five minutes the payer pays each open request within its limits (0.05 ZEC per request, 0.25 ZEC per day by default), writing the ledger before it sends so a crash can never pay twice.
+3. With the Zcash transaction id in hand it calls `fulfill(id, txid)`. The desk marks the request fulfilled, burns the escrow through ZZEC's `requestRedeem` (so it is recorded on the wrapper too), and stores the txid on chain.
+4. Requests above the limits are flagged to the operator and paid by hand the same way.
 
-The tool refuses to record inside the last 12 hours of the window. Paying ZEC and then losing the escrow to a reclaim is the one double-spend this design permits, and the guard exists so it never happens by accident.
+The reserve then reimburses the float: each payout burns zZEC while the reserve stays put, so the reserve over-covers by the paid amount and the operator moves that excess to the float. The public coverage figure never dips.
 
 ## Fees and rounding
 

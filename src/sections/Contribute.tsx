@@ -90,7 +90,7 @@ export function Contribute() {
             <p className="ctb-lede">Send ZEC, get {TOKEN.wrapper} one for one. Your Zcash exposure stays exactly what it was; it just becomes usable on Robinhood Chain.</p>
             <ul className="ctb-list">
               <li><b>1:1, no fee.</b> The only cost is the Zcash network fee on your deposit.</li>
-              <li><b>You can always leave.</b> Redeem through the desk: escrow, get paid native ZEC, or reclaim your {TOKEN.wrapper} yourself after 7 days. Nobody can pause that.</li>
+              <li><b>You can always leave.</b> Redeem through the desk: escrow, get paid native ZEC automatically, usually within minutes. If a payout ever failed, the contract lets you take your {TOKEN.wrapper} back yourself. Nobody can pause that.</li>
               <li><b>Public within the hour.</b> Your deposit shows on the reserve address immediately and in the on-chain attestation at the next 6-hour mark.</li>
               <li><b>More reserve, tighter peg.</b> A bigger reserve means more {TOKEN.wrapper} in circulation, more inventory for the keeper and for arbitrage, and a smaller price impact per trade.</li>
               <li><b>It unlocks the other side.</b> {TOKEN.wrapper} is what you need to provide liquidity, or to buy anything on zealz.fun.</li>
@@ -150,7 +150,7 @@ export function Contribute() {
               <tr><td>exposure</td><td>ZEC</td><td>ZEC, on Robinhood Chain</td><td>half ZEC, half ETH, rebalancing</td></tr>
               <tr><td>earns</td><td>nothing</td><td>nothing yet</td><td>{ZZEC_MARKET.lpFeePct}% of every trade, pro rata</td></tr>
               <tr><td>does for the machine</td><td>nothing</td><td>grows the public reserve, adds peg inventory</td><td>deepens the market, hosts burns</td></tr>
-              <tr><td>exit</td><td>n/a</td><td>redeem via the desk, 7-day reclaim floor</td><td>remove liquidity any time, then redeem</td></tr>
+              <tr><td>exit</td><td>n/a</td><td>redeem via the desk, paid automatically</td><td>remove liquidity any time, then redeem</td></tr>
               <tr><td>risk</td><td>ZEC price</td><td>operator custody of the reserve</td><td>plus impermanent loss and contract risk</td></tr>
             </tbody>
           </table>

@@ -5,7 +5,7 @@ import { stagger } from '../useReveal'
 
 /**
  * Redemption Desk. Escrow zZEC with a t-address, get paid native ZEC, the desk
- * burns the escrow only after the Zcash txid is recorded, or reclaim after 7
+ * burns the escrow only after the Zcash txid is recorded; payouts are automatic.
  * days. Wallet-native (EIP-1193), no library. Three steps, one idea: you are
  * never left with nothing.
  */
@@ -63,7 +63,7 @@ function OpensIn() {
       <div className="wd-clock-f mono">{new Date(REDEEM_OPENS_AT).toUTCString().replace(' GMT', ' UTC')} · the desk contract is deployed and verified; new requests are paused on chain until then</div>
       <ol className="wd-timeline mono">
         <li className="done"><b>✓</b><span>RedemptionDesk deployed and verified</span><a href={`${CONTRACTS.explorer}/address/${CONTRACTS.desk}?tab=contract`} target="_blank" rel="noreferrer">contract ↗</a></li>
-        <li className="done"><b>✓</b><span>escrow-first design: paid before burned, reclaim after 7 days</span><a href="/docs/#/redeem">docs ↗</a></li>
+        <li className="done"><b>✓</b><span>escrow-first design: paid before burned, automatically</span><a href="/docs/#/redeem">docs ↗</a></li>
         <li className="now"><b>…</b><span>automatic payouts from a hot float wallet, proven end to end</span></li>
         <li><b>4</b><span>requests unpaused · this form opens</span></li>
       </ol>
@@ -134,7 +134,7 @@ export function Redeem() {
       if (hexToBig(al) < zats) { setBusy('1 of 2 · approve zZEC in your wallet'); await send(CONTRACTS.zzec, SEL.approve + encAddress(desk) + u256(zats)) }
       setBusy('2 of 2 · confirm the request in your wallet')
       await send(desk, SEL.request + u256(zats) + u256(64n) + encString(zaddr.trim()))
-      setMsg({ kind: 'ok', text: `Request opened. ${zec(zats)} ZEC is on its way to ${zaddr.trim().slice(0, 8)}…. If it has not arrived in 7 days, reclaim below.` }); setAmount(''); setZaddr('')
+      setMsg({ kind: 'ok', text: `Request opened. ${zec(zats)} ZEC is on its way to ${zaddr.trim().slice(0, 8)}…. Payouts are automatic; watch the request below.` }); setAmount(''); setZaddr('')
       await load()
     } catch (e) { setMsg({ kind: 'err', text: (e as Error).message }) } finally { setBusy(null) }
   }
@@ -156,8 +156,8 @@ export function Redeem() {
           </h2>
           <p className="lede" data-reveal style={stagger(2)}>
             Your {TOKEN.wrapper} waits in escrow, not in a burn. The operator pays real ZEC to your address, records the Zcash
-            transaction on chain, and only then is the escrow burned. Nothing arrives in 7 days? Take your {TOKEN.wrapper} back
-            yourself. No permission, no pause, ever.
+            transaction on chain, and only then is the escrow burned. Payouts run automatically, usually within minutes. If one
+            ever failed, the contract lets you take your {TOKEN.wrapper} back yourself. No permission, no pause, ever.
           </p>
         </div>
 
@@ -169,7 +169,7 @@ export function Redeem() {
             <div className="rd-badges" data-reveal style={stagger(4)}>
               <span><b>no fee</b>1:1, the reserve pays the Zcash network fee</span>
               <span><b>escrow, not burn</b>your zZEC is held, and burned only after you are paid</span>
-              <span><b>7-day reclaim</b>unconditional · no role can pause it</span>
+              <span><b>automatic payout</b>usually within minutes · no human in the loop</span>
               <span><b>on-chain receipt</b>every payout's Zcash txid is recorded in the contract</span>
             </div>
             <div className="rd-flow-wrap" data-reveal style={stagger(4)}><RedeemFlow paid={0} /></div>
@@ -179,7 +179,7 @@ export function Redeem() {
             <div className="rd-badges" data-reveal style={stagger(3)}>
               <span><b>no fee</b>1:1, the reserve pays the Zcash network fee</span>
               <span><b>escrow, not burn</b>your zZEC is held, and burned only after you are paid</span>
-              <span><b>7-day reclaim</b>unconditional · no role can pause it</span>
+              <span><b>automatic payout</b>usually within minutes · no human in the loop</span>
               <span><b>on-chain receipt</b>every payout's Zcash txid is recorded in the contract</span>
             </div>
             <div className="rd-flow-wrap" data-reveal style={stagger(3)}><RedeemFlow paid={info?.paid ?? 0} /></div>
@@ -188,7 +188,7 @@ export function Redeem() {
               <div><span>paid out</span><b>{info ? `${zec(info.paidAmount)} ZEC` : '…'}</b><i>{info ? `${info.paid} redemptions` : ''}</i></div>
               <div><span>minimum</span><b>{info ? `${zec(info.min)} ${TOKEN.wrapper}` : '…'}</b></div>
               <div><span>fee</span><b>none</b><i>the reserve pays the Zcash network fee</i></div>
-              <div><span>reclaim floor</span><b>7 days</b><i>unconditional</i></div>
+              <div><span>payout</span><b>automatic</b><i>usually within minutes</i></div>
             </div>
 
             <div className="rd-grid" data-reveal style={stagger(4)}>
@@ -227,7 +227,7 @@ export function Redeem() {
                   <div><b>01</b>{TOKEN.wrapper} moves into escrow. Still yours.</div>
                   <div><b>02</b>operator pays native ZEC to your t-address</div>
                   <div><b>03</b>txid recorded on chain, escrow burned</div>
-                  <div><b>07d</b>nothing arrived? <em>reclaim</em>, no one can stop it</div>
+                  <div><b>04</b>if a payout ever failed, <em>reclaim</em> your {TOKEN.wrapper} yourself</div>
                 </div>
                 <p className="redeem-fine mono"><a href={`${CONTRACTS.explorer}/address/${desk}?tab=contract`} target="_blank" rel="noreferrer">desk contract ↗</a> · <a href="/docs/#/redeem">how it works ↗</a></p>
               </div>
@@ -250,7 +250,7 @@ export function Redeem() {
                           {r.status === 1 && (
                             <div className="rd-prog">
                               <div className="rd-prog-bar"><div style={{ width: `${elapsed * 100}%` }} /></div>
-                              <div className="mono rd-prog-l">{left > 0 ? `reclaimable in ${Math.ceil(left / 3600)}h · operator pays before that` : 'reclaimable now'}</div>
+                              <div className="mono rd-prog-l">{left > 0 ? 'awaiting automatic payout' : 'payout did not arrive · you can reclaim'}</div>
                               {left <= 0 && <button className="btn btn-ghost btn-sm" type="button" disabled={!!busy} onClick={() => reclaim(r.id)}>reclaim my {TOKEN.wrapper}</button>}
                             </div>
                           )}

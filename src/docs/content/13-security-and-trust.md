@@ -11,7 +11,7 @@ group: Running it
 - The Foundry's 60/25/15 split and its three sinks. No owner exists.
 - The Tap's single exit. Every wei it claims goes to the Foundry in the same transaction.
 - zZEC supply never exceeds the attested reserve, and never mints against a stale attestation.
-- Redemption cannot be paused, gated, or rate-limited, on the wrapper or the desk. Reclaim on the desk is the holder's after 7 days, unconditionally.
+- Redemption cannot be paused, gated, or rate-limited, on the wrapper or the desk. Reclaim on the desk is the holder's, unconditionally, if a payout ever fails.
 - The Furnace's one door: $ZEAL to the dead address. Liquidity it holds can never be decreased.
 - The hook's share and destination are immutable.
 - Every role change waits 48 hours in public and emits an event first.

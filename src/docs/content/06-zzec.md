@@ -39,7 +39,7 @@ Zcash is denominated in zatoshi (10^-8 ZEC). Matching it makes the peg a literal
 
 ## The two ways out
 
-1. **Through the desk (recommended).** Escrow zZEC with a t-address, get paid, the desk burns it only after recording the Zcash transaction, or reclaim after 7 days. See [Redeem](#/redeem).
+1. **Through the desk (recommended).** Escrow zZEC with a t-address, an automatic payer sends the ZEC, and the desk burns the escrow only after recording the Zcash transaction. Opens Sep 6. See [Redeem](#/redeem).
 2. **Directly on the contract.** Call `requestRedeem` yourself. It burns first and trusts the operator to pay. The operator watches for these and pays them, but there is no escrow and no reclaim. Use the desk.
 
 ## Check it yourself

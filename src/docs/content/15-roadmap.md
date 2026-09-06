@@ -13,7 +13,7 @@ group: Ahead
 | 00 Launch | live | $ZEAL on Pons, Foundry and Tap deployed and verified |
 | 01 Reserve opens | live | First ZEC at the published address, first attestation, first mint |
 | 02 zZEC mints | live | Wrapper and Furnace deployed, market on the hooked pool, burns running |
-| 03 Redemption | live | Redemption Desk: escrow, pay, record, or reclaim after 7 days |
+| 03 Redemption | Sep 6 | Redemption Desk: escrow, automatic payout, txid recorded, then burn |
 | 03b Wrap | Sep 7 | WrapDesk becomes minter; send ZEC, get zZEC |
 | 04 Hand off custody | the goal | Reserve moves to trust-minimized custody: a Zcash multisig first, then MPC such as NEAR Chain Signatures, or red·bridge when it ships |
 
