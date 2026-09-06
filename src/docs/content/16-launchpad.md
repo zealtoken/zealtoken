@@ -4,22 +4,22 @@ group: Ahead
 ---
 # zealz.fun: launch a token on Zcash rails
 
-> **In one breath.** zealz.fun lets anyone launch a token that trades against zZEC. One transaction creates the token, puts its entire supply into a Uniswap v4 pool, and locks that liquidity in a contract nobody can withdraw from. The creator receives no tokens and earns a share of every trade instead. Every trade also pays at least 0.5% of its zZEC to the Furnace, so every launch burns $ZEAL whether or not the token does well. The bonding curve lives inside the locked pool, so there is no graduation and no creator allocation. zZEC is the trust root: a launched token is only as sound as the reserve behind zZEC, which is attested on chain and can be checked by anyone. Status: contracts written and passing a full lifecycle on a chain fork, interface built on a preview link, not yet deployed.
+> **In one breath.** zealz.fun lets anyone launch a token that trades against zZEC. One transaction creates the token, puts its entire supply into a Uniswap v4 pool, and locks that liquidity in a contract nobody can withdraw from. The creator receives no tokens and earns a share of every trade instead. Every trade also pays at least 0.5% of its zZEC to the Furnace, so every launch buys back and burns $ZEAL whether or not the token does well. The bonding curve lives inside the locked pool, so there is no graduation and no creator allocation. zZEC is the trust root: a launched token is only as sound as the reserve behind zZEC, which is attested on chain and can be checked by anyone. Status: contracts written and passing a full lifecycle on a chain fork, interface built on a preview link, not yet deployed.
 
 {{viz:launchflow}}
 
 ## Why it exists
 
-Every other launchpad prices tokens in the chain's gas coin. zealz.fun prices them in Zcash. That does three things at once: it gives every buyer a reason to hold zZEC, it locks zZEC permanently inside pools, and it routes a slice of every trade into the $ZEAL burn. The launchpad is not a side business. It is a demand engine for the wrapper and a burn engine for $ZEAL, and it happens to be a fair place to launch a token.
+Every other launchpad prices tokens in the chain's gas coin. zealz.fun prices them in Zcash. That does three things at once: it gives every buyer a reason to hold zZEC, it locks every token's liquidity permanently, and it routes a slice of every trade into the $ZEAL buyback and burn. The launchpad is not a side business. It is a demand engine for the wrapper and a burn engine for $ZEAL, and it happens to be a fair place to launch a token.
 
 ## The four contracts
 
 | Contract | Job | Trust it needs |
 |---|---|---|
-| **ZealzToken** | A plain ERC-20 with a fixed supply of 1,000,000,000, minted once to the factory. No owner, no mint function, no tax, no hooks. | None. It is the simplest token that can exist. |
+| **ZealzToken** | An ERC-20 with a fixed supply of 1,000,000,000, minted once to the factory. No owner, no mint function, no tax on transfers. It carries the dividend ledger: the hook hands it zZEC, every holder's share accrues, and anyone can pay a holder out. | None. The only thing it can do with zZEC is send it to the holder it belongs to. |
 | **ZealzFactory** | Creates the token, opens the zZEC pool at the bottom of a single-sided range that holds the entire supply, hands the position to the locker, records the launch. The creator brings no capital. | None after deployment. Anyone may call `launch()`. |
-| **ZealzHook** | Two jobs. On a batch launch, for the first ten minutes every buy is a bid: the hook holds the zZEC, the pool is untouched, sells are refused, and when the window closes one swap executes for the whole batch so everyone in it pays the same price. On an instant launch there is no window and trading starts in the first block. After that (or from the start) it takes the creator's fee, anywhere from 0.5% to 5%, from the zZEC side of every swap and splits it the way the creator chose at launch: at least 0.5% to the Furnace, at most 0.5% to the creator, 0.5% to the platform, and whatever is left paid to the token's holders as claimable zZEC dividends. The fee is always taken from the zZEC leg, so a buy pays it from the zZEC going in and a sell from the zZEC coming out. Nobody is ever paid in the launched token. | The fee range, the platform share, the minimum burn, the creator cap and the window length are constants. Each pool's fee, split and opening type are fixed at launch and cannot be changed. Only the factory can register pools. The only funds it ever holds are open bids and unclaimed batch tokens, movable only by their owners. |
-| **ZealzLocker** | Holds every launch's position NFT forever. Anyone can call `compound()`: it collects the position's LP fees and adds them straight back as liquidity in the same range, so the floor only rises. Cannot decrease liquidity, transfer the NFT, or be upgraded. | None. It has no owner. |
+| **ZealzHook** | Two jobs. On a batch launch, for the first ten minutes every buy is a bid: the hook holds the zZEC, the pool is untouched, sells are refused, and when the window closes one swap executes for the whole batch so everyone in it pays the same price. On an instant launch there is no window and trading starts in the first block. After that (or from the start) it takes the creator's fee, anywhere from 1% to 5%, from the zZEC side of every swap and splits it the way the creator chose at launch: at least 0.5% to the Furnace, at most 0.5% to the creator, 0.5% to the platform, and whatever is left paid to the token's holders as zZEC dividends, sent out daily. The fee is always taken from the zZEC leg, so a buy pays it from the zZEC going in and a sell from the zZEC coming out. Nobody is ever paid in the launched token. | The fee range, the platform share, the minimum burn, the creator cap and the window length are constants. Each pool's fee, split and opening type are fixed at launch and cannot be changed. Only the factory can register pools. The only funds it ever holds are open bids and unclaimed batch tokens, movable only by their owners. |
+| **ZealzLocker** | Holds every launch's position NFT forever. Anyone can call `compound()`: it collects the position's LP fees and adds them straight back as liquidity in the same range, so liquidity only rises. Cannot decrease liquidity, transfer the NFT, or be upgraded. | None. It has no owner. |
 
 All four live in the public repository under `contracts/contracts/zealz/`.
 
@@ -28,8 +28,8 @@ All four live in the public repository under `contracts/contracts/zealz/`.
 1. **The creator fills in a form.** Name, ticker, one line, an image, and social links. The image and text become the token's metadata URI, recorded on chain in the `Launched` event.
 2. **One transaction.** The creator pays the launch fee and confirms. Inside that transaction the factory mints the token, creates a Uniswap v4 pool for token/zZEC with the zealz hook attached, adds the full supply as liquidity, and transfers the resulting position NFT to the locker. The locker refuses any NFT that did not come from the factory.
 3. **The pool is live.** The token appears on zealz.fun's feed and is tradeable on Uniswap immediately. There is no waiting period, no target to hit, and no second phase.
-4. **Trading.** Buyers swap zZEC for the token. The pool's 0.3% LP fee accrues to the locked position. The hook takes its 2% of the zZEC leg on every swap and delivers every share in the same transaction, except the holders' share, which lands in the token's dividend ledger and is paid out to holders daily.
-5. **Forever.** The position never leaves the locker. Anyone can trigger a fee collection from it at any time, which pays the accrued LP fees out without touching the liquidity.
+4. **Trading.** Buyers swap zZEC for the token, or ETH routed through zZEC. The pool's 0.3% LP fee accrues to the locked position. The hook takes the creator's fee from the zZEC leg on every swap and delivers every share in the same transaction, except the holders' share, which lands in the token's dividend ledger and is paid out to holders daily.
+5. **Forever.** The position never leaves the locker. Anyone can call compound on it at any time, which collects the accrued LP fees and adds them back as liquidity. Nothing ever comes out.
 
 
 
@@ -59,7 +59,7 @@ So over a round trip of 1 zZEC in and roughly 1 zZEC out:
 |---|---|---|
 | Locked position (LP fee) | ~0.006 zZEC | 0.3% each way; compounds into the lock |
 | Furnace, buys back and burns $ZEAL | ~0.01 zZEC | 0.5% of the zZEC leg each way |
-| Holders, in zZEC | ~0.01 zZEC | 0.5% each way, claimable from the token |
+| Holders, in zZEC | ~0.01 zZEC | 0.5% each way, paid out daily |
 | Creator | ~0.01 zZEC | 0.5% each way, paid on the spot |
 | Platform | ~0.01 zZEC | 0.5% each way |
 
@@ -111,7 +111,7 @@ At launch the creator picks how the first ten minutes work, and the choice is wr
 | **Batch** | Every buy is a bid held by the hook. Nothing touches the pool, sells are refused, and one swap settles the whole batch at one price when the window closes. | A launch that will be sniped: everyone in the window pays the same price, so being first is worth nothing. |
 | **Instant** | Nothing special. Trading starts in the block the pool opens. First come, first priced. | A community that is already waiting, a creator who wants the simple and familiar path, or a small launch where a window is more ceremony than protection. |
 
-Everything else is identical between the two: the whole supply goes into the locked position, the fees are the same 2%, the lock compounds the same way, and neither gives the creator any tokens.
+Everything else is identical between the two: the whole supply goes into the locked position, the fee is whatever the creator set, the lock compounds the same way, and neither gives the creator any tokens.
 
 ### The batch opening in detail
 
@@ -125,18 +125,22 @@ The pool's 0.3% LP fee accrues to the locked position. Anyone can call `compound
 
 To be clear about what this is and is not: a graduated pump.fun token sits in a constant-product pool whose LP fees also stay in the pool, so its liquidity grows the same way. Concentrated-liquidity launchpads such as Clanker and Zora pay their LP fees out instead, so those positions never grow. Compounding is how our lock behaves, not something no one else has; the parts of this launchpad that are genuinely different are the Zcash pair, zZEC dividends to holders, the creator's split, the batch opening and, next, shielded buys.
 
-## Open decisions
+## Decisions made
 
-| Decision | Options | Effect |
+| Decision | Choice | Effect |
 |---|---|---|
-| Launch fee | decided: 0.005 zZEC to treasury | forces every creator to wrap first, feeding the reserve |
+| Launch fee | 0.005 zZEC to treasury, payable in ETH through the site | every creator touches zZEC, feeding the reserve |
+| Opening market cap | 5 zZEC for the whole supply | a $200 buy takes about 4% of supply; 15 zZEC of buying is a 16 times move |
+| Curve | one wide range, no ceiling in practice | no shape to choose, nothing to get wrong |
+| Fee band | 1% to 5%, platform 0.5% fixed, burn at least 0.5%, creator at most 0.5% | the creator's choice always buys more burn or more dividends |
+| Holders' share | zZEC dividends, paid out daily by a keeper, claimable any time | holders do nothing and get paid in Zcash |
 
 ## What is built, what is not
 
 | Piece | State |
 |---|---|
 | ZealzToken, ZealzHook, ZealzLocker, ZealzFactory | written and unit-tested; the full lifecycle passes on a fork of Robinhood Chain: capital-free launch, buy and sell through the real Universal Router with the hook paying the creator and the Furnace, then a compound that raised the locked liquidity |
-| Batch opening | built into the hook and passing on the fork: two bids, one settlement swap that pays the same 2% as any buy, pro-rata claims, sells refused during the window |
+| Batch opening | built into the hook and passing on the fork: two bids, one settlement swap that pays the same fee as any buy, pro-rata claims, sells refused during the window |
 | Instant opening | passing on the fork: a second launch with the instant flag trades in its first block with no bids and no settlement |
 | Variable fee | passing on the fork: a 5% token pays 0.5% to the Furnace, 0.5% to the platform and 4% to holders |
 | Buying with ETH | passing on the fork: ETH to zZEC to token in one router transaction, and the same route as a bid during an opening; the site's calldata builder is byte-checked against ethers |
@@ -148,10 +152,10 @@ To be clear about what this is and is not: a graduated pump.fun token sits in a 
 ## Risks, honestly
 
 - **A launched token can still go to zero.** Locked liquidity means nobody can pull the floor out; it does not mean the price holds. Most memecoins go to zero. The burn to $ZEAL happens either way.
-- **The creator can buy first.** Fair launch with no allocation still lets a creator buy their own token with another wallet. The optional first-block cap narrows this and cannot eliminate it.
+- **The creator can buy first.** Fair launch with no allocation still lets a creator buy their own token with another wallet. A batch opening narrows this, since their bid settles at the same price as everyone else's, and nothing can eliminate it.
 - **Contract risk.** Uniswap v4, the hook, the locker, and the factory are code. The zealz contracts pass unit tests and a full lifecycle test against a fork of the live chain (launch, batch and instant openings, buys and sells in every swap shape, dividends, compounding, buying with ETH). They have not had a third-party audit.
 - **Everything is priced in zZEC.** A launched token inherits zZEC's own trust model: reserve-backed, operator custody, checkable. See [Security and trust](#/security-and-trust).
 
 ## Check it yourself, once live
 
-`launchCount()` and `launches(i)` on the factory return each token, creator, pool id, and locked position id. `ownerOf(positionId)` on Uniswap's PositionManager must return the locker. `FeeTaken` events on the hook show every cut with its three destinations. The addresses will be listed on this page and in the site footer the day the factory deploys.
+`launchCount()` and `launches(i)` on the factory return each token, creator, pool id, locked position id, opening type and fee split. `ownerOf(positionId)` on Uniswap's PositionManager must return the locker. `FeeTaken` events on the hook show every cut with its four destinations, and `dividendsOf(address)` on any token shows what a holder is owed. The addresses will be listed on this page and in the site footer the day the factory deploys.

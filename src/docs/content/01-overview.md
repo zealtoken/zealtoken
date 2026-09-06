@@ -18,7 +18,7 @@ Between them sits zZEC itself: a plain ERC-20 with 8 decimals whose supply can n
 
 ## What $ZEAL gets out of it
 
-A supply that shrinks with every unit of activity: 0.7% of every zZEC trade and 1% of every zealz.fun trade become burned $ZEAL, and no one can switch that off. The full case is on [Why this is good for $ZEAL](#/why-zeal).
+A supply that shrinks with every unit of activity: 0.7% of every zZEC trade and at least 0.5% of every zealz.fun trade buy back and burn $ZEAL, and no one can switch that off. The full case is on [Why this is good for $ZEAL](#/why-zeal).
 
 ## What is live today
 
