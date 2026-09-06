@@ -149,7 +149,7 @@ To be clear about what this is and is not: a graduated pump.fun token sits in a 
 
 - **A launched token can still go to zero.** Locked liquidity means nobody can pull the floor out; it does not mean the price holds. Most memecoins go to zero. The burn to $ZEAL happens either way.
 - **The creator can buy first.** Fair launch with no allocation still lets a creator buy their own token with another wallet. The optional first-block cap narrows this and cannot eliminate it.
-- **Contract risk.** Uniswap v4, the hook, the locker, and the factory are code. The zealz contracts are unit-tested and will be fork-tested; they are not audited.
+- **Contract risk.** Uniswap v4, the hook, the locker, and the factory are code. The zealz contracts pass unit tests and a full lifecycle test against a fork of the live chain (launch, batch and instant openings, buys and sells in every swap shape, dividends, compounding, buying with ETH). They have not had a third-party audit.
 - **Everything is priced in zZEC.** A launched token inherits zZEC's own trust model: reserve-backed, operator custody, checkable. See [Security and trust](#/security-and-trust).
 
 ## Check it yourself, once live
