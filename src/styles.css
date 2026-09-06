@@ -1254,3 +1254,21 @@ p:last-child { margin-bottom: 0; }
 .rd-go { box-shadow: 0 10px 40px rgba(0,163,3,.18); } .rd-go:not(:disabled):hover { box-shadow: 0 14px 50px rgba(0,200,5,.35); }
 .rd-amt input { font-size:30px; }
 @media (max-width: 960px) { .rd-badges { grid-template-columns:1fr 1fr; } }
+
+/* liquidity desk */
+.ld-grid { display:grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, .9fr); gap:22px; align-items:start; }
+.ld-board { border:1px solid var(--line); border-radius:18px; background: var(--bg); padding:18px 18px 14px; }
+.ld-board-h { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color: var(--fg-faint); margin-bottom:10px; }
+.ld-row { display:grid; grid-template-columns: 42px 30px minmax(0,1.2fr) minmax(0,1.4fr) minmax(0,1fr) minmax(0,.8fr); gap:10px; align-items:center; padding:12px 8px; border-top:1px solid var(--line); border-radius:10px; }
+.ld-row.me { background: color-mix(in srgb, var(--green) 8%, var(--bg)); outline:1px solid rgba(0,163,3,.4); }
+.ld-rank { color: var(--fg-faint); font-size:12px; } .ld-emoji { font-size:20px; }
+.ld-who { display:flex; flex-direction:column; } .ld-who b { font-size:14px; } .ld-who i { font-style:normal; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color: var(--green-text); }
+.ld-share { display:flex; align-items:center; gap:10px; } .ld-bar { flex:1; height:8px; border-radius:999px; background: var(--bg-2); overflow:hidden; } .ld-bar div { height:100%; background: linear-gradient(90deg, var(--green-dim), var(--green-bright)); } .ld-share b { font-size:13px; min-width:48px; text-align:right; }
+.ld-stat { display:flex; flex-direction:column; font-size:11.5px; color: var(--fg); } .ld-stat em { font-style:normal; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color: var(--fg-faint); }
+.ld-tiers { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:12px; padding-top:12px; border-top:1px solid var(--line); font-size:10.5px; color: var(--fg-faint); } .ld-tiers b { color: var(--fg); }
+.ld-mine { font-size:12px; padding:10px 12px; border-radius:10px; background: color-mix(in srgb, var(--green) 8%, var(--bg)); border:1px solid rgba(0,163,3,.35); } .ld-mine b { color: var(--green-text); }
+.ld-impact { border:1px solid var(--line); border-radius:12px; padding:12px 14px; background: var(--bg-2); }
+.ld-impact-h { font-size:10px; letter-spacing:.16em; text-transform:uppercase; color: var(--fg-faint); margin-bottom:8px; }
+.ld-impact-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; } .ld-impact-grid div { display:flex; flex-direction:column; gap:2px; } .ld-impact-grid span { font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color: var(--fg-faint); } .ld-impact-grid b { font-size:14px; color: var(--fg); } .ld-impact-grid i { font-style:normal; font-size:10.5px; color: var(--fg-faint); }
+.rd-sub a { color: var(--green-text); }
+@media (max-width: 960px) { .ld-grid { grid-template-columns:1fr; } .ld-row { grid-template-columns: 36px 26px 1fr 1fr; } .ld-stat { display:none; } .ld-impact-grid { grid-template-columns:1fr; } }

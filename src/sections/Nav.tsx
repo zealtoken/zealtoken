@@ -7,6 +7,7 @@ const ITEMS = [
   { href: '#furnace', label: 'The Furnace' },
   { href: '#market', label: 'Market' },
   { href: '#contribute', label: 'Add ZEC' },
+  { href: '#liquidity', label: 'The Herd' },
   { href: '#wrap', label: 'Wrap' },
   { href: '#redeem', label: 'Redeem' },
   { href: '#proof', label: 'Proof' },

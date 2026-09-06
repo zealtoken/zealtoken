@@ -106,3 +106,31 @@ export function units(v: bigint, decimals: number): number {
   const frac = v % base
   return Number(whole) + Number(frac) / Number(base)
 }
+
+/** eth_getLogs for one address and topic list, from genesis. The public RPC answers these quickly. */
+export async function getLogs(address: string, topics: (string | null)[], signal?: AbortSignal): Promise<{ topics: string[]; data: string; blockNumber: string; transactionHash: string }[]> {
+  const res = await fetch(CHAIN.rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getLogs', params: [{ address, topics, fromBlock: '0x0', toBlock: 'latest' }] }), signal })
+  const j = (await res.json()) as { result?: { topics: string[]; data: string; blockNumber: string; transactionHash: string }[]; error?: { message: string } }
+  if (j.error) throw new Error(j.error.message)
+  return j.result ?? []
+}
+
+/** Minimal ABI encoding for the few shapes the site signs: static words, dynamic bytes, arrays of bytes, tuples. */
+export type Enc = { s: string } | { d: string }
+export const encUint = (n: bigint): Enc => ({ s: (n < 0n ? (1n << 256n) + n : n).toString(16).padStart(64, '0') })
+export const encAddr = (a: string): Enc => ({ s: encAddress(a) })
+export const encBytes = (hex: string): Enc => { const h = hex.replace(/^0x/, ''); return { d: (h.length / 2).toString(16).padStart(64, '0') + h.padEnd(Math.ceil(h.length / 64) * 64, '0') } }
+/** ABI-encode a list of members as a tuple body (no selector): heads then tails, offsets relative to the tuple start. */
+export function encTuple(members: Enc[]): string {
+  const headLen = members.length * 32
+  let tail = ''
+  const heads = members.map((m) => { if ('s' in m) return m.s; const off = headLen + tail.length / 2; tail += m.d; return off.toString(16).padStart(64, '0') })
+  return heads.join('') + tail
+}
+/** bytes[]: count, then offsets, then each element as length-prefixed padded bytes. */
+export function encBytesArray(items: string[]): Enc {
+  const encoded = items.map((h) => (encBytes(h) as { d: string }).d)
+  let tail = ''
+  const heads = encoded.map((e) => { const off = items.length * 32 + tail.length / 2; tail += e; return off.toString(16).padStart(64, '0') })
+  return { d: items.length.toString(16).padStart(64, '0') + heads.join('') + tail }
+}

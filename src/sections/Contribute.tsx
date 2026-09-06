@@ -136,7 +136,7 @@ export function Contribute() {
               </div>
             </div>
             <div className="ctb-actions">
-              <a className="btn btn-primary" href={LINKS.uniswapAddLiquidity} target="_blank" rel="noreferrer">Add liquidity on Uniswap</a>
+              <a className="btn btn-primary" href="#liquidity">Add liquidity here</a>
               <a className="btn btn-ghost" href="#market">See the pool</a>
             </div>
             <p className="ctb-risk mono">what you accept: impermanent loss if {TOKEN.wrapper} and ETH diverge, Uniswap v4 and hook contract risk, and the same reserve custody as above. Fee figures are your assumption times {ZZEC_MARKET.lpFeePct}%, not a promise.</p>
