@@ -13,7 +13,10 @@ export const CHAIN = {
    * per open tab, which is well inside that. Swap for a dedicated endpoint if
    * traffic ever makes it a problem.
    */
-  rpc: 'https://rpc.mainnet.chain.robinhood.com',
+  /** Reads go through the site's own relay (the public node sends a broken CORS header now and then). */
+  rpc: '/api/rpc',
+  /** The node itself, for wallets and for anyone reading the docs. */
+  rpcPublic: 'https://rpc.mainnet.chain.robinhood.com',
 } as const
 
 /** Pons launchpad economics. Fixed by the protocol, not by us. */
