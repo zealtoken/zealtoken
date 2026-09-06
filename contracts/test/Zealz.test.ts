@@ -14,7 +14,7 @@ describe('zealz.fun contracts (unit; the factory is exercised on a chain fork)',
     const H = await ethers.getContractFactory('ZealzHook')
     const hook = await H.deploy(pm.address, factory.address, furnace.address, treasury.address, await zzec.getAddress())
     // a real launched token so dividends have a ledger; the "factory" signer deploys it
-    const tokC = await (await ethers.getContractFactory('ZealzToken', factory)).deploy('Meme', 'MEME', 'ipfs://meme', ethers.parseEther('1000000000'), factory.address, await zzec.getAddress(), await hook.getAddress(), pm.address)
+    const tokC = await (await ethers.getContractFactory('ZealzToken', factory)).deploy('Meme', 'MEME', 'ipfs://meme', ethers.parseEther('1000000000'), factory.address, { zzec: await zzec.getAddress(), hook: await hook.getAddress(), poolManager: pm.address, furnace: furnace.address })
     const tok = { getAddress: () => tokC.getAddress() }
     const [z, t] = [await zzec.getAddress(), await tok.getAddress()]
     const key = z.toLowerCase() < t.toLowerCase() ? { currency0: z, currency1: t, fee: 3000, tickSpacing: 60, hooks: await hook.getAddress() } : { currency0: t, currency1: z, fee: 3000, tickSpacing: 60, hooks: await hook.getAddress() }
@@ -73,9 +73,31 @@ describe('zealz.fun contracts (unit; the factory is exercised on a chain fork)',
     await expect(locker.compound(6)).to.be.revertedWithCustomError(locker, 'NotLocked')
   })
 
+  it('token: dividends held as pending while nobody eligible holds it, sweepable to the Furnace after 90 days', async () => {
+    const [deployer, hookS, furnace, holder] = await ethers.getSigners()
+    const zzec = await (await ethers.getContractFactory('MockERC20')).deploy('zZEC', 'zZEC', 8)
+    // deployer is the factory (excluded) and holds the whole supply, so eligible supply is 0
+    const t = await (await ethers.getContractFactory('ZealzToken', deployer)).deploy('Meme', 'MEME', 'ipfs://m', ethers.parseEther('1000000000'), deployer.address, { zzec: await zzec.getAddress(), hook: hookS.address, poolManager: deployer.address, furnace: furnace.address })
+    await zzec.mint(await t.getAddress(), 1_000_000n)
+    await t.connect(hookS).distribute(1_000_000n)
+    expect(await t.pending()).to.equal(1_000_000n)
+    await expect(t.sweepPending()).to.be.revertedWithCustomError(t, 'NotSweepable')
+    // a holder appears: the next distribution releases the pending amount to them
+    await t.transfer(holder.address, ethers.parseEther('5000'))
+    await t.connect(hookS).distribute(0n)
+    expect(await t.pending()).to.equal(0n)
+    expect(await t.dividendsOf(holder.address)).to.equal(999_999n) // magnified maths rounds down by a zat
+    // and a token nobody holds: pending waits 90 days then goes to the Furnace
+    const t2 = await (await ethers.getContractFactory('ZealzToken', deployer)).deploy('Dead', 'DEAD', 'ipfs://d', ethers.parseEther('1000000000'), deployer.address, { zzec: await zzec.getAddress(), hook: hookS.address, poolManager: deployer.address, furnace: furnace.address })
+    await zzec.mint(await t2.getAddress(), 500n); await t2.connect(hookS).distribute(500n)
+    await ethers.provider.send('evm_increaseTime', [91 * 86400]); await ethers.provider.send('evm_mine', [])
+    await t2.sweepPending()
+    expect(await zzec.balanceOf(furnace.address)).to.equal(500n)
+  })
+
   it('token: fixed supply to the recipient, no owner, metadata readable', async () => {
     const [a] = await ethers.getSigners()
-    const t = await (await ethers.getContractFactory('ZealzToken')).deploy('Meme', 'MEME', 'ipfs://meta', ethers.parseEther('1000000000'), a.address, a.address, a.address, a.address)
+    const t = await (await ethers.getContractFactory('ZealzToken')).deploy('Meme', 'MEME', 'ipfs://meta', ethers.parseEther('1000000000'), a.address, { zzec: a.address, hook: a.address, poolManager: a.address, furnace: a.address })
     expect(await t.totalSupply()).to.equal(ethers.parseEther('1000000000'))
     expect(await t.balanceOf(a.address)).to.equal(ethers.parseEther('1000000000'))
     expect(await t.metadataURI()).to.equal('ipfs://meta')

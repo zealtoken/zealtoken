@@ -128,6 +128,27 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     expect((await erc(ZZEC).balanceOf(TRADER)) - zBefore).to.equal(owed)
     console.log(`      dividends · ${Number(await rtok.distributedTotal()) / 1e8} zZEC distributed, trader claimed ${Number(owed) / 1e8} zZEC`)
 
+    // ---- exact-OUTPUT swaps, both directions, through a bare v4 router: the fee still comes off the zZEC leg
+    const tr = await (await ethers.getContractFactory('TestSwapRouter', trader)).deploy(POOL_MANAGER)
+    const trAddr = await tr.getAddress()
+    const zzecT = new ethers.Contract(ZZEC, ['function approve(address,uint256) returns (bool)'], trader)
+    await (await zzecT.approve(trAddr, 10_000_000n)).wait()
+    await (await new ethers.Contract(token, ['function approve(address,uint256) returns (bool)'], trader).approve(trAddr, ethers.parseEther('1000000000'))).wait()
+    const MIN_P = 4295128739n + 1n, MAX_P = 1461446703485210103287273052203988822378723970342n - 1n
+    // exact-out BUY: ask for exactly 1,000,000 ZBRA; zZEC is the unspecified input, afterSwap takes the fee from it
+    { const f0 = await erc(ZZEC).balanceOf(FURNACE), z0 = await erc(ZZEC).balanceOf(TRADER), t0 = await erc(token).balanceOf(TRADER)
+      await (await tr.swap(key, !tokenIs0, ethers.parseEther('1000000'), !tokenIs0 ? MIN_P : MAX_P)).wait()
+      const paid = z0 - (await erc(ZZEC).balanceOf(TRADER)), fGot = (await erc(ZZEC).balanceOf(FURNACE)) - f0
+      expect((await erc(token).balanceOf(TRADER)) - t0).to.equal(ethers.parseEther('1000000'))
+      expect(fGot * 100n).to.be.within((paid * 97n) / 100n, paid) // the Furnace's 1% is of the zZEC the pool reports as input, a hair under what the trader paid with the LP fee
+      console.log(`      exact-out buy · paid ${paid} zats for 1,000,000 ZBRA · Furnace ${fGot}`) }
+    // exact-out SELL: ask for exactly 50,000 zats out; zZEC is the specified output, beforeSwap takes the fee on top
+    { const f0 = await erc(ZZEC).balanceOf(FURNACE), z0 = await erc(ZZEC).balanceOf(TRADER)
+      await (await tr.swap(key, tokenIs0, 50_000n, tokenIs0 ? MIN_P : MAX_P)).wait()
+      expect((await erc(ZZEC).balanceOf(TRADER)) - z0).to.equal(50_000n) // the trader gets exactly what they asked for
+      expect((await erc(ZZEC).balanceOf(FURNACE)) - f0).to.equal(500n) // and the Furnace its 1% of it
+      console.log(`      exact-out sell · trader received exactly 50,000 zats · Furnace 500`) }
+
     // ---- compound: fees back into the lock, liquidity only rises
     await (await locker.compound(positionId)).wait()
     const L1 = await posm.getPositionLiquidity(positionId)

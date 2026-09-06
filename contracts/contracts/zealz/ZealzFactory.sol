@@ -9,7 +9,7 @@ import {PoolKey} from "../ZealFurnaceV4.sol";
 import {ZealzToken} from "./ZealzToken.sol";
 import {TickMath} from "./lib/TickMath.sol";
 
-interface IZealzHook { function register(PoolKey calldata key, address token, address creator, bool batchOpening, uint16 totalBps, uint16 burnBps, uint16 creatorBps) external; }
+interface IZealzHook { function furnace() external view returns (address); function register(PoolKey calldata key, address token, address creator, bool batchOpening, uint16 totalBps, uint16 burnBps, uint16 creatorBps) external; }
 interface IPositionManagerF {
     function initializePool(PoolKey calldata key, uint160 sqrtPriceX96) external payable returns (int24);
     function modifyLiquidities(bytes calldata unlockData, uint256 deadline) external payable;
@@ -126,7 +126,7 @@ contract ZealzFactory is ReentrancyGuard {
         if (locker == address(0)) revert LockerUnset();
         if (launchFeeZats != 0) IERC20(zzec).safeTransferFrom(msg.sender, treasury, launchFeeZats);
 
-        token = address(new ZealzToken(name, symbol, metadataURI, SUPPLY, address(this), zzec, hook, poolManager));
+        token = _mintToken(name, symbol, metadataURI);
         PoolKey memory key;
         (key, positionId) = _openAndSeed(token, curve, opening, totalBps, burnBps, creatorBps);
         _sweep(token);
@@ -164,6 +164,11 @@ contract ZealzFactory is ReentrancyGuard {
             ? Math.mulDiv(Math.mulDiv(SUPPLY, sA, Q96), sB, sB - sA) // amount0 = L (sB - sA) / (sA sB) * Q96
             : Math.mulDiv(SUPPLY, Q96, sB - sA); // amount1 = L (sB - sA) / Q96
         liquidity = (liquidity * 9999) / 10_000;
+    }
+
+    /// @dev Its own frame: the token constructor takes nine arguments and launch() is already deep.
+    function _mintToken(string calldata name, string calldata symbol, string calldata metadataURI) private returns (address) {
+        return address(new ZealzToken(name, symbol, metadataURI, SUPPLY, address(this), ZealzToken.Wiring(zzec, hook, poolManager, IZealzHook(hook).furnace())));
     }
 
     /// @dev Rounding dust of the supply goes to the treasury; nothing stays here.
