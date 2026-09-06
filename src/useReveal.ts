@@ -27,8 +27,17 @@ export function useReveal() {
 
     const nodes = document.querySelectorAll('[data-reveal]')
     nodes.forEach((n) => io.observe(n))
+    // Sections that mount after a chain read (countdowns, live forms) arrive later; observe them too.
+    const mo = new MutationObserver((muts) => {
+      for (const m of muts) for (const n of m.addedNodes) {
+        if (!(n instanceof Element)) continue
+        if (n.matches('[data-reveal]')) io.observe(n)
+        n.querySelectorAll('[data-reveal]').forEach((c) => io.observe(c))
+      }
+    })
+    mo.observe(document.body, { childList: true, subtree: true })
 
-    return () => io.disconnect()
+    return () => { io.disconnect(); mo.disconnect() }
   }, [])
 }
 

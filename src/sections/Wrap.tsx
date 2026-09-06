@@ -207,6 +207,18 @@ export function Wrap() {
             </div>
           </>
         )}
+        <div className="ctb-compare" data-reveal>
+          <table className="mono">
+            <thead><tr><th></th><th>hold ZEC</th><th>wrap</th><th>wrap + provide</th></tr></thead>
+            <tbody>
+              <tr><td>exposure</td><td>ZEC</td><td>ZEC, on Robinhood Chain</td><td>half ZEC, half ETH, rebalancing</td></tr>
+              <tr><td>earns</td><td>nothing</td><td>nothing yet</td><td>0.3% of every trade, pro rata</td></tr>
+              <tr><td>does for the machine</td><td>nothing</td><td>grows the public reserve, adds peg inventory</td><td>deepens the market, hosts burns</td></tr>
+              <tr><td>exit</td><td>n/a</td><td>redeem via the desk, paid automatically</td><td>remove liquidity any time, then redeem</td></tr>
+              <tr><td>risk</td><td>ZEC price</td><td>operator custody of the reserve</td><td>plus impermanent loss and contract risk</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
   )
