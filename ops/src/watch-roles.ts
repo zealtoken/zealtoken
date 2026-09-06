@@ -44,7 +44,12 @@ async function main() {
   const alerts: string[] = []
   if (now.zzec.pendingOwner !== zero) alerts.push(`ZZEC ownership handover pending to ${now.zzec.pendingOwner}`)
   if (now.zzec.pendingAttestor !== zero) alerts.push(`ZZEC attestor change proposed -> ${now.zzec.pendingAttestor} (eta ${new Date(now.zzec.pendingAttestorEta * 1000).toISOString()})`)
-  if (now.zzec.pendingMinter !== zero) alerts.push(`ZZEC minter change proposed -> ${now.zzec.pendingMinter} (eta ${new Date(now.zzec.pendingMinterEta * 1000).toISOString()})`)
+  if (now.zzec.pendingMinter !== zero) {
+    const line = `ZZEC minter change proposed -> ${now.zzec.pendingMinter} (eta ${new Date(now.zzec.pendingMinterEta * 1000).toISOString()})`
+    // the WrapDesk handover is ours: log it, do not alert on it
+    if (now.zzec.pendingMinter.toLowerCase() === (process.env.WRAP_DESK_ADDRESS ?? '').toLowerCase()) console.log(`${stamp} expected ${line}`)
+    else alerts.push(line)
+  }
   if (now.zzec.mintingPaused) alerts.push('ZZEC minting is PAUSED')
   if (now.tap.pendingRecipient !== zero) alerts.push(`Tap migration proposed -> ${now.tap.pendingRecipient} (ready ${new Date(now.tap.migrationReadyAt * 1000).toISOString()})`)
   if (now.pons.proposedRecipient !== zero) alerts.push(`Pons recipient change proposed -> ${now.pons.proposedRecipient} (executes ${new Date(now.pons.effectiveAt * 1000).toISOString()})`)
@@ -53,4 +58,4 @@ async function main() {
   if (alerts.length) { for (const a of alerts) console.log(`${stamp} ALERT ${a}`); process.exitCode = 2 }
   else console.log(`${stamp} ok · nothing pending${changed ? ' · state changed (see roles-state.json)' : ''}`)
 }
-main().catch((e) => { console.error(e?.shortMessage ?? e?.message ?? e); process.exitCode = 1 })
+main().catch((e) => { console.error(`${new Date().toISOString()} ERROR ${e?.shortMessage ?? e?.message ?? e}`); process.exitCode = 1 })

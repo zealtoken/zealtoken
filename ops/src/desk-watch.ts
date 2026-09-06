@@ -78,4 +78,4 @@ async function main() {
   if (alerts.length) { for (const a of alerts) console.log(`${stamp} ALERT ${a}`); process.exitCode = 2 }
   else console.log(`${stamp} ok · no open desk work · gas fine · attestation ${ageH.toFixed(1)}h old`)
 }
-main().catch((e) => { console.error(e?.shortMessage ?? e?.message ?? e); process.exitCode = 1 })
+main().catch((e) => { console.error(`${new Date().toISOString()} ERROR ${e?.shortMessage ?? e?.message ?? e}`); process.exitCode = 1 })

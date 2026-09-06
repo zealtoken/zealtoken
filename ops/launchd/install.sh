@@ -5,7 +5,7 @@ set -euo pipefail
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 RT="$HOME/zeal-ops"
 mkdir -p "$RT/launchd"
-rsync -a --delete --exclude '.float' --exclude 'desk-ledger.json' --exclude 'redemptions.json' --exclude 'launchd/*.log' --exclude 'launchd/*.out' --exclude 'launchd/*.err' --exclude 'launchd/*.json' --exclude 'launchd/desk-alerted' --exclude 'launchd/keeper-pricefail' "$SRC/" "$RT/"
+rsync -a --delete --exclude '.float' --exclude 'desk-ledger.json' --exclude 'redemptions.json' --exclude 'launchd/*.log' --exclude 'launchd/*.out' --exclude 'launchd/*.err' --exclude 'launchd/*.json' --exclude 'launchd/desk-alerted' --exclude 'launchd/roles-alerted' --exclude 'launchd/keeper-pricefail' "$SRC/" "$RT/"
 chmod 700 "$RT/.keys" 2>/dev/null || true
 # The LP/burn job signs with the deployer keystore; launchd cannot read ~/Documents, so keep a copy beside the role keys.
 if [ -f "$SRC/../contracts/.keystore.json" ]; then install -m 600 "$SRC/../contracts/.keystore.json" "$RT/.keys/deployer.json"; fi
