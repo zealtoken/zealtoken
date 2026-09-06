@@ -55,12 +55,12 @@ contract ZealzHook is ReentrancyGuard {
     uint256 public immutable creatorBps;
     uint256 public immutable treasuryBps;
 
-    struct Opening { uint64 launchedAt; bool settled; uint256 totalBids; uint256 tokensOut; PoolKey key; }
+    struct Opening { uint64 launchedAt; uint64 window; bool settled; uint256 totalBids; uint256 tokensOut; PoolKey key; }
     mapping(bytes32 poolId => address creator) public creatorOf;
     mapping(bytes32 poolId => Opening) public openings;
     mapping(bytes32 poolId => mapping(address bidder => uint256 zats)) public bids;
 
-    event PoolRegistered(bytes32 indexed poolId, address indexed token, address indexed creator, uint64 launchedAt);
+    event PoolRegistered(bytes32 indexed poolId, address indexed token, address indexed creator, uint64 launchedAt, uint64 openingWindow);
     event Bid(bytes32 indexed poolId, address indexed bidder, uint256 zats, uint256 totalBids);
     event OpeningSettled(bytes32 indexed poolId, uint256 zatsIn, uint256 tokensOut);
     event Claimed(bytes32 indexed poolId, address indexed bidder, uint256 tokens);
@@ -87,20 +87,24 @@ contract ZealzHook is ReentrancyGuard {
         burnBps = burnBps_; creatorBps = creatorBps_; treasuryBps = treasuryBps_; totalBps = total;
     }
 
-    function register(PoolKey calldata key, address token, address creator) external {
+    /// @param batchOpening true = the first OPENING_WINDOW is a batch (bids, one settlement price); false = instant trading.
+    function register(PoolKey calldata key, address token, address creator, bool batchOpening) external {
         if (msg.sender != factory) revert NotFactory();
         if (creator == address(0)) revert ZeroAddress();
         bytes32 id = keccak256(abi.encode(key));
         creatorOf[id] = creator;
-        openings[id].launchedAt = uint64(block.timestamp);
-        openings[id].key = key;
-        emit PoolRegistered(id, token, creator, uint64(block.timestamp));
+        Opening storage o = openings[id];
+        o.launchedAt = uint64(block.timestamp);
+        o.window = batchOpening ? OPENING_WINDOW : 0;
+        o.key = key;
+        if (!batchOpening) o.settled = true; // nothing to settle on an instant launch
+        emit PoolRegistered(id, token, creator, uint64(block.timestamp), o.window);
     }
 
     // ------------------------------------------------------------ the opening
 
-    function openingEndsAt(bytes32 poolId) public view returns (uint64) { return openings[poolId].launchedAt + OPENING_WINDOW; }
-    function inOpening(bytes32 poolId) public view returns (bool) { Opening storage o = openings[poolId]; return o.launchedAt != 0 && block.timestamp < o.launchedAt + OPENING_WINDOW; }
+    function openingEndsAt(bytes32 poolId) public view returns (uint64) { Opening storage o = openings[poolId]; return o.launchedAt + o.window; }
+    function inOpening(bytes32 poolId) public view returns (bool) { Opening storage o = openings[poolId]; return o.launchedAt != 0 && o.window != 0 && block.timestamp < o.launchedAt + o.window; }
 
     /**
      * @dev During the opening a buy becomes a bid. The hook takes the whole zZEC input
@@ -133,7 +137,7 @@ contract ZealzHook is ReentrancyGuard {
     function settle(bytes32 poolId) external nonReentrant {
         Opening storage o = openings[poolId];
         if (o.launchedAt == 0) revert UnknownPool();
-        if (block.timestamp < o.launchedAt + OPENING_WINDOW) revert OpeningNotOver();
+        if (block.timestamp < o.launchedAt + o.window) revert OpeningNotOver();
         if (o.settled) revert AlreadySettled();
         o.settled = true;
         if (o.totalBids == 0) { emit OpeningSettled(poolId, 0, 0); return; }

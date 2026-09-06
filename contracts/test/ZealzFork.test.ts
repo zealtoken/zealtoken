@@ -40,7 +40,7 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     await factory.setLocker(await locker.getAddress())
 
     // ---- launch, capital free
-    const tx = await factory.connect(creator).launch('Zebra Foundry', 'ZBRA', 'ipfs://zbra', 0, { value: ethers.parseEther('0.001') })
+    const tx = await factory.connect(creator).launch('Zebra Foundry', 'ZBRA', 'ipfs://zbra', 0, 0, { value: ethers.parseEther('0.001') }) // Gentle curve, Batch opening
     const rc = await tx.wait()
     const ev = rc!.logs.map((l) => { try { return factory.interface.parseLog(l) } catch { return null } }).find((e) => e?.name === 'Launched')!
     const token = ev.args.token as string, positionId = ev.args.positionId as bigint, poolId = ev.args.poolId as string
@@ -113,5 +113,21 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     const L1 = await posm.getPositionLiquidity(positionId)
     expect(L1).to.be.gt(L0)
     console.log(`      compounded · liquidity ${L0} -> ${L1} (+${((Number(L1 - L0) / Number(L0)) * 100).toFixed(4)}%)`)
+
+    // ---- an INSTANT launch trades from the first block, no bids, no settlement
+    const rc2 = await (await factory.connect(creator).launch('Halo', 'HALO', 'ipfs://halo', 1, 1, { value: ethers.parseEther('0.001') })).wait() // Steep, Instant
+    const ev2 = rc2!.logs.map((l) => { try { return factory.interface.parseLog(l) } catch { return null } }).find((e) => e?.name === 'Launched')!
+    const token2 = ev2.args.token as string, poolId2 = ev2.args.poolId as string, t2Is0 = token2.toLowerCase() < ZZEC.toLowerCase()
+    expect(await hook.inOpening(poolId2)).to.equal(false)
+    const key2 = { currency0: t2Is0 ? token2 : ZZEC, currency1: t2Is0 ? ZZEC : token2, fee: 3000, tickSpacing: 60, hooks: hookAddr }
+    const swap2 = async (zeroForOne: boolean, amountIn: bigint) => {
+      const acts = ethers.solidityPacked(['uint8', 'uint8', 'uint8'], [0x06, 0x0c, 0x0f]); const input = zeroForOne ? key2.currency0 : key2.currency1, output = zeroForOne ? key2.currency1 : key2.currency0
+      const params = [abi.encode([`tuple(${KEY_T} poolKey,bool zeroForOne,uint128 amountIn,uint128 amountOutMinimum,uint256 minHopPriceX36,bytes hookData)`], [{ poolKey: key2, zeroForOne, amountIn, amountOutMinimum: 0n, minHopPriceX36: 0n, hookData: '0x' }]), abi.encode(['address', 'uint256'], [input, amountIn]), abi.encode(['address', 'uint256'], [output, 0n])]
+      const data = new ethers.Interface(['function execute(bytes,bytes[],uint256) payable']).encodeFunctionData('execute', [ethers.solidityPacked(['uint8'], [0x10]), [abi.encode(['bytes', 'bytes[]'], [acts, params])], Math.floor(Date.now() / 1000) + 3600 * 24 * 365])
+      await (await trader.sendTransaction({ to: UR, data })).wait()
+    }
+    await swap2(!t2Is0, 200_000n)
+    expect(await erc(token2).balanceOf(TRADER)).to.be.gt(0n) // bought straight away
+    console.log(`      instant launch: bought ${ethers.formatEther(await erc(token2).balanceOf(TRADER))} HALO in the first block`)
   })
 })

@@ -22,17 +22,17 @@ describe('zealz.fun contracts (unit; the factory is exercised on a chain fork)',
 
   it('hook: only the factory registers, only the pool manager calls, unknown pools revert, split caps at 5%', async () => {
     const { hook, key, tok, factory, creator, stranger, pm, H, furnace, treasury, zzec } = await hookFixture()
-    await expect(hook.connect(stranger).register(key, tok, creator.address)).to.be.revertedWithCustomError(hook, 'NotFactory')
+    await expect(hook.connect(stranger).register(key, tok, creator.address, true)).to.be.revertedWithCustomError(hook, 'NotFactory')
     await expect(hook.connect(stranger).afterSwap(stranger.address, key, { zeroForOne: true, amountSpecified: -1n, sqrtPriceLimitX96: 1n }, 0n, '0x')).to.be.revertedWithCustomError(hook, 'NotPoolManager')
     const pmSigner = await ethers.getImpersonatedSigner(pm.address); await ethers.provider.send('hardhat_setBalance', [pm.address, '0x56bc75e2d63100000']); await expect(hook.connect(pmSigner).afterSwap(stranger.address, key, { zeroForOne: true, amountSpecified: -1n, sqrtPriceLimitX96: 1n }, 0n, '0x')).to.be.revertedWithCustomError(hook, 'UnknownPool')
-    await hook.connect(factory).register(key, tok, creator.address)
+    await hook.connect(factory).register(key, tok, creator.address, false)
     expect(await hook.creatorOf(ethers.keccak256(ethers.AbiCoder.defaultAbiCoder().encode(['tuple(address,address,uint24,int24,address)'], [[key.currency0, key.currency1, key.fee, key.tickSpacing, key.hooks]])))).to.equal(creator.address)
     await expect(H.deploy(pm.address, factory.address, furnace.address, treasury.address, zzec, 400, 100, 100)).to.be.revertedWithCustomError(H, 'BadSplit')
   })
 
   it('hook: zZEC output splits burn/creator/treasury; token output splits creator/treasury only', async () => {
     const { hook, key, tok, zzec, factory, creator, pm } = await hookFixture()
-    await hook.connect(factory).register(key, tok, creator.address)
+    await hook.connect(factory).register(key, tok, creator.address, false)
     const zzecIs0 = key.currency0.toLowerCase() === zzec.toLowerCase()
     // a SELL of token for zZEC: specified = token in (negative), output = zZEC 1,000,000 raw
     const sellZeroForOne = !zzecIs0 // token is currency0 when zZEC is currency1

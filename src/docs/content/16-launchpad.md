@@ -18,7 +18,7 @@ Every other launchpad prices tokens in the chain's gas coin. zealz.fun prices th
 |---|---|---|
 | **ZealzToken** | A plain ERC-20 with a fixed supply of 1,000,000,000, minted once to the factory. No owner, no mint function, no tax, no hooks. | None. It is the simplest token that can exist. |
 | **ZealzFactory** | Creates the token, opens the zZEC pool at the bottom of a single-sided range that holds the entire supply, hands the position to the locker, records the launch. The creator brings no capital. | None after deployment. Anyone may call `launch()`. |
-| **ZealzHook** | Two jobs. For the first ten minutes after a launch every buy is a bid: the hook holds the zZEC, the pool is untouched, sells are refused, and when the window closes one swap executes for the whole batch so everyone in it pays the same price. After that it takes 2% of every swap's output: on the zZEC side 1% to the Furnace, 0.5% to the creator, 0.5% to treasury; on the token side creator and treasury split it. | Immutable percentages and window. Only the factory can register pools. The only funds it ever holds are open bids and unclaimed batch tokens, movable only by their owners. |
+| **ZealzHook** | Two jobs. On a batch launch, for the first ten minutes every buy is a bid: the hook holds the zZEC, the pool is untouched, sells are refused, and when the window closes one swap executes for the whole batch so everyone in it pays the same price. On an instant launch there is no window and trading starts in the first block. After that (or from the start) it takes 2% of every swap's output: on the zZEC side 1% to the Furnace, 0.5% to the creator, 0.5% to treasury; on the token side creator and treasury split it. | Immutable percentages and window length. The opening type is fixed per pool at launch and cannot be changed. Only the factory can register pools. The only funds it ever holds are open bids and unclaimed batch tokens, movable only by their owners. |
 | **ZealzLocker** | Holds every launch's position NFT forever. Anyone can call `compound()`: it collects the position's LP fees and adds them straight back as liquidity in the same range, so the floor only rises. Cannot decrease liquidity, transfer the NFT, or be upgraded. | None. It has no owner. |
 
 All four live in the public repository under `contracts/contracts/zealz/`.
@@ -72,9 +72,20 @@ Whether the locked position's LP fees also go to the creator, or to treasury, is
 
 The liquidity is the supply. At launch the factory puts all one billion tokens into one locked Uniswap v4 position whose price range sits entirely above the opening price, so it holds only the token. The first buyer's zZEC enters that position and takes tokens out of the bottom of the range; every buy walks the price up the range and leaves more zZEC locked behind it; sells walk it back down. That is a bonding curve, except it lives inside the locked position from the first second: no curve contract, no graduation, no moment where anyone holds the funds. Two shapes: gentle (a wide range, price rises slowly per zZEC) and steep.
 
-## The batch opening
+## Two openings, the creator chooses
 
-Sniping is the first-block problem every launchpad pretends to solve. Here the first ten minutes are not a race. Every buy in that window is a bid: the hook takes the zZEC, nothing touches the pool, and sells are refused. When the window closes, anyone calls settle and the hook executes one swap for the entire batch. Every bidder then claims tokens pro rata to their bid, at one shared price. A bot that is first by a millisecond gets exactly the price of the person who bid nine minutes later.
+At launch the creator picks how the first ten minutes work, and the choice is written into the hook for that pool forever:
+
+| Opening | What happens in the first ten minutes | When to pick it |
+|---|---|---|
+| **Batch** | Every buy is a bid held by the hook. Nothing touches the pool, sells are refused, and one swap settles the whole batch at one price when the window closes. | A launch that will be sniped: everyone in the window pays the same price, so being first is worth nothing. |
+| **Instant** | Nothing special. Trading starts in the block the pool opens. First come, first priced. | A community that is already waiting, a creator who wants the simple and familiar path, or a small launch where a window is more ceremony than protection. |
+
+Everything else is identical between the two: the whole supply goes into the locked position, the fees are the same 2%, the lock compounds the same way, and neither gives the creator any tokens.
+
+### The batch opening in detail
+
+Sniping is the first-block problem every launchpad pretends to solve. With a batch opening the first ten minutes are not a race. Every buy in that window is a bid: the hook takes the zZEC, nothing touches the pool, and sells are refused. When the window closes, anyone calls settle and the hook executes one swap for the entire batch. Every bidder then claims tokens pro rata to their bid, at one shared price. A bot that is first by a millisecond gets exactly the price of the person who bid nine minutes later.
 
 ## The floor only goes up
 
@@ -92,6 +103,7 @@ The pool's 0.3% LP fee accrues to the locked position. Anyone can call `compound
 |---|---|
 | ZealzToken, ZealzHook, ZealzLocker, ZealzFactory | written and unit-tested; the full lifecycle passes on a fork of Robinhood Chain: capital-free launch, buy and sell through the real Universal Router with the hook paying the creator and the Furnace, then a compound that raised the locked liquidity |
 | Batch opening | built into the hook and passing on the fork: two bids, one settlement swap, pro-rata claims, sells refused during the window |
+| Instant opening | passing on the fork: a second launch with the instant flag trades in its first block with no bids and no settlement |
 | Shielded buys and memo launches | next: both ride the wrap desk's tagged-deposit path |
 | Hook deployment | needs a mined address (Uniswap v4 encodes hook permissions in the address) |
 | zealz.fun interface | built: feed, token pages, launch form with live preview, explainer. On a preview link with clearly labelled sample data until the factory deploys. |
