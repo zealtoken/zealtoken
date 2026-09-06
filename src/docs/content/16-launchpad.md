@@ -4,7 +4,7 @@ group: Ahead
 ---
 # zealz.fun: launch a token on Zcash rails
 
-> **In one breath.** zealz.fun lets anyone launch a token that trades against zZEC. One transaction creates the token, puts its entire supply into a Uniswap v4 pool, and locks that liquidity in a contract nobody can withdraw from. The creator receives no tokens and earns a share of every trade instead. Every trade also pays 1% into the Furnace, so every launch burns $ZEAL whether or not the token does well. No bonding curve, no graduation, no creator allocation, no rug. Status: contracts written and mostly tested, one math fix outstanding, interface built on a preview link, not yet live.
+> **In one breath.** zealz.fun lets anyone launch a token that trades against zZEC. One transaction creates the token, puts its entire supply into a Uniswap v4 pool, and locks that liquidity in a contract nobody can withdraw from. The creator receives no tokens and earns a share of every trade instead. Every sell also pays 1% of its zZEC into the Furnace, so every launch burns $ZEAL whether or not the token does well. No bonding curve, no graduation, no creator allocation, no rug. Status: contracts written and passing a full lifecycle on a chain fork, interface built on a preview link, not yet deployed.
 
 {{viz:launchflow}}
 
@@ -18,7 +18,7 @@ Every other launchpad prices tokens in the chain's gas coin. zealz.fun prices th
 |---|---|---|
 | **ZealzToken** | A plain ERC-20 with a fixed supply of 1,000,000,000, minted once to the factory. No owner, no mint function, no tax, no hooks. | None. It is the simplest token that can exist. |
 | **ZealzFactory** | Creates the token, opens the zZEC pool at the bottom of a single-sided range that holds the entire supply, hands the position to the locker, records the launch. The creator brings no capital. | None after deployment. Anyone may call `launch()`. |
-| **ZealzHook** | Two jobs. On a batch launch, for the first ten minutes every buy is a bid: the hook holds the zZEC, the pool is untouched, sells are refused, and when the window closes one swap executes for the whole batch so everyone in it pays the same price. On an instant launch there is no window and trading starts in the first block. After that (or from the start) it takes 2% of every swap's output: on the zZEC side 1% to the Furnace, 0.5% to the creator, 0.5% to treasury; on the token side creator and treasury split it. | Immutable percentages and window length. The opening type is fixed per pool at launch and cannot be changed. Only the factory can register pools. The only funds it ever holds are open bids and unclaimed batch tokens, movable only by their owners. |
+| **ZealzHook** | Two jobs. On a batch launch, for the first ten minutes every buy is a bid: the hook holds the zZEC, the pool is untouched, sells are refused, and when the window closes one swap executes for the whole batch so everyone in it pays the same price. On an instant launch there is no window and trading starts in the first block. After that (or from the start) it takes 2% of every swap's output: on the zZEC side 1% to the Furnace, 0.5% to the creator, 0.5% to treasury; on the token side there is no burn, creator and treasury split that share, so the Furnace only ever receives zZEC, from sells. | Immutable percentages and window length. The opening type is fixed per pool at launch and cannot be changed. Only the factory can register pools. The only funds it ever holds are open bids and unclaimed batch tokens, movable only by their owners. |
 | **ZealzLocker** | Holds every launch's position NFT forever. Anyone can call `compound()`: it collects the position's LP fees and adds them straight back as liquidity in the same range, so the floor only rises. Cannot decrease liquidity, transfer the NFT, or be upgraded. | None. It has no owner. |
 
 All four live in the public repository under `contracts/contracts/zealz/`.
@@ -70,7 +70,7 @@ Whether the locked position's LP fees also go to the creator, or to treasury, is
 
 ## Where the liquidity comes from with no bonding curve
 
-The liquidity is the supply. At launch the factory puts all one billion tokens into one locked Uniswap v4 position whose price range sits entirely above the opening price, so it holds only the token. The first buyer's zZEC enters that position and takes tokens out of the bottom of the range; every buy walks the price up the range and leaves more zZEC locked behind it; sells walk it back down. That is a bonding curve, except it lives inside the locked position from the first second: no curve contract, no graduation, no moment where anyone holds the funds. Two shapes: gentle (a wide range, price rises slowly per zZEC) and steep.
+The liquidity is the supply. At launch the factory puts all one billion tokens (less a rounding dust of about 0.01%, which goes to treasury) into one locked Uniswap v4 position whose price range sits entirely above the opening price, so it holds only the token. The first buyer's zZEC enters that position and takes tokens out of the bottom of the range; every buy walks the price up the range and leaves more zZEC locked behind it; sells walk it back down. That is a bonding curve, except it lives inside the locked position from the first second: no curve contract, no graduation, no moment where anyone holds the funds. Two shapes: gentle (a wide range, price rises slowly per zZEC) and steep.
 
 ## Two openings, the creator chooses
 
@@ -85,11 +85,13 @@ Everything else is identical between the two: the whole supply goes into the loc
 
 ### The batch opening in detail
 
+One point to understand before bidding: the settlement is one swap for the whole batch, so a large opening walks up the curve and everyone pays the average price along it, not the opening price. It is the same price for every bidder, and the interface will show the settlement price the batch would close at right now.
+
 Sniping is the first-block problem every launchpad pretends to solve. With a batch opening the first ten minutes are not a race. Every buy in that window is a bid: the hook takes the zZEC, nothing touches the pool, and sells are refused. When the window closes, anyone calls settle and the hook executes one swap for the entire batch. Every bidder then claims tokens pro rata to their bid, at one shared price. A bot that is first by a millisecond gets exactly the price of the person who bid nine minutes later.
 
 ## The floor only goes up
 
-The pool's 0.3% LP fee accrues to the locked position. Anyone can call `compound()` on the locker: it collects those fees and adds them back as liquidity in the same range. Depth rises with every trade and can never fall, so a token's worst-case exit price ratchets upward over its life.
+The pool's 0.3% LP fee accrues to the locked position. Anyone can call `compound()` on the locker: it collects those fees and adds them back as liquidity in the same range. Fees sit uncollected until someone compounds, so depth rises with every compound rather than every trade; the burner job will call it daily for every launched pool once the contracts deploy. It can never fall: the locker has no withdraw. The hard floor is the bottom tick of the range, fixed at launch. What ratchets upward is the zZEC behind every price level above it.
 
 ## Open decisions
 
