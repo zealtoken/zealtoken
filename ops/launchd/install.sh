@@ -11,7 +11,11 @@ chmod 700 "$RT/.keys" 2>/dev/null || true
 if [ -f "$SRC/../contracts/.keystore.json" ]; then install -m 600 "$SRC/../contracts/.keystore.json" "$RT/.keys/deployer.json"; fi
 for job in attest watch-roles keeper burn desk-watch desk-pay ${EXTRA_JOBS:-}; do
   PLIST="$HOME/Library/LaunchAgents/com.zealtoken.$job.plist"
-  sed "s#__OPS__#$RT#g" "$SRC/launchd/com.zealtoken.$job.plist" > "$PLIST"
+  NEW="$(sed "s#__OPS__#$RT#g" "$SRC/launchd/com.zealtoken.$job.plist")"
+  # Reload only when the job definition changed or it is not loaded: every reload triggers a macOS
+  # "App Background Activity" notification, and the scripts themselves are picked up fresh on each run anyway.
+  if [ -f "$PLIST" ] && [ "$NEW" = "$(cat "$PLIST")" ] && launchctl list | grep -q "com.zealtoken.$job"; then continue; fi
+  printf '%s\n' "$NEW" > "$PLIST"
   launchctl unload -w "$PLIST" 2>/dev/null || true
   launchctl load -w "$PLIST"
 done
