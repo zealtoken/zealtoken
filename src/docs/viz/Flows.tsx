@@ -37,8 +37,8 @@ export function TradeSplitFlow() {
         { id: 'lp', x: 250, y: 50, t: '0.3% to LPs', s: 'stays in the pool', w: 140 },
         { id: 'hk', x: 250, y: 165, t: '0.7% to the hook', s: 'taken from output', w: 150, g: true },
         { id: 'fu', x: 430, y: 165, t: 'Furnace', s: 'zZEC → ETH → $ZEAL', w: 140, g: true },
-        { id: 'bn', x: 620, y: 165, t: '0x…dEaD', s: 'burned, counted, public', w: 150 },
-      ]} edges={[{ a: 'sw', b: 'lp' }, { a: 'sw', b: 'hk' }, { a: 'hk', b: 'fu' }, { a: 'fu', b: 'bn', t: 'ignite · daily' }]} />
+        { id: 'bn', x: 640, y: 165, t: '0x…dEaD', s: 'burned · counted · public', w: 190 },
+      ]} edges={[{ a: 'sw', b: 'lp' }, { a: 'sw', b: 'hk' }, { a: 'hk', b: 'fu' }, { a: 'fu', b: 'bn', t: 'ignite' }]} />
     </Frame>
   )
 }
@@ -63,4 +63,22 @@ export function RedeemStates() {
     { id: 'f', x: 540, y: 80, t: 'Fulfilled', s: 'txid on chain · escrow burned', w: 180, g: true },
     { id: 'r', x: 300, y: 190, t: 'Reclaimed', s: 'after 7 days, by you, unconditionally', w: 230 },
   ]} edges={[{ a: 'o', b: 'p', t: 'operator pays' }, { a: 'p', b: 'f', t: 'fulfill(id, txid)' }, { a: 'o', b: 'r', t: 'nothing arrived' }]} />
+}
+
+export function Flywheel() {
+  return (
+    <Frame title="The flywheel" note="every arrow is a contract with no reverse gear · the only exit for value at the bottom is the burn">
+      <Diagram h={300} nodes={[
+        { id: 'zt', x: 90, y: 60, t: '$ZEAL trades', s: 'Pons · 1% fee', w: 130 },
+        { id: 'fd', x: 290, y: 60, t: 'Foundry', s: '60 / 25 / 15', w: 120 },
+        { id: 'rs', x: 490, y: 60, t: 'ZEC reserve', s: 'public t-address', w: 130 },
+        { id: 'zz', x: 680, y: 60, t: 'zZEC minted', s: '≤ attested reserve', w: 130, g: true },
+        { id: 'mk', x: 680, y: 170, t: 'zZEC market', s: 'Uniswap v4 · 1%', w: 130 },
+        { id: 'lp', x: 490, y: 170, t: 'zealz.fun launches', s: 'paired with zZEC · 2%', w: 160 },
+        { id: 'fu', x: 290, y: 170, t: 'Furnace', s: 'one door', w: 120, g: true },
+        { id: 'bn', x: 90, y: 170, t: '$ZEAL burned', s: '0x…dEaD · forever', w: 130, g: true },
+        { id: 'pol', x: 290, y: 265, t: 'protocol-owned liquidity', s: 'the 25% bucket · hosts burns', w: 200 },
+      ]} edges={[{ a: 'zt', b: 'fd' }, { a: 'fd', b: 'rs', t: '60%' }, { a: 'rs', b: 'zz', t: 'attest → mint' }, { a: 'zz', b: 'mk' }, { a: 'mk', b: 'fu', t: '0.7% of every swap' }, { a: 'lp', b: 'fu', t: '1% of every swap' }, { a: 'fu', b: 'bn', t: 'ignite' }, { a: 'fd', b: 'pol', t: '25%' }, { a: 'pol', b: 'mk' }]} />
+    </Frame>
+  )
 }
