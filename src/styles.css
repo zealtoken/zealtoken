@@ -1354,3 +1354,15 @@ p:last-child { margin-bottom: 0; }
 .rd-band .rd-inc-card i { font-family: var(--sans); font-size: 13px; letter-spacing: 0; text-transform: none; font-weight: 600; }
 .rd-band .rd-inc-soon { font-family: var(--sans); font-size: 13px; letter-spacing: 0; }
 @media (max-width: 700px) { .rd-recent-row { grid-template-columns: 40px 1fr auto; } .rd-recent-to { display: none; } }
+
+/* redemption bridge diagram v2 */
+.rd-flow { font-family: var(--sans); }
+.rd-band .rd-n-t { font-size: 15px; font-weight: 700; } .rd-band .rd-n-s { font-family: var(--sans); font-size: 12px; letter-spacing: 0; fill: var(--fg-faint); }
+.rd-band .rd-zone-t { font-size: 11.5px; letter-spacing: .22em; }
+.rd-tag rect { fill: var(--ink); stroke: rgba(0,200,5,.45); }
+.rd-tag-n { fill: var(--green-bright); font-family: var(--mono); font-size: 11px; font-weight: 700; }
+.rd-tag-t { fill: var(--fg); font-size: 12px; font-weight: 600; }
+.rd-e { stroke-width: 2.2; }
+.rd-flow-cap { display: flex; gap: 16px; align-items: baseline; padding: 6px 4px 10px; font-size: 13.5px; color: var(--fg-soft); line-height: 1.5; }
+.rd-flow-cap .mono { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--green-bright); white-space: nowrap; }
+@media (max-width: 700px) { .rd-flow-cap { flex-direction: column; gap: 4px; } }

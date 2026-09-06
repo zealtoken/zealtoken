@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CHAIN, CONTRACTS, LINKS, REDEEM_OPENS_AT, TOKEN, ZZEC_MARKET } from '../config'
+import { CHAIN, CONTRACTS, LINKS, TOKEN, ZZEC_MARKET } from '../config'
 import { encAddress, hexToBig, readBatchRaw, word, wordAddress } from '../lib/chain'
 import { stagger } from '../useReveal'
 
@@ -27,54 +27,40 @@ const STATUS = ['', 'open', 'paid', 'reclaimed']
 
 /** The bridge, drawn: Robinhood Chain on the left, Zcash on the right, the desk in between. Dashes crawl in the flow direction. */
 function RedeemFlow({ paid }: { paid: number }) {
+  const Node = ({ x, y, w = 140, h = 72, t, sub, g = false }: { x: number; y: number; w?: number; h?: number; t: string; sub: string; g?: boolean }) => (
+    <g className={`rd-node ${g ? 'g' : ''}`}><rect x={x} y={y} width={w} height={h} rx="14" /><text x={x + w / 2} y={y + h / 2 - 4} className="rd-n-t">{t}</text><text x={x + w / 2} y={y + h / 2 + 18} className="rd-n-s">{sub}</text></g>
+  )
+  const Tag = ({ x, y, n, t }: { x: number; y: number; n: string; t: string }) => (
+    <g className="rd-tag"><rect x={x - 6} y={y - 15} width={t.length * 7.2 + 34} height="22" rx="11" /><text x={x + 6} y={y} className="rd-tag-n">{n}</text><text x={x + 22} y={y} className="rd-tag-t">{t}</text></g>
+  )
   return (
-    <svg className="rd-flow" viewBox="0 0 900 190" role="img" aria-label="zZEC escrowed on Robinhood Chain, ZEC paid on Zcash, escrow burned">
-      <defs>
-        <marker id="rdarr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--green)" /></marker>
-        <linearGradient id="rdglow" x1="0" x2="1"><stop offset="0" stopColor="var(--green)" stopOpacity="0" /><stop offset=".5" stopColor="var(--green)" stopOpacity=".18" /><stop offset="1" stopColor="var(--green)" stopOpacity="0" /></linearGradient>
-      </defs>
-      <rect x="20" y="20" width="270" height="150" rx="18" className="rd-zone" /><text x="40" y="46" className="rd-zone-t">ROBINHOOD CHAIN</text>
-      <rect x="610" y="20" width="270" height="150" rx="18" className="rd-zone z" /><text x="630" y="46" className="rd-zone-t">ZCASH</text>
-      <rect x="300" y="50" width="300" height="90" rx="16" fill="url(#rdglow)" />
-      <g className="rd-node"><rect x="50" y="70" width="110" height="64" rx="12" /><text x="105" y="97" className="rd-n-t">your wallet</text><text x="105" y="116" className="rd-n-s">zZEC</text></g>
-      <g className="rd-node g"><rect x="180" y="70" width="100" height="64" rx="12" /><text x="230" y="97" className="rd-n-t">escrow</text><text x="230" y="116" className="rd-n-s">still yours</text></g>
-      <g className="rd-node g"><rect x="395" y="60" width="110" height="84" rx="14" /><text x="450" y="90" className="rd-n-t">the desk</text><text x="450" y="108" className="rd-n-s">records the txid</text><text x="450" y="126" className="rd-n-s">then burns the escrow</text></g>
-      <g className="rd-node"><rect x="640" y="70" width="110" height="64" rx="12" /><text x="695" y="97" className="rd-n-t">reserve</text><text x="695" y="116" className="rd-n-s">t1Ujk…</text></g>
-      <g className="rd-node g"><rect x="760" y="70" width="100" height="64" rx="12" /><text x="810" y="97" className="rd-n-t">your address</text><text x="810" y="116" className="rd-n-s">native ZEC</text></g>
-      <path d="M160 102 L180 102" className="rd-e" markerEnd="url(#rdarr)" />
-      <path d="M280 102 C 330 102, 340 102, 395 102" className="rd-e" markerEnd="url(#rdarr)" />
-      <path d="M750 102 L760 102" className="rd-e" markerEnd="url(#rdarr)" />
-      <path d="M505 80 C 560 80, 590 80, 640 90" className="rd-e" markerEnd="url(#rdarr)" /><text x="572" y="66" className="rd-e-t">automatic payout</text>
-      <path d="M640 118 C 590 130, 560 130, 505 124" className="rd-e slow" markerEnd="url(#rdarr)" /><text x="572" y="152" className="rd-e-t">txid recorded</text>
-      <path d="M230 134 C 230 165, 300 172, 450 172 C 470 172, 470 172, 450 144" className="rd-e burn" markerEnd="url(#rdarr)" /><text x="330" y="186" className="rd-e-t">escrow burned only after payout · {paid} paid so far</text>
-    </svg>
+    <>
+      <svg className="rd-flow" viewBox="0 0 1000 250" role="img" aria-label="zZEC escrowed on Robinhood Chain, ZEC paid on Zcash, escrow burned after the payout is recorded">
+        <defs><marker id="rdarr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--green)" /></marker></defs>
+        <rect x="20" y="30" width="330" height="150" rx="20" className="rd-zone" /><text x="42" y="58" className="rd-zone-t">ROBINHOOD CHAIN</text>
+        <rect x="650" y="30" width="330" height="150" rx="20" className="rd-zone z" /><text x="672" y="58" className="rd-zone-t">ZCASH</text>
+        <Node x={42} y={80} t="your wallet" sub="holds zZEC" />
+        <Node x={196} y={80} t="escrow" sub="still yours" g />
+        <Node x={420} y={68} w={160} h={96} t="the desk" sub="pays · records · burns" g />
+        <Node x={672} y={80} t="reserve" sub="native ZEC" />
+        <Node x={826} y={80} t="your address" sub="native ZEC" g />
+        <path d="M182 116 L196 116" className="rd-e" markerEnd="url(#rdarr)" />
+        <path d="M336 116 C 380 116, 380 116, 420 116" className="rd-e" markerEnd="url(#rdarr)" />
+        <path d="M580 96 C 630 96, 640 108, 672 110" className="rd-e" markerEnd="url(#rdarr)" />
+        <path d="M812 116 L826 116" className="rd-e" markerEnd="url(#rdarr)" />
+        <path d="M672 130 C 640 140, 630 140, 580 136" className="rd-e slow" markerEnd="url(#rdarr)" />
+        <path d="M500 164 C 500 215, 266 215, 266 152" className="rd-e burn" markerEnd="url(#rdarr)" />
+        <Tag x={600} y={82} n="1" t="pays ZEC" />
+        <Tag x={598} y={160} n="2" t="txid recorded on chain" />
+        <Tag x={332} y={226} n="3" t="then, and only then, the escrow burns" />
+      </svg>
+      <div className="rd-flow-cap"><span className="mono">{paid} paid so far</span><span>Escrow first. The desk pays real ZEC to your address, records the Zcash transaction id on the contract, and burns the escrow last.</span></div>
+    </>
   )
 }
-
-function OpensIn() {
-  const [now, setNow] = useState(Date.now())
-  useEffect(() => { const t = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(t) }, [])
-  const left = Math.max(0, (REDEEM_OPENS_AT - now) / 1000)
-  const d = Math.floor(left / 86400), h = Math.floor((left % 86400) / 3600), m = Math.floor((left % 3600) / 60), s = Math.floor(left % 60)
-  return (
-    <div className="wd-clock" data-reveal style={stagger(3)}>
-      <div className="wd-clock-l mono">redemptions open in</div>
-      <div className="wd-digits"><div><b>{pad(d)}</b><span className="mono">days</span></div><i>:</i><div><b>{pad(h)}</b><span className="mono">hours</span></div><i>:</i><div><b>{pad(m)}</b><span className="mono">min</span></div><i>:</i><div><b>{pad(s)}</b><span className="mono">sec</span></div></div>
-      <div className="wd-clock-f mono">{new Date(REDEEM_OPENS_AT).toUTCString().replace(' GMT', ' UTC')} · the desk contract is deployed and verified; new requests are paused on chain until then</div>
-      <ol className="wd-timeline mono">
-        <li className="done"><b>✓</b><span>RedemptionDesk deployed and verified</span><a href={`${CONTRACTS.explorer}/address/${CONTRACTS.desk}?tab=contract`} target="_blank" rel="noreferrer">contract ↗</a></li>
-        <li className="done"><b>✓</b><span>escrow-first design: paid before burned, automatically</span><a href="/docs/#/redeem">docs ↗</a></li>
-        <li className="now"><b>…</b><span>automatic payouts from a hot float wallet, proven end to end</span></li>
-        <li><b>4</b><span>requests unpaused · this form opens</span></li>
-      </ol>
-    </div>
-  )
-}
-const pad = (n: number) => String(Math.max(0, n)).padStart(2, '0')
 
 export function Redeem() {
   const desk = CONTRACTS.desk
-  const preLive = Date.now() < REDEEM_OPENS_AT
   const [info, setInfo] = useState<Desk | null>(null)
   const [account, setAccount] = useState<string | null>(null)
   const [balance, setBalance] = useState<bigint>(0n)
@@ -162,27 +148,6 @@ export function Redeem() {
 
         {!desk ? (
           <div className="redeem-soon" data-reveal style={stagger(3)}><span className="tag tag-wait"><span className="dot" /> pending</span><p>The desk deploys with Phase 03.</p></div>
-        ) : preLive ? (
-          <>
-            <OpensIn />
-            <div className="rd-badges" data-reveal style={stagger(4)}>
-              <span><b>no fee</b>1:1, the reserve pays the Zcash network fee</span>
-              <span><b>escrow, not burn</b>your zZEC is held, and burned only after you are paid</span>
-              <span><b>automatic payout</b>usually within minutes · no human in the loop</span>
-              <span><b>on-chain receipt</b>every payout's Zcash txid is recorded in the contract</span>
-            </div>
-            <div className="rd-flow-wrap" data-reveal style={stagger(4)}><RedeemFlow paid={0} /></div>
-            <div className="rd-inc" data-reveal style={stagger(5)}>
-              <div className="rd-inc-h"><span className="eyebrow">What is in it for you</span><h3 className="h3">Holding {TOKEN.wrapper} should pay. Leaving should cost nothing.</h3></div>
-              <div className="rd-inc-grid">
-                <a className="rd-inc-card" href="#wrap"><span className="rd-inc-n mono">in</span><b>Wrap for free</b><p>ZEC in, {TOKEN.wrapper} out, one for one. No fee on the way in, no fee on the way out. Opens Sep 7.</p><i className="mono">wrap desk →</i></a>
-                <a className="rd-inc-card" href="#liquidity"><span className="rd-inc-n mono">earn</span><b>{ZZEC_MARKET.lpFeePct}% of every trade</b><p>Provide {TOKEN.wrapper} and ETH and you earn the pool fee on every swap, pro rata, withdrawable any time. The burn's {ZZEC_MARKET.hookFeePct}% comes from traders, not from you.</p><i className="mono">join the herd →</i></a>
-                <a className="rd-inc-card" href="#liquidity"><span className="rd-inc-n mono">rank</span><b>A public place in the herd</b><p>Liquidity providers are ranked live from chain: Foal, Zebra, Stallion, Herd Leader. Your share, your burns hosted, your fees, in the open.</p><i className="mono">see the board →</i></a>
-                <a className="rd-inc-card" href="#wrap"><span className="rd-inc-n mono">burn</span><b>Every trade you host burns ${TOKEN.symbol}</b><p>{ZZEC_MARKET.hookFeePct}% of every swap goes to the Furnace and comes out as burned ${TOKEN.symbol}. More depth, more volume, more burn.</p><i className="mono">how it compounds →</i></a>
-              </div>
-              <div className="rd-inc-soon mono"><span className="tag tag-wait"><span className="dot" /> under consideration</span> a {TOKEN.wrapper}-paid rewards program for liquidity providers and a launch bonus for early wraps. Not live, not promised. If either ships, the budget and end date appear here first.</div>
-            </div>
-          </>
         ) : (
           <>
             <div className="rd-badges" data-reveal style={stagger(3)}>
