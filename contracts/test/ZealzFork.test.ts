@@ -45,7 +45,7 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     const treasuryZzec0 = await zzecW.balanceOf(treasury.address)
 
     // ---- launch, capital free
-    const tx = await factory.connect(creator).launch('Zebra Foundry', 'ZBRA', 'ipfs://zbra', 0, 0, 200, 100, 50) // Gentle, Batch, 2% total: 1% burn / 0.5% creator / 0.25% platform / 0.25% reflected
+    const tx = await factory.connect(creator).launch('Zebra Foundry', 'ZBRA', 'ipfs://zbra', 0, 0, 200, 100, 50) // Gentle, Batch, 2% total: 1% burn / 0.5% creator / 0.25% platform / 0.25% to holders
     expect((await zzecW.balanceOf(treasury.address)) - treasuryZzec0).to.equal(500_000n) // launch fee landed in treasury as zZEC
     const rc = await tx.wait()
     const ev = rc!.logs.map((l) => { try { return factory.interface.parseLog(l) } catch { return null } }).find((e) => e?.name === 'Launched')!
@@ -118,15 +118,15 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     expect(furnaceGot).to.be.gt(0n)
     console.log(`      sold half · Furnace received ${Number(furnaceGot) / 1e8} zZEC`)
 
-    // ---- reflections: the trader holds the token, so the sell's reflected zZEC is theirs to claim
-    const rtok = new ethers.Contract(token, ['function reflectionsOf(address) view returns (uint256)', 'function claimReflections() returns (uint256)', 'function reflectedTotal() view returns (uint256)', 'function eligibleSupply() view returns (uint256)'], trader)
-    const owed = await rtok.reflectionsOf(TRADER)
+    // ---- dividends: the trader holds the token, so the sell's to holders zZEC is theirs to claim
+    const rtok = new ethers.Contract(token, ['function dividendsOf(address) view returns (uint256)', 'function claimDividends() returns (uint256)', 'function distributedTotal() view returns (uint256)', 'function eligibleSupply() view returns (uint256)'], trader)
+    const owed = await rtok.dividendsOf(TRADER)
     expect(owed).to.be.gt(0n)
-    expect(await rtok.reflectionsOf(POOL_MANAGER)).to.equal(0n) // the pool never earns reflections
+    expect(await rtok.dividendsOf(POOL_MANAGER)).to.equal(0n) // the pool never earns dividends
     const zBefore = await erc(ZZEC).balanceOf(TRADER)
-    await (await rtok.claimReflections()).wait()
+    await (await rtok.claimDividends()).wait()
     expect((await erc(ZZEC).balanceOf(TRADER)) - zBefore).to.equal(owed)
-    console.log(`      reflections · ${Number(await rtok.reflectedTotal()) / 1e8} zZEC distributed, trader claimed ${Number(owed) / 1e8} zZEC`)
+    console.log(`      dividends · ${Number(await rtok.distributedTotal()) / 1e8} zZEC distributed, trader claimed ${Number(owed) / 1e8} zZEC`)
 
     // ---- compound: fees back into the lock, liquidity only rises
     await (await locker.compound(positionId)).wait()
@@ -135,7 +135,7 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     console.log(`      compounded · liquidity ${L0} -> ${L1} (+${((Number(L1 - L0) / Number(L0)) * 100).toFixed(4)}%)`)
 
     // ---- an INSTANT launch trades from the first block, no bids, no settlement
-    const rc2 = await (await factory.connect(creator).launch('Halo', 'HALO', 'ipfs://halo', 1, 1, 500, 25, 0)).wait() // Steep, Instant, 5% total: 0.25% burn / 0 creator / 0.25% platform / 4.5% reflected // Steep, Instant
+    const rc2 = await (await factory.connect(creator).launch('Halo', 'HALO', 'ipfs://halo', 1, 1, 500, 25, 0)).wait() // Steep, Instant, 5% total: 0.25% burn / 0 creator / 0.25% platform / 4.5% to holders // Steep, Instant
     const ev2 = rc2!.logs.map((l) => { try { return factory.interface.parseLog(l) } catch { return null } }).find((e) => e?.name === 'Launched')!
     const token2 = ev2.args.token as string, poolId2 = ev2.args.poolId as string, t2Is0 = token2.toLowerCase() < ZZEC.toLowerCase()
     expect(await hook.inOpening(poolId2)).to.equal(false)
@@ -151,8 +151,8 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     expect(await erc(token2).balanceOf(TRADER)).to.be.gt(0n) // bought straight away
     expect((await erc(ZZEC).balanceOf(FURNACE)) - fz0).to.equal(500n) // 0.25% of 200,000 on a 5% token
     expect((await erc(ZZEC).balanceOf(treasury.address)) - tz0).to.equal(500n) // platform 0.25%, fixed whatever the total
-    const rt2 = new ethers.Contract(token2, ['function pending() view returns (uint256)', 'function reflectedTotal() view returns (uint256)'], ethers.provider)
-    expect((await rt2.pending()) + (await rt2.reflectedTotal())).to.equal(9_000n) // 4.5% reflected (held as pending until holders exist, since the fee is taken before the buyer holds anything)
+    const rt2 = new ethers.Contract(token2, ['function pending() view returns (uint256)', 'function distributedTotal() view returns (uint256)'], ethers.provider)
+    expect((await rt2.pending()) + (await rt2.distributedTotal())).to.equal(9_000n) // 4.5% to holders (held as pending until holders exist, since the fee is taken before the buyer holds anything)
     console.log(`      instant launch: bought ${ethers.formatEther(await erc(token2).balanceOf(TRADER))} HALO in the first block`)
   })
 })

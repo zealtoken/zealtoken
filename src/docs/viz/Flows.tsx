@@ -100,7 +100,7 @@ export function LaunchFees() {
         { id: 'lp', x: 240, y: 55, t: '0.3% LP fee', s: 'compounds into the lock', w: 150 },
         { id: 'hk', x: 240, y: 195, t: '2% hook', s: 'of the zZEC leg', w: 130, g: true },
         { id: 'fu', x: 450, y: 45, t: '≥ 0.25% → Furnace', s: 'burns $ZEAL', w: 180, g: true },
-        { id: 'rf', x: 450, y: 125, t: 'rest → holders', s: 'reflected in zZEC, claimable', w: 180, g: true },
+        { id: 'rf', x: 450, y: 125, t: 'rest → holders', s: 'claimable zZEC dividends', w: 180, g: true },
         { id: 'cr', x: 450, y: 205, t: '≤ 0.5% → creator', s: 'forever, no claim step', w: 180 },
         { id: 'tr', x: 450, y: 285, t: '0.25% → platform', s: 'fixed', w: 180 },
         { id: 'bn', x: 670, y: 45, t: '0x…dEaD', s: 'on the next ignition', w: 150, g: true },

@@ -20,7 +20,7 @@ interface IPermit2Z { function approve(address token, address spender, uint160 a
  * @title ZealzLocker
  * @notice Holds every launch's liquidity position forever, and makes it grow.
  *
- * @dev The floor only goes up. Anyone can call compound(): it collects the
+ * @dev Liquidity never falls. Anyone can call compound(): it collects the
  *      position's accrued LP fees into this contract and adds them straight back
  *      as liquidity in the same range. Nothing can decrease a position, transfer
  *      it, or send its fees anywhere else. There is no owner. Fees in a currency

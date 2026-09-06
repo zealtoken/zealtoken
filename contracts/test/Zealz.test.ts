@@ -13,7 +13,7 @@ describe('zealz.fun contracts (unit; the factory is exercised on a chain fork)',
     await pmc.fund(await zzec.getAddress(), ethers.parseUnits('1', 8)); 
     const H = await ethers.getContractFactory('ZealzHook')
     const hook = await H.deploy(pm.address, factory.address, furnace.address, treasury.address, await zzec.getAddress())
-    // a real launched token so reflections have a ledger; the "factory" signer deploys it
+    // a real launched token so dividends have a ledger; the "factory" signer deploys it
     const tokC = await (await ethers.getContractFactory('ZealzToken', factory)).deploy('Meme', 'MEME', 'ipfs://meme', ethers.parseEther('1000000000'), factory.address, await zzec.getAddress(), await hook.getAddress(), pm.address)
     const tok = { getAddress: () => tokC.getAddress() }
     const [z, t] = [await zzec.getAddress(), await tok.getAddress()]
@@ -44,7 +44,7 @@ describe('zealz.fun contracts (unit; the factory is exercised on a chain fork)',
     const sellZeroForOne = !zzecIs0 // token is currency0 when zZEC is currency1
     const dSell = zzecIs0 ? delta(1_000_000n, -5n) : delta(-5n, 1_000_000n)
     const pmSigner = await ethers.getImpersonatedSigner(pm.address); await ethers.provider.send('hardhat_setBalance', [pm.address, '0x56bc75e2d63100000']); const r1 = await hook.connect(pmSigner).afterSwap.staticCall(pm.address, key, { zeroForOne: sellZeroForOne, amountSpecified: -5n, sqrtPriceLimitX96: 1n }, dSell, '0x')
-    expect(r1[1]).to.equal(20_000n) // 2% of 1,000,000: 1% burn + 0.5% creator + 0.25% platform + 0.25% reflected
+    expect(r1[1]).to.equal(20_000n) // 2% of 1,000,000: 1% burn + 0.5% creator + 0.25% platform + 0.25% to holders
     // a BUY: specified = zZEC in, output = token 1,000,000
     const dBuy = zzecIs0 ? delta(-5n, 1_000_000n) : delta(1_000_000n, -5n)
     const r2 = await hook.connect(pmSigner).afterSwap.staticCall(pm.address, key, { zeroForOne: zzecIs0, amountSpecified: -5n, sqrtPriceLimitX96: 1n }, dBuy, '0x')
