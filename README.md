@@ -17,8 +17,8 @@ Everything that can be a contract is a contract, and every contract is verified.
 | ZZEC · 1:1 wrapped Zcash, attest → mint cap, redeem never pausable | [`0x0b15…E402`](https://robinhoodchain.blockscout.com/address/0x0b151Ff7a7c5250130EC16C275790961d558E402?tab=contract) | live · source verified · minted against a real reserve |
 | ZealFurnaceV4 · zZEC fees → ETH → $ZEAL → burn, on Uniswap v4 | [`0x72C2…7E70`](https://robinhoodchain.blockscout.com/address/0x72C2f71dC3c0058974fd59039F9A79397bf87E70?tab=contract) | live · source verified · burning |
 | ZealBurnHook · v4 hook, 0.7% of every zZEC swap to the Furnace, no owner | [`0x1664…0044`](https://robinhoodchain.blockscout.com/address/0x16642362837e2FDC02fF1ECF71f5629c094B0044?tab=contract) | live · source verified |
-| RedemptionDesk · escrow zZEC, get native ZEC, reclaim yourself after 7 days | [`0x9A1f…cA1a`](https://robinhoodchain.blockscout.com/address/0x9A1f622C2267fCdBD664D259A27b057B53E9cA1a?tab=contract) | live · source verified (Sourcify) |
-| WrapDesk · send ZEC, get zZEC 1:1; becomes the minter after a 48h timelock | [`0xb53E…E118`](https://robinhoodchain.blockscout.com/address/0xb53E3CD58668D1fC9082b51a7d74879733e9E118?tab=contract) | live · source verified (Sourcify) · minter rotation pending |
+| RedemptionDesk · escrow zZEC, get native ZEC, reclaim yourself after 7 days | [`0x9A1f…cA1a`](https://robinhoodchain.blockscout.com/address/0x9A1f622C2267fCdBD664D259A27b057B53E9cA1a?tab=contract) | live · source verified |
+| WrapDesk · send ZEC, get zZEC 1:1; becomes the minter after a 48h timelock | [`0xb53E…E118`](https://robinhoodchain.blockscout.com/address/0xb53E3CD58668D1fC9082b51a7d74879733e9E118?tab=contract) | live · source verified · minter rotation pending |
 
 The live numbers on [zealtoken.com](https://zealtoken.com) are read straight
 from these contracts over JSON-RPC in the browser. The one server-side piece is

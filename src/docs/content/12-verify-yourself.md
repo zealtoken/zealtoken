@@ -15,8 +15,8 @@ group: Start here
 | ZZEC | [Blockscout](https://robinhoodchain.blockscout.com/address/0x0b151Ff7a7c5250130EC16C275790961d558E402?tab=contract) |
 | ZealFurnaceV4 | [Blockscout](https://robinhoodchain.blockscout.com/address/0x72C2f71dC3c0058974fd59039F9A79397bf87E70?tab=contract) |
 | ZealBurnHook | [Blockscout](https://robinhoodchain.blockscout.com/address/0x16642362837e2FDC02fF1ECF71f5629c094B0044?tab=contract) |
-| RedemptionDesk | [Sourcify](https://repo.sourcify.dev/4663/0x9A1f622C2267fCdBD664D259A27b057B53E9cA1a) · [Blockscout](https://robinhoodchain.blockscout.com/address/0x9A1f622C2267fCdBD664D259A27b057B53E9cA1a) |
-| WrapDesk | [Sourcify](https://repo.sourcify.dev/4663/0xb53E3CD58668D1fC9082b51a7d74879733e9E118) · [Blockscout](https://robinhoodchain.blockscout.com/address/0xb53E3CD58668D1fC9082b51a7d74879733e9E118) |
+| RedemptionDesk | [Blockscout](https://robinhoodchain.blockscout.com/address/0x9A1f622C2267fCdBD664D259A27b057B53E9cA1a?tab=contract) · [Sourcify](https://repo.sourcify.dev/4663/0x9A1f622C2267fCdBD664D259A27b057B53E9cA1a) |
+| WrapDesk | [Blockscout](https://robinhoodchain.blockscout.com/address/0xb53E3CD58668D1fC9082b51a7d74879733e9E118?tab=contract) · [Sourcify](https://repo.sourcify.dev/4663/0xb53E3CD58668D1fC9082b51a7d74879733e9E118) |
 | Everything | [github.com/zealtoken/zealtoken](https://github.com/zealtoken/zealtoken) |
 
 ## The reserve

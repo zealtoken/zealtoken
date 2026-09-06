@@ -23,7 +23,7 @@ group: Ahead
 - **Sep 7, 19:16 UTC:** WrapDesk becomes the zZEC minter; the wrap form opens.
 - **Pons fee re-point:** filed with Pons; unblocks the Foundry's 60/25/15 flow for every future fee.
 - **Key separation:** cold owner key, hot igniter, so a compromise of the operator machine cannot reach ownership.
-- **Blockscout verification** of both desks, pending their API (Sourcify already exact-matches).
+- **Both desks verified** on Blockscout and Sourcify.
 
 ## Incentives under consideration
 
