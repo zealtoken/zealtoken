@@ -13,3 +13,4 @@ contracts/.env
 ops/node_modules
 ops/redemptions.json
 ops/.env
+*.tsbuildinfo

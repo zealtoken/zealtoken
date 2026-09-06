@@ -17,7 +17,7 @@ Everything that can be a contract is a contract, and every contract is verified.
 | ZZEC · 1:1 wrapped Zcash, attest → mint cap, redeem never pausable | [`0x0b15…E402`](https://robinhoodchain.blockscout.com/address/0x0b151Ff7a7c5250130EC16C275790961d558E402?tab=contract) | live · source verified · minted against a real reserve |
 | ZealFurnaceV4 · zZEC fees → ETH → $ZEAL → burn, on Uniswap v4 | [`0x72C2…7E70`](https://robinhoodchain.blockscout.com/address/0x72C2f71dC3c0058974fd59039F9A79397bf87E70?tab=contract) | live · source verified · burning |
 | ZealBurnHook · v4 hook, 0.7% of every zZEC swap to the Furnace, no owner | [`0x1664…0044`](https://robinhoodchain.blockscout.com/address/0x16642362837e2FDC02fF1ECF71f5629c094B0044?tab=contract) | live · source verified |
-| RedemptionDesk · escrow zZEC, get native ZEC automatically (opens Sep 6) | [`0x9A1f…cA1a`](https://robinhoodchain.blockscout.com/address/0x9A1f622C2267fCdBD664D259A27b057B53E9cA1a?tab=contract) | live · source verified |
+| RedemptionDesk · escrow zZEC, get native ZEC automatically (live since Sep 6) | [`0x9A1f…cA1a`](https://robinhoodchain.blockscout.com/address/0x9A1f622C2267fCdBD664D259A27b057B53E9cA1a?tab=contract) | live · source verified |
 | WrapDesk · send ZEC, get zZEC 1:1; becomes the minter after a 48h timelock | [`0xb53E…E118`](https://robinhoodchain.blockscout.com/address/0xb53E3CD58668D1fC9082b51a7d74879733e9E118?tab=contract) | live · source verified · minter rotation pending |
 
 The live numbers on [zealtoken.com](https://zealtoken.com) are read straight
@@ -27,7 +27,7 @@ lightwalletd node because browsers cannot speak gRPC. It holds no keys.
 
 ## Layout
 
-- [`contracts/`](contracts) · Solidity 0.8.24, Hardhat, 102 tests. `npm test`.
+- [`contracts/`](contracts) · Solidity 0.8.24, Hardhat, 104 unit tests plus a full launchpad lifecycle on a mainnet fork. `npm test`.
 - [`ops/`](ops) · the reserve operator: attests the Zcash balance, mints zZEC
   up to it, honours redemptions, sweeps ETH → ZEC. Nothing here can move
   funds without a passphrase-unlocked key.
@@ -59,10 +59,39 @@ The live ledger (`src/sections/Ledger.tsx`) batches `eth_call`s straight to the
 Robinhood Chain RPC every 15 seconds. Selectors are precomputed from the compiled
 ABIs in `contracts/`; there is no indexer and no server.
 
+## zealz.fun · the launchpad (built, tested, not yet deployed)
+
+[zealz.fun](https://zealz.fun) launches tokens paired with zZEC straight into a
+locked Uniswap v4 pool. Contracts live in
+[`contracts/contracts/zealz/`](contracts/contracts/zealz) and are exercised end
+to end on a fork of the live chain by
+[`ZealzFork.test.ts`](contracts/test/ZealzFork.test.ts):
+
+- **ZealzFactory** · one transaction: mint one billion tokens, open the pool,
+  put the whole supply into one single-sided locked range, hand the position to
+  the locker. The creator holds zero. Launch fee 0.005 zZEC.
+- **ZealzHook** · the creator's fee (1% to 5%) comes off the zZEC leg of every
+  trade: at least 0.5% buys back and burns $ZEAL, at most 0.5% to the creator,
+  0.5% to the platform, the rest to holders. Optional ten minute batch opening
+  where every buy is a bid and everyone pays one price.
+- **ZealzToken** · fixed supply, no owner, and a dividend ledger: holders claim
+  their share of every trade in zZEC.
+- **ZealzLocker** · holds every position forever; anyone can compound its LP
+  fees back in; there is no withdraw.
+- Buying with ETH routes through the zZEC market in one router transaction,
+  proven on the fork as a buy and as a bid.
+
+The mechanism, every number and every open risk:
+[zealtoken.com/docs/#/launchpad](https://zealtoken.com/docs/#/launchpad).
+
 ## Status
 
-Phase 00 (launch) is live, zZEC is deployed at supply zero, the reserve address
-is published and attested on a 6-hour schedule. Phase 01 completes when the
-first ZEC lands and the first mint follows. The dated build log on
-[zealtoken.com](https://zealtoken.com#phases) lists only things that have already
-happened, each linked to verified source.
+Reserve, market, Furnace, burn hook and automatic redemptions are live. The
+wrap desk becomes the minter after its timelock. The launchpad is built and
+fork-tested and deploys on a date still to be set. The dated build log on
+[zealtoken.com](https://zealtoken.com#phases) lists only things that have
+already happened, each linked to verified source. Nothing here is audited.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
