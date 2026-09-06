@@ -13,7 +13,8 @@ async function post<T>(body: unknown): Promise<T> {
   const run = async () => {
     for (let attempt = 0; ; attempt++) {
       try {
-        const r = await fetch(CHAIN.rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+        const url = attempt < 2 ? CHAIN.rpc : CHAIN.rpcPublic
+        const r = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
         if (!r.ok) throw new Error(`rpc ${r.status}`)
         return (await r.json()) as T
       } catch (e) { if (attempt >= 3) throw e; await new Promise((res) => setTimeout(res, 350 * (attempt + 1))) }

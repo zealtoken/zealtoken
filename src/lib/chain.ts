@@ -47,6 +47,25 @@ export const hexToBig = (hex: string): bigint => (hex && hex !== '0x' ? BigInt(h
 
 type RpcResult = { id: number; result?: string; error?: { message: string } }
 
+/** POST a JSON-RPC body: the relay first (retrying briefly on 429/5xx), then the node directly as a last resort. */
+export async function rpcPost(body: unknown, signal?: AbortSignal): Promise<Response> {
+  const payload = JSON.stringify(body)
+  const targets = [CHAIN.rpc, CHAIN.rpcPublic]
+  let last: Error | null = null
+  for (const url of targets) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: payload, signal })
+        if (res.ok) return res
+        last = new Error(`rpc ${res.status}`)
+        if (res.status !== 429 && res.status < 500) break
+      } catch (e) { last = e as Error; if (signal?.aborted) throw e }
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)))
+    }
+  }
+  throw last ?? new Error('rpc unreachable')
+}
+
 /** One batched eth_call round trip plus the block it was read at. */
 export async function readBatch(
   calls: Call[],
@@ -61,14 +80,7 @@ export async function readBatch(
     { jsonrpc: '2.0', id: calls.length + 1, method: 'eth_blockNumber', params: [] },
   ]
 
-  const res = await fetch(CHAIN.rpc, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-    signal,
-  })
-  if (!res.ok) throw new Error(`rpc ${res.status}`)
-
+  const res = await rpcPost(body, signal)
   const out = (await res.json()) as RpcResult[]
   const byId = new Map(out.map((r) => [r.id, r]))
 
@@ -84,8 +96,7 @@ export async function readBatch(
 /** Same round trip, but the raw hex of every result, for multi-word returns. */
 export async function readBatchRaw(calls: Call[], signal?: AbortSignal): Promise<string[]> {
   const body = calls.map((c, i) => ({ jsonrpc: '2.0', id: i + 1, method: 'eth_call', params: [{ to: c.to, data: c.data }, 'latest'] }))
-  const res = await fetch(CHAIN.rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal })
-  if (!res.ok) throw new Error(`rpc ${res.status}`)
+  const res = await rpcPost(body, signal)
   const out = (await res.json()) as RpcResult[]
   const byId = new Map(out.map((r) => [r.id, r]))
   return calls.map((_, i) => {
@@ -109,7 +120,7 @@ export function units(v: bigint, decimals: number): number {
 
 /** eth_getLogs for one address and topic list, from genesis. The public RPC answers these quickly. */
 export async function getLogs(address: string, topics: (string | null)[], signal?: AbortSignal): Promise<{ topics: string[]; data: string; blockNumber: string; transactionHash: string }[]> {
-  const res = await fetch(CHAIN.rpc, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getLogs', params: [{ address, topics, fromBlock: '0x0', toBlock: 'latest' }] }), signal })
+  const res = await rpcPost({ jsonrpc: '2.0', id: 1, method: 'eth_getLogs', params: [{ address, topics, fromBlock: '0x0', toBlock: 'latest' }] }, signal)
   const j = (await res.json()) as { result?: { topics: string[]; data: string; blockNumber: string; transactionHash: string }[]; error?: { message: string } }
   if (j.error) throw new Error(j.error.message)
   return j.result ?? []
