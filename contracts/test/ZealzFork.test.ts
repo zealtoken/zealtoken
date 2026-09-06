@@ -31,7 +31,7 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     const nonce = await ethers.provider.getTransactionCount(DEPLOYER)
     const factoryAddr = ethers.getCreateAddress({ from: DEPLOYER, nonce: nonce + 1 })
     const initCode = ethers.concat([Hook.bytecode, abi.encode(['address', 'address', 'address', 'address', 'address', 'uint256', 'uint256', 'uint256'], [POOL_MANAGER, factoryAddr, FURNACE, treasury.address, ZZEC, 100, 50, 50])])
-    const { salt, address: hookAddr } = mineSalt(ethers.keccak256(initCode))
+    const { salt, address: hookAddr } = mineSalt(ethers.keccak256(initCode), 0x00ccn) // beforeSwap + afterSwap, both returning deltas
     await (await deployer.sendTransaction({ to: CREATE2, data: ethers.concat([salt, initCode]) })).wait()
     expect(await ethers.provider.getCode(hookAddr)).to.not.equal('0x')
     const factory = await (await ethers.getContractFactory('ZealzFactory', deployer)).deploy(POSM, PERMIT2, ZZEC, hookAddr, treasury.address, ethers.parseEther('0.001'), openTick0, openTick1)
@@ -55,29 +55,51 @@ const tickFor = (price: number, spacing: number) => { const t = Math.floor(Math.
     const tokenIs0 = token.toLowerCase() < ZZEC.toLowerCase()
     console.log(`      token ${token} is currency${tokenIs0 ? 0 : 1} · open tick ${s0[1]} · liquidity ${L0}`)
 
-    // ---- buy 0.01 zZEC of it through the Universal Router
+    // ---- the batch opening: buys in the first 10 minutes are bids, sells are refused
     const key = { currency0: tokenIs0 ? token : ZZEC, currency1: tokenIs0 ? ZZEC : token, fee: 3000, tickSpacing: 60, hooks: hookAddr }
-    const swap = async (zeroForOne: boolean, amountIn: bigint) => {
+    const hook = await ethers.getContractAt('ZealzHook', hookAddr)
+    const swap = async (zeroForOne: boolean, amountIn: bigint, hookData = '0x', minOut = 0n) => {
       const acts = ethers.solidityPacked(['uint8', 'uint8', 'uint8'], [0x06, 0x0c, 0x0f])
       const input = zeroForOne ? key.currency0 : key.currency1, output = zeroForOne ? key.currency1 : key.currency0
       // Robinhood Chain's Universal Router is a modified v4-periphery build: ExactInputSingleParams carries a
       // uint256 minHopPriceX36 before hookData. Without it the struct only decodes by luck when currency0 is ETH.
-      const params = [abi.encode([`tuple(${KEY_T} poolKey,bool zeroForOne,uint128 amountIn,uint128 amountOutMinimum,uint256 minHopPriceX36,bytes hookData)`], [{ poolKey: key, zeroForOne, amountIn, amountOutMinimum: 0n, minHopPriceX36: 0n, hookData: '0x' }]), abi.encode(['address', 'uint256'], [input, amountIn]), abi.encode(['address', 'uint256'], [output, 0n])]
-      const data = new ethers.Interface(['function execute(bytes,bytes[],uint256) payable']).encodeFunctionData('execute', [ethers.solidityPacked(['uint8'], [0x10]), [abi.encode(['bytes', 'bytes[]'], [acts, params])], Math.floor(Date.now() / 1000) + 3600])
+      const params = [abi.encode([`tuple(${KEY_T} poolKey,bool zeroForOne,uint128 amountIn,uint128 amountOutMinimum,uint256 minHopPriceX36,bytes hookData)`], [{ poolKey: key, zeroForOne, amountIn, amountOutMinimum: minOut, minHopPriceX36: 0n, hookData }]), abi.encode(['address', 'uint256'], [input, amountIn]), abi.encode(['address', 'uint256'], [output, minOut])]
+      const data = new ethers.Interface(['function execute(bytes,bytes[],uint256) payable']).encodeFunctionData('execute', [ethers.solidityPacked(['uint8'], [0x10]), [abi.encode(['bytes', 'bytes[]'], [acts, params])], Math.floor(Date.now() / 1000) + 3600 * 24 * 365])
       await (await (erc(input).connect(trader) as ethers.Contract).approve(PERMIT2, ethers.MaxUint256)).wait()
-      await (await new ethers.Contract(PERMIT2, ['function approve(address,address,uint160,uint48)'], trader).approve(input, UR, (1n << 160n) - 1n, Math.floor(Date.now() / 1000) + 86400)).wait()
+      await (await new ethers.Contract(PERMIT2, ['function approve(address,address,uint160,uint48)'], trader).approve(input, UR, (1n << 160n) - 1n, Math.floor(Date.now() / 1000) + 86400 * 365)).wait()
       await (await trader.sendTransaction({ to: UR, data })).wait()
     }
+    expect(await hook.inOpening(poolId)).to.equal(true)
+    const bidderB = ethers.Wallet.createRandom().address
+    await swap(!tokenIs0, 300_000n) // bid 1: attributed to tx.origin (the trader)
+    await swap(!tokenIs0, 100_000n, abi.encode(['address'], [bidderB])) // bid 2: attributed via hookData
+    expect(await erc(token).balanceOf(TRADER)).to.equal(0n) // nothing bought yet: it is a bid
+    expect((await hook.openings(poolId)).totalBids).to.equal(400_000n)
+    expect(await erc(ZZEC).balanceOf(hookAddr)).to.equal(400_000n)
+    const s0b = await sv.getSlot0(poolId); expect(s0b[1]).to.equal(s0[1]) // pool untouched during the opening
+    await expect(hook.settle(poolId)).to.be.revertedWithCustomError(hook, 'OpeningNotOver')
+    await network.provider.send('evm_increaseTime', [601]); await network.provider.send('evm_mine', [])
+    expect(await hook.inOpening(poolId)).to.equal(false)
+    await (await hook.settle(poolId)).wait()
+    const tokensOut = (await hook.openings(poolId)).tokensOut; expect(tokensOut).to.be.gt(0n)
+    await (await hook.connect(trader).claim(poolId)).wait()
+    const claimedA = await erc(token).balanceOf(TRADER)
+    expect(claimedA).to.equal((tokensOut * 300_000n) / 400_000n) // same price for everyone, pro rata
+    await expect(hook.connect(trader).claim(poolId)).to.be.revertedWithCustomError(hook, 'NothingToClaim')
+    console.log(`      opening: 2 bids (0.003 + 0.001 zZEC) settled in one swap -> ${ethers.formatEther(tokensOut)} ZBRA; trader claimed ${ethers.formatEther(claimedA)}`)
+
+    // ---- after the opening: normal trades through the Universal Router
     const buyIn = 1_000_000n // 0.01 zZEC
     const tokBefore = await erc(token).balanceOf(TRADER), creatorTokBefore = await erc(token).balanceOf(creator.address)
+    const sOpen = await sv.getSlot0(poolId)
     await swap(!tokenIs0, buyIn)
     const got = (await erc(token).balanceOf(TRADER)) - tokBefore
     expect(got).to.be.gt(0n)
     const creatorCut = (await erc(token).balanceOf(creator.address)) - creatorTokBefore
     expect(creatorCut).to.be.gt(0n) // 0.5% of a buy's token output goes to the creator
     const s1 = await sv.getSlot0(poolId)
-    console.log(`      bought ${ethers.formatEther(got)} ZBRA for 0.01 zZEC · creator got ${ethers.formatEther(creatorCut)} · tick ${s0[1]} -> ${s1[1]}`)
-    expect(tokenIs0 ? s1[1] > s0[1] : s1[1] < s0[1]).to.equal(true) // price of the token rose
+    console.log(`      bought ${ethers.formatEther(got)} ZBRA for 0.01 zZEC · creator got ${ethers.formatEther(creatorCut)} · tick ${sOpen[1]} -> ${s1[1]}`)
+    expect(tokenIs0 ? s1[1] > sOpen[1] : s1[1] < sOpen[1]).to.equal(true) // price of the token rose
 
     // ---- sell half back: the zZEC output pays the Furnace 1%
     const furnaceBefore = await erc(ZZEC).balanceOf(FURNACE)

@@ -13,11 +13,11 @@ const CREATE2 = '0x4e59b44847b379578588920cA78FbF26c0B4956C'
 const POOL_MANAGER = '0x8366a39cc670b4001a1121b8f6a443a643e40951'
 const FLAG_MASK = 0x3fffn, WANT = 0x0044n
 
-export function mineSalt(initCodeHash: string): { salt: string; address: string } {
+export function mineSalt(initCodeHash: string, want: bigint = WANT): { salt: string; address: string } {
   for (let i = 0n; i < 5_000_000n; i++) {
     const salt = ethers.zeroPadValue(ethers.toBeHex(i), 32)
     const addr = ethers.getCreate2Address(CREATE2, salt, initCodeHash)
-    if ((BigInt(addr) & FLAG_MASK) === WANT) return { salt, address: addr }
+    if ((BigInt(addr) & FLAG_MASK) === want) return { salt, address: addr }
   }
   throw new Error('no salt found')
 }
