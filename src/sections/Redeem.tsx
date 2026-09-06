@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CHAIN, CONTRACTS, LINKS, TOKEN } from '../config'
+import { CHAIN, CONTRACTS, LINKS, REDEEM_OPENS_AT, TOKEN } from '../config'
 import { encAddress, hexToBig, readBatchRaw, word, wordAddress } from '../lib/chain'
 import { stagger } from '../useReveal'
 
@@ -51,8 +51,30 @@ function RedeemFlow({ paid }: { paid: number }) {
   )
 }
 
+function OpensIn() {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => { const t = window.setInterval(() => setNow(Date.now()), 1000); return () => window.clearInterval(t) }, [])
+  const left = Math.max(0, (REDEEM_OPENS_AT - now) / 1000)
+  const d = Math.floor(left / 86400), h = Math.floor((left % 86400) / 3600), m = Math.floor((left % 3600) / 60), s = Math.floor(left % 60)
+  return (
+    <div className="wd-clock" data-reveal style={stagger(3)}>
+      <div className="wd-clock-l mono">redemptions open in</div>
+      <div className="wd-digits"><div><b>{pad(d)}</b><span className="mono">days</span></div><i>:</i><div><b>{pad(h)}</b><span className="mono">hours</span></div><i>:</i><div><b>{pad(m)}</b><span className="mono">min</span></div><i>:</i><div><b>{pad(s)}</b><span className="mono">sec</span></div></div>
+      <div className="wd-clock-f mono">{new Date(REDEEM_OPENS_AT).toUTCString().replace(' GMT', ' UTC')} · the desk contract is deployed and verified; new requests are paused on chain until then</div>
+      <ol className="wd-timeline mono">
+        <li className="done"><b>✓</b><span>RedemptionDesk deployed and verified</span><a href={`${CONTRACTS.explorer}/address/${CONTRACTS.desk}?tab=contract`} target="_blank" rel="noreferrer">contract ↗</a></li>
+        <li className="done"><b>✓</b><span>escrow-first design: paid before burned, reclaim after 7 days</span><a href="/docs/#/redeem">docs ↗</a></li>
+        <li className="now"><b>…</b><span>automatic payouts from a hot float wallet, proven end to end</span></li>
+        <li><b>4</b><span>requests unpaused · this form opens</span></li>
+      </ol>
+    </div>
+  )
+}
+const pad = (n: number) => String(Math.max(0, n)).padStart(2, '0')
+
 export function Redeem() {
   const desk = CONTRACTS.desk
+  const preLive = Date.now() < REDEEM_OPENS_AT
   const [info, setInfo] = useState<Desk | null>(null)
   const [account, setAccount] = useState<string | null>(null)
   const [balance, setBalance] = useState<bigint>(0n)
@@ -141,6 +163,17 @@ export function Redeem() {
 
         {!desk ? (
           <div className="redeem-soon" data-reveal style={stagger(3)}><span className="tag tag-wait"><span className="dot" /> pending</span><p>The desk deploys with Phase 03.</p></div>
+        ) : preLive ? (
+          <>
+            <OpensIn />
+            <div className="rd-badges" data-reveal style={stagger(4)}>
+              <span><b>no fee</b>1:1, the reserve pays the Zcash network fee</span>
+              <span><b>escrow, not burn</b>your zZEC is held, and burned only after you are paid</span>
+              <span><b>7-day reclaim</b>unconditional · no role can pause it</span>
+              <span><b>on-chain receipt</b>every payout's Zcash txid is recorded in the contract</span>
+            </div>
+            <div className="rd-flow-wrap" data-reveal style={stagger(4)}><RedeemFlow paid={0} /></div>
+          </>
         ) : (
           <>
             <div className="rd-badges" data-reveal style={stagger(3)}>

@@ -6,6 +6,10 @@ group: Using it
 
 > **In one breath.** Put your zZEC into the Redemption Desk with a transparent Zcash address. The operator pays you real ZEC from the reserve, then records the Zcash transaction on chain, and only then is your zZEC burned. If nothing has arrived after 7 days, you take your zZEC back yourself. No permission, no pause, ever.
 
+## Status
+
+The desk is deployed and verified. New requests are paused on chain until **2026-09-06 at 17:00 UTC**, when automatic payouts from a hot float wallet go live alongside it. Fulfil and reclaim are never pausable; the pause only gates new requests.
+
 ## Why escrow first
 
 {{viz:redeemstates}}

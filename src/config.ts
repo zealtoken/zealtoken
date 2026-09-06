@@ -186,3 +186,6 @@ export const STATIONS = {
     { n: '05', t: 'Supply', s: 'less $ZEAL exists' },
   ],
 } as const
+
+/** Redemption opens to the public at this moment (UTC). Until then the desk refuses new requests and the site shows a countdown. */
+export const REDEEM_OPENS_AT = Date.UTC(2026, 8, 6, 17, 0, 0)
