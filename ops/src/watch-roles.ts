@@ -47,7 +47,7 @@ async function main() {
   if (now.zzec.pendingMinter !== zero) {
     const line = `ZZEC minter change proposed -> ${now.zzec.pendingMinter} (eta ${new Date(now.zzec.pendingMinterEta * 1000).toISOString()})`
     // the WrapDesk handover is ours: log it, do not alert on it
-    if (now.zzec.pendingMinter.toLowerCase() === (process.env.WRAP_DESK_ADDRESS ?? '').toLowerCase()) console.log(`${stamp} expected ${line}`)
+    if (now.zzec.pendingMinter.toLowerCase() === (process.env.WRAP_DESK_ADDRESS ?? '').toLowerCase()) console.log(`${new Date().toISOString()} expected ${line}`)
     else alerts.push(line)
   }
   if (now.zzec.mintingPaused) alerts.push('ZZEC minting is PAUSED')
