@@ -9,3 +9,6 @@ launchd/burn.log
 launchd/keeper-pricefail
 launchd/wrap.json
 launchd/desk-alerted
+desk-ledger.json
+.float/
+launchd/desk-pay.log

@@ -21,7 +21,8 @@
     "lp:collect": "tsx src/lp-collect.ts",
     "desk": "tsx src/fulfill.ts",
     "wrap": "tsx src/wrap.ts",
-    "watch:desk": "tsx src/desk-watch.ts"
+    "watch:desk": "tsx src/desk-watch.ts",
+    "desk:pay": "tsx src/desk-pay.ts"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.4",

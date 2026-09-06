@@ -38,7 +38,8 @@ export async function chainTipHash(): Promise<string> {
  */
 export async function sendZec(toTAddress: string, zats: bigint): Promise<string> {
   if (!/^t[13][a-zA-Z0-9]{33}$/.test(toTAddress)) throw new Error(`not a transparent address: ${toTAddress}`)
-  const extra = (process.env.ZINGO_SEND_ARGS ?? '--online').split(' ').filter(Boolean)
+  // zingo-cli v0.4 (zingolib v5): `--waitsync quicksend <address> <zatoshis>` sends and broadcasts in one step.
+  const extra = (process.env.ZINGO_SEND_ARGS ?? '').split(' ').filter(Boolean)
   const out = await zingo([...extra, '--waitsync', process.env.ZINGO_SEND_CMD ?? 'quicksend', toTAddress, zats.toString()])
   const m = out.match(/[0-9a-f]{64}/i)
   if (!m) throw new Error(`send produced no txid: ${out.slice(0, 200)}`)
