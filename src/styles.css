@@ -1323,3 +1323,34 @@ p:last-child { margin-bottom: 0; }
 .ld-band .rd-acct { font-size: 13px; }
 .rd-amt input { min-width: 0; }
 @media (max-width: 960px) { .ld-stat { display: flex; } .ld-row { grid-template-columns: 36px 26px 1fr 1fr; } .ld-row .ld-stat { grid-column: span 2; } }
+
+/* redemption desk: polish pass */
+.rd-band .rd-badges span { font-family: var(--sans); font-size: 14px; line-height: 1.5; padding: 16px 18px; border-radius: 14px; gap: 6px; }
+.rd-band .rd-badges b { font-size: 11px; }
+.rd-band .rd-flow-wrap { padding: 18px 22px 8px; }
+.rd-band .rd-n-t { font-size: 14px; } .rd-band .rd-n-s { font-size: 11px; } .rd-band .rd-e-t { font-size: 11px; } .rd-band .rd-zone-t { font-size: 11px; }
+.rd-band .rd-strip div { padding: 16px 18px; border-radius: 14px; gap: 6px; }
+.rd-band .rd-strip span { font-size: 10.5px; } .rd-band .rd-strip b { font-size: 20px; letter-spacing: -.02em; } .rd-band .rd-strip i { font-family: var(--sans); font-size: 12.5px; letter-spacing: 0; }
+.rd-band .rd-form { padding: 26px; gap: 12px; border-radius: 20px; }
+.rd-band .rd-steps li { font-size: 11px; padding: 10px 12px; }
+.rd-band .rd-connect p { font-family: var(--sans); font-size: 13.5px; letter-spacing: 0; color: var(--fg-faint); }
+.rd-band .rd-how { font-family: var(--sans); font-size: 14px; letter-spacing: 0; line-height: 1.5; gap: 8px; padding-top: 16px; }
+.rd-band .rd-how b { font-family: var(--mono); min-width: 24px; display: inline-block; }
+.rd-band .redeem-fine { font-size: 12.5px; }
+.rd-band .redeem-l { font-size: 11px; }
+.rd-recent { border: 1px solid var(--line); border-radius: 20px; padding: 22px 24px; background: var(--ink-2); }
+.rd-recent-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.rd-recent-h .redeem-h { margin: 0; }
+.rd-recent-n { font-size: 11px; color: var(--fg-faint); letter-spacing: .1em; }
+.rd-recent .redeem-empty { font-family: var(--sans); font-size: 14px; color: var(--fg-faint); line-height: 1.5; }
+.rd-recent-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1.2fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+.rd-recent-amt { font-size: 16px; font-weight: 700; } .rd-recent-amt span { font-size: 11px; color: var(--fg-faint); margin-left: 4px; }
+.rd-recent-to { font-size: 12px; color: var(--fg-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rd-recent-tx { font-size: 13px; color: var(--green-bright); text-decoration: none; white-space: nowrap; }
+.rd-band .rd-inc-h .h3 { font-size: clamp(24px, 3vw, 34px); letter-spacing: -.03em; }
+.rd-band .rd-inc-card { padding: 22px; gap: 10px; border-radius: 18px; }
+.rd-band .rd-inc-card b { font-size: 19px; }
+.rd-band .rd-inc-card p { font-size: 14.5px; line-height: 1.55; }
+.rd-band .rd-inc-card i { font-family: var(--sans); font-size: 13px; letter-spacing: 0; text-transform: none; font-weight: 600; }
+.rd-band .rd-inc-soon { font-family: var(--sans); font-size: 13px; letter-spacing: 0; }
+@media (max-width: 700px) { .rd-recent-row { grid-template-columns: 40px 1fr auto; } .rd-recent-to { display: none; } }

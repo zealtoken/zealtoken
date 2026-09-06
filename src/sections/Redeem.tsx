@@ -38,13 +38,13 @@ function RedeemFlow({ paid }: { paid: number }) {
       <rect x="300" y="50" width="300" height="90" rx="16" fill="url(#rdglow)" />
       <g className="rd-node"><rect x="50" y="70" width="110" height="64" rx="12" /><text x="105" y="97" className="rd-n-t">your wallet</text><text x="105" y="116" className="rd-n-s">zZEC</text></g>
       <g className="rd-node g"><rect x="180" y="70" width="100" height="64" rx="12" /><text x="230" y="97" className="rd-n-t">escrow</text><text x="230" y="116" className="rd-n-s">still yours</text></g>
-      <g className="rd-node g"><rect x="395" y="60" width="110" height="84" rx="14" /><text x="450" y="90" className="rd-n-t">the desk</text><text x="450" y="108" className="rd-n-s">records txid</text><text x="450" y="126" className="rd-n-s">then burns</text></g>
+      <g className="rd-node g"><rect x="395" y="60" width="110" height="84" rx="14" /><text x="450" y="90" className="rd-n-t">the desk</text><text x="450" y="108" className="rd-n-s">records the txid</text><text x="450" y="126" className="rd-n-s">then burns the escrow</text></g>
       <g className="rd-node"><rect x="640" y="70" width="110" height="64" rx="12" /><text x="695" y="97" className="rd-n-t">reserve</text><text x="695" y="116" className="rd-n-s">t1Ujk…</text></g>
-      <g className="rd-node g"><rect x="760" y="70" width="100" height="64" rx="12" /><text x="810" y="97" className="rd-n-t">your t-addr</text><text x="810" y="116" className="rd-n-s">native ZEC</text></g>
+      <g className="rd-node g"><rect x="760" y="70" width="100" height="64" rx="12" /><text x="810" y="97" className="rd-n-t">your address</text><text x="810" y="116" className="rd-n-s">native ZEC</text></g>
       <path d="M160 102 L180 102" className="rd-e" markerEnd="url(#rdarr)" />
       <path d="M280 102 C 330 102, 340 102, 395 102" className="rd-e" markerEnd="url(#rdarr)" />
       <path d="M750 102 L760 102" className="rd-e" markerEnd="url(#rdarr)" />
-      <path d="M505 80 C 560 80, 590 80, 640 90" className="rd-e" markerEnd="url(#rdarr)" /><text x="572" y="66" className="rd-e-t">operator pays</text>
+      <path d="M505 80 C 560 80, 590 80, 640 90" className="rd-e" markerEnd="url(#rdarr)" /><text x="572" y="66" className="rd-e-t">automatic payout</text>
       <path d="M640 118 C 590 130, 560 130, 505 124" className="rd-e slow" markerEnd="url(#rdarr)" /><text x="572" y="152" className="rd-e-t">txid recorded</text>
       <path d="M230 134 C 230 165, 300 172, 450 172 C 470 172, 470 172, 450 144" className="rd-e burn" markerEnd="url(#rdarr)" /><text x="330" y="186" className="rd-e-t">escrow burned only after payout · {paid} paid so far</text>
     </svg>
@@ -233,9 +233,9 @@ export function Redeem() {
                 )}
                 {msg && <p className={`rd-msg mono ${msg.kind}`}>{msg.text}</p>}
                 <div className="rd-how mono">
-                  <div><b>01</b>{TOKEN.wrapper} moves into escrow. Still yours.</div>
-                  <div><b>02</b>operator pays native ZEC to your t-address</div>
-                  <div><b>03</b>txid recorded on chain, escrow burned</div>
+                  <div><b>01</b>your {TOKEN.wrapper} moves into escrow. It is still yours.</div>
+                  <div><b>02</b>the desk pays native ZEC to your address, automatically</div>
+                  <div><b>03</b>the Zcash transaction id is recorded on chain and the escrow is burned</div>
                   <div><b>04</b>if a payout ever failed, <em>reclaim</em> your {TOKEN.wrapper} yourself</div>
                 </div>
                 <p className="redeem-fine mono"><a href={`${CONTRACTS.explorer}/address/${desk}?tab=contract`} target="_blank" rel="noreferrer">desk contract ↗</a> · <a href="/docs/#/redeem">how it works ↗</a></p>
@@ -269,15 +269,15 @@ export function Redeem() {
                     })}
                   </div>
                 )}
-                <div>
-                  <div className="redeem-h mono">recent payouts</div>
-                  {recent.length === 0 && <div className="redeem-empty mono">no redemptions paid yet · the first one lands here with its Zcash transaction</div>}
+                <div className="rd-recent">
+                  <div className="rd-recent-h"><span className="redeem-h mono">recent payouts</span><span className="mono rd-recent-n">{info ? `${info.paid} paid · ${zec(info.paidAmount)} ZEC` : ''}</span></div>
+                  {recent.length === 0 && <div className="redeem-empty">No redemptions paid yet. The first one lands here with its Zcash transaction.</div>}
                   {recent.map((r) => (
-                    <div className="redeem-row" key={r.id}>
-                      <span className="mono">#{r.id}</span>
-                      <span className="mono">{zec(r.amount)} {TOKEN.wrapper}</span>
-                      <span className="mono redeem-addr">{r.zaddr.slice(0, 8)}…{r.zaddr.slice(-4)}</span>
-                      <a className="mono redeem-tx" href={`${LINKS.zcashTx}${r.txid.slice(2)}`} target="_blank" rel="noreferrer">zcash tx ↗</a>
+                    <div className="rd-recent-row" key={r.id}>
+                      <span className="mono rd-id">#{r.id}</span>
+                      <span className="rd-recent-amt">{zec(r.amount)} <span className="mono">{TOKEN.wrapper}</span></span>
+                      <span className="mono rd-recent-to">→ {r.zaddr.slice(0, 10)}…{r.zaddr.slice(-6)}</span>
+                      <a className="rd-recent-tx" href={`${LINKS.zcashTx}${r.txid.slice(2)}`} target="_blank" rel="noreferrer">view on Zcash ↗</a>
                     </div>
                   ))}
                 </div>
