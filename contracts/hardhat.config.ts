@@ -19,6 +19,8 @@ const config: HardhatUserConfig = {
     },
   },
   networks: {
+    // FORK_URL=https://rpc.mainnet.chain.robinhood.com FORK=1 npx hardhat test test/ZealzFork.test.ts
+    hardhat: process.env.FORK_URL ? { forking: { url: process.env.FORK_URL }, chainId: 4663 } : {},
     rhMainnet: {
       url: process.env.RH_RPC_URL ?? 'https://rpc.mainnet.chain.robinhood.com',
       chainId: 4663,

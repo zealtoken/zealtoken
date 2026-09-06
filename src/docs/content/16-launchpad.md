@@ -17,9 +17,9 @@ Every other launchpad prices tokens in the chain's gas coin. zealz.fun prices th
 | Contract | Job | Trust it needs |
 |---|---|---|
 | **ZealzToken** | A plain ERC-20 with a fixed supply of 1,000,000,000, minted once to the factory. No owner, no mint function, no tax, no hooks. | None. It is the simplest token that can exist. |
-| **ZealzFactory** | Creates the token, opens the zZEC pool, seeds it, hands the position to the locker, records the launch. | None after deployment. Anyone may call `launch()`. |
+| **ZealzFactory** | Creates the token, opens the zZEC pool at the bottom of a single-sided range that holds the entire supply, hands the position to the locker, records the launch. The creator brings no capital. | None after deployment. Anyone may call `launch()`. |
 | **ZealzHook** | Runs after every swap in a launched pool and takes 2% of the output. On the zZEC side: 1% to the Furnace, 0.5% to the creator, 0.5% to treasury. On the token side: creator and treasury split it. | Immutable percentages and destinations. Only the factory can register pools. |
-| **ZealzLocker** | Holds every launch's position NFT. Can collect the position's fees. Cannot decrease liquidity, transfer the NFT, or be upgraded. | None. It has no owner. |
+| **ZealzLocker** | Holds every launch's position NFT forever. Anyone can call `compound()`: it collects the position's LP fees and adds them straight back as liquidity in the same range, so the floor only rises. Cannot decrease liquidity, transfer the NFT, or be upgraded. | None. It has no owner. |
 
 All four live in the public repository under `contracts/contracts/zealz/`.
 
@@ -68,18 +68,18 @@ Whether the locked position's LP fees also go to the creator, or to treasury, is
 - **zZEC demand.** Every buyer needs zZEC, which means buying it on the market or wrapping ZEC, both of which pull ZEC into the reserve.
 - **Permanently locked zZEC.** The zZEC that buyers spend accumulates inside locked positions and never comes out.
 
-## The two ways to seed a pool
+## Where the liquidity comes from with no bonding curve
 
-The code today requires the creator to bring some zZEC to seed the pool alongside the tokens (`minZzecIn`). Every launch then opens with two-sided liquidity and a real starting price.
+The liquidity is the supply. At launch the factory puts all one billion tokens into one locked Uniswap v4 position whose price range sits entirely above the opening price, so it holds only the token. The first buyer's zZEC enters that position and takes tokens out of the bottom of the range; every buy walks the price up the range and leaves more zZEC locked behind it; sells walk it back down. That is a bonding curve, except it lives inside the locked position from the first second: no curve contract, no graduation, no moment where anyone holds the funds. Two shapes: gentle (a wide range, price rises slowly per zZEC) and steep.
 
-The alternative under consideration is **capital-free launches**: the pool opens with tokens only, positioned in a price range above the starting price, and the first buyers' zZEC fills the locked position. Creators need nothing but the launch fee. The locking, the hook, and the burn are identical; the difference is who funds the first zZEC.
+## The floor only goes up
+
+The pool's 0.3% LP fee accrues to the locked position. Anyone can call `compound()` on the locker: it collects those fees and adds them back as liquidity in the same range. Depth rises with every trade and can never fall, so a token's worst-case exit price ratchets upward over its life.
 
 ## Open decisions
 
 | Decision | Options | Effect |
 |---|---|---|
-| Starting liquidity | creator brings zZEC, or capital-free single-sided tokens | who can launch, and whether launch day has two-sided depth |
-| Locked position's LP fees | creator, or treasury | the size of the creator's permanent incentive |
 | Launch fee | ETH or zZEC, and how much | a zZEC fee forces creators to wrap first, feeding the reserve |
 | Anti-snipe | none, or a per-wallet cap in the first block | limits a creator buying their own launch with a second wallet |
 
@@ -87,8 +87,8 @@ The alternative under consideration is **capital-free launches**: the pool opens
 
 | Piece | State |
 |---|---|
-| ZealzToken, ZealzHook, ZealzLocker | written, unit-tested |
-| ZealzFactory | written, compiles, one bug: the initial-price calculation loses precision when a billion tokens meet a fraction of a zZEC, so the first swap on a fork reverted. Needs Q64.96 fixed-point math, then a full lifecycle test on a fork. |
+| ZealzToken, ZealzHook, ZealzLocker, ZealzFactory | written and unit-tested; the full lifecycle passes on a fork of Robinhood Chain: capital-free launch, buy and sell through the real Universal Router with the hook paying the creator and the Furnace, then a compound that raised the locked liquidity |
+| Dutch opening | next: the hook holds a descending price for the first minutes so everyone in the window clears at one price |
 | Hook deployment | needs a mined address (Uniswap v4 encodes hook permissions in the address) |
 | zealz.fun interface | built: feed, token pages, launch form with live preview, explainer. On a preview link with clearly labelled sample data until the factory deploys. |
 | Docs | this page |

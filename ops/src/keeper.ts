@@ -85,7 +85,8 @@ function encode(p: Plan): { data: string; value: bigint } {
   const zeroForOne = p.side === 'buy'
   const actions = ethers.solidityPacked(['uint8', 'uint8', 'uint8'], [ACT.SWAP_EXACT_IN_SINGLE, ACT.SETTLE_ALL, ACT.TAKE_ALL])
   const params = [
-    abi.encode([`tuple(${KEY_T} poolKey,bool zeroForOne,uint128 amountIn,uint128 amountOutMinimum,bytes hookData)`], [{ poolKey: key, zeroForOne, amountIn: p.amountIn, amountOutMinimum: p.minOut, hookData: '0x' }]),
+    // Robinhood Chain's Universal Router carries an extra uint256 minHopPriceX36 in ExactInputSingleParams (modified v4-periphery).
+    abi.encode([`tuple(${KEY_T} poolKey,bool zeroForOne,uint128 amountIn,uint128 amountOutMinimum,uint256 minHopPriceX36,bytes hookData)`], [{ poolKey: key, zeroForOne, amountIn: p.amountIn, amountOutMinimum: p.minOut, minHopPriceX36: 0n, hookData: '0x' }]),
     abi.encode(['address', 'uint256'], [zeroForOne ? ETH : CONTRACTS.zzec, p.amountIn]),
     abi.encode(['address', 'uint256'], [zeroForOne ? CONTRACTS.zzec : ETH, p.minOut]),
   ]

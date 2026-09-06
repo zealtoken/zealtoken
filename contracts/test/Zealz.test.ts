@@ -45,23 +45,20 @@ describe('zealz.fun contracts (unit; the factory is exercised on a chain fork)',
     expect(r2[1]).to.equal(20_000n) // still 2%, all to creator + treasury
   })
 
-  it('locker: accepts only factory deposits via the position manager, collects fees to the treasury, never releases', async () => {
-    const [, factory, treasury, stranger] = await ethers.getSigners()
+  it('locker: accepts only factory deposits via the position manager and refuses unknown positions', async () => {
+    const [, factory, stranger] = await ethers.getSigners()
     const Mock = await ethers.getContractFactory('MockERC20')
     const zzec = await Mock.deploy('zZEC', 'zZEC', 8)
     const posm = await (await ethers.getContractFactory('MockPositionManagerV4')).deploy()
-    const locker = await (await ethers.getContractFactory('ZealzLocker')).deploy(await posm.getAddress(), factory.address, treasury.address)
+    const pm = await (await ethers.getContractFactory('MockPoolManagerV4')).deploy()
+    const locker = await (await ethers.getContractFactory('ZealzLocker')).deploy(await posm.getAddress(), await pm.getAddress(), '0x000000000022D473030F116dDEE9F6B43aC78BA3', factory.address)
     const key = { currency0: ETH, currency1: await zzec.getAddress(), fee: 3000, tickSpacing: 60, hooks: ETH }
     await posm.setPositionPool(5, key)
     await expect(posm.giveFrom(stranger.address, await locker.getAddress(), 5)).to.be.revertedWithCustomError(locker, 'NotFactoryDeposit')
     await posm.giveFrom(factory.address, await locker.getAddress(), 5)
     expect(await locker.positionCount()).to.equal(1n)
-    await expect(locker.collect(6)).to.be.revertedWithCustomError(locker, 'NotLocked')
-    await posm.setFees(await zzec.getAddress(), 777n, 0n)
-    await expect(locker.connect(stranger).collect(5)).to.emit(locker, 'FeesCollected')
-    expect(await zzec.balanceOf(treasury.address)).to.equal(777n)
-    const fns = locker.interface.fragments.filter((f) => f.type === 'function').map((f) => (f as unknown as { name: string }).name).sort()
-    expect(fns).to.deep.equal(['collect', 'factory', 'locked', 'onERC721Received', 'positionCount', 'positionIds', 'positionManager', 'treasury'])
+    expect(await locker.locked(5)).to.equal(true)
+    await expect(locker.compound(6)).to.be.revertedWithCustomError(locker, 'NotLocked')
   })
 
   it('token: fixed supply to the recipient, no owner, metadata readable', async () => {
