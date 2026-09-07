@@ -139,6 +139,7 @@ export const FURNACE = {
 } as const
 
 export const LINKS = {
+  zealz: 'https://zealz.fun',
   uniswapSwap: 'https://app.uniswap.org/swap?chain=robinhood&inputCurrency=NATIVE&outputCurrency=0x0b151Ff7a7c5250130EC16C275790961d558E402',
   uniswapAddLiquidity: 'https://app.uniswap.org/positions/create/v4?currencyA=NATIVE&currencyB=0x0b151Ff7a7c5250130EC16C275790961d558E402&chain=robinhood&feeTier=3000&tickSpacing=60&hook=0x16642362837e2FDC02fF1ECF71f5629c094B0044',
   zcashExplorer: 'https://mainnet.zcashexplorer.app/address/',

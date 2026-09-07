@@ -12,3 +12,6 @@ launchd/desk-alerted
 desk-ledger.json
 .float/
 launchd/desk-pay.log
+
+reserve-signer/target/
+launchd/reserve-transfers.json

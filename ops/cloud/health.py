@@ -15,6 +15,16 @@ jobs={'keeper':120,'attest':25200,'replenish':4200,'roles':900,'desk-watch':900,
 if pathlib.Path('/etc/zeal/PAYOUT_ACTIVE').exists(): jobs.update({'desk-pay':2400,'float-health':2400})
 if pathlib.Path('/etc/zeal/BURN_ACTIVE').exists(): jobs['burn']=108000
 if pathlib.Path('/etc/zeal/LP_REINVEST_ACTIVE').exists(): jobs['lp-reinvest']=7500
+if pathlib.Path('/etc/zeal/RESERVE_ACTIVE').exists():
+ jobs['reserve-reimburse']=900
+ try:
+  import datetime
+  transfers=json.loads(pathlib.Path('/var/lib/zeal/runtime/launchd/reserve-transfers.json').read_text())
+  for transfer in transfers:
+   if transfer['status']!='confirmed' and time.time()-datetime.datetime.fromisoformat(transfer['at'].replace('Z','+00:00')).timestamp()>900:
+    healthy=False;problems['reserve-settlement']='Reserve reimbursement is pending or uncertain for over 15 minutes. Minting is blocked until reconciliation; do not resend blindly.'
+ except Exception:
+  healthy=False;problems['reserve-journal']='Reserve transfer journal missing or unreadable. Stop reserve spending and reconcile before restoring.'
 for job,max_age in jobs.items():
  raw=subprocess.check_output(['systemctl','show','zeal-'+job+'.service','--property=ExecMainStatus,ExecMainExitTimestampMonotonic,ExecMainStartTimestampMonotonic,ActiveState'],text=True)
  props=dict(l.split('=',1) for l in raw.splitlines() if '=' in l)

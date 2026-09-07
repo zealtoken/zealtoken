@@ -363,6 +363,7 @@ p:last-child { margin-bottom: 0; }
 .nav-group { position: relative; }
 .nav-top { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
 .nav-caret { font-size: 9px; opacity: .5; }
+.nav-ext { font-size: 10px; opacity: .55; }
 .nav-menu {
   position: absolute; top: calc(100% + 14px); left: -14px; min-width: 232px;
   background: #f7f7f4;

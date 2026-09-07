@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { LINKS, TOKEN } from '../config'
 
 /** Four groups instead of twelve flat links. Order is what a visitor wants first: do something, understand it, check it. */
-const GROUPS: { label: string; href?: string; items?: { href: string; label: string; note: string }[] }[] = [
+const GROUPS: { label: string; href?: string; external?: boolean; items?: { href: string; label: string; note: string }[] }[] = [
   {
     label: 'Use it',
     items: [
@@ -29,6 +29,7 @@ const GROUPS: { label: string; href?: string; items?: { href: string; label: str
       { href: '#faq', label: 'FAQ', note: 'the awkward questions' },
     ],
   },
+  { label: 'zealz.fun', href: 'https://zealz.fun', external: true },
   { label: 'Docs', href: '/docs/' },
 ]
 
@@ -54,7 +55,9 @@ export function Nav() {
         <nav className={`nav-links ${open ? 'is-open' : ''}`}>
           {GROUPS.map((g) =>
             g.href ? (
-              <a key={g.label} className="nav-top" href={g.href} onClick={() => setOpen(false)}>{g.label}</a>
+              <a key={g.label} className="nav-top" href={g.href} onClick={() => setOpen(false)} {...(g.external ? { target: '_blank', rel: 'noreferrer' } : {})}>
+                {g.label}{g.external && <span className="nav-ext" aria-hidden> &#8599;</span>}
+              </a>
             ) : (
               <div key={g.label} className="nav-group">
                 <button className="nav-top" aria-haspopup="true">{g.label}<span className="nav-caret" aria-hidden>&#8964;</span></button>

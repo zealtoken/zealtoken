@@ -1,5 +1,6 @@
 import { ethers } from 'ethers'
 import { CHAIN, CONTRACTS, requireEnv } from './config.js'
+import { reimbursementCredits } from './reserve-settlements.js'
 
 export type DeskLiability = { amount: bigint; status: number; redemptionId: bigint }
 
@@ -44,6 +45,9 @@ export async function redemptionAccounting() {
       const batch = await Promise.all(Array.from({ length: Math.min(10, Number(n) - i) }, (_, j) => desk.getRequest(i + j, { blockTag })))
       rows.push(...batch.map(r => ({ amount: BigInt(r.amount), status: Number(r.status), redemptionId: BigInt(r.zzecRedemptionId) })))
     }
-    return { block: blockTag, supply: BigInt(supply), reimbursementZats: reimbursementDue(rows, BigInt(count)), requests: Number(n) }
+    const gross = reimbursementDue(rows, BigInt(count))
+    const credited = await reimbursementCredits()
+    if (credited > gross) throw new Error('Reserve reimbursements exceed completed desk obligations')
+    return { block: blockTag, supply: BigInt(supply), reimbursementZats: gross - credited, requests: Number(n) }
   } finally { provider.destroy() }
 }
