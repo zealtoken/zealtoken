@@ -73,35 +73,49 @@ contract ZealzLocker is IERC721Receiver, ReentrancyGuard {
     }
 
     /// @notice Collect a position's LP fees and add them back as liquidity. Anyone may call.
+    /// @notice Fee residue left over from a position's own compounds (the side the ratio did not need). Never shared across positions.
+    mapping(uint256 => uint256) public residue0;
+    mapping(uint256 => uint256) public residue1;
+
     function compound(uint256 tokenId) external nonReentrant {
         if (!locked[tokenId]) revert NotLocked();
         (PoolKey memory key, uint256 info) = positionManager.getPoolAndPositionInfo(tokenId);
-        // 1. collect: a zero decrease pays accrued fees to this contract
-        {
-            bytes[] memory p = new bytes[](2);
-            p[0] = abi.encode(tokenId, uint256(0), uint128(0), uint128(0), bytes(""));
-            p[1] = abi.encode(key.currency0, key.currency1, address(this));
-            positionManager.modifyLiquidities(abi.encode(abi.encodePacked(ACTION_DECREASE_LIQUIDITY, ACTION_TAKE_PAIR), p), block.timestamp);
-        }
-        uint256 bal0 = IERC20(key.currency0).balanceOf(address(this));
-        uint256 bal1 = IERC20(key.currency1).balanceOf(address(this));
-        // 2. how much liquidity those balances buy in this position's range at the current price
-        int24 tickLower = int24(uint24(info >> 8));
-        int24 tickUpper = int24(uint24(info >> 32));
-        uint160 sA = TickMath.getSqrtPriceAtTick(tickLower);
-        uint160 sB = TickMath.getSqrtPriceAtTick(tickUpper);
-        uint160 sP = uint160(uint256(poolManager.extsload(keccak256(abi.encodePacked(keccak256(abi.encode(key)), POOLS_SLOT)))));
-        uint256 liquidity = _liquidityFor(sP, sA, sB, bal0, bal1);
-        if (liquidity == 0) revert NothingToCompound();
-        // 3. add it back, paying from the balances held here
-        _approve(key.currency0, bal0);
-        _approve(key.currency1, bal1);
+        (uint256 amt0, uint256 amt1) = _collect(tokenId, key);
+        uint256 liquidity = _liquidityFor(_sqrtPrice(key), TickMath.getSqrtPriceAtTick(int24(uint24(info >> 8))), TickMath.getSqrtPriceAtTick(int24(uint24(info >> 32))), amt0, amt1);
+        if (liquidity == 0) { residue0[tokenId] = amt0; residue1[tokenId] = amt1; revert NothingToCompound(); }
+        (uint256 used0, uint256 used1) = _add(tokenId, key, liquidity, amt0, amt1);
+        residue0[tokenId] = amt0 - used0; residue1[tokenId] = amt1 - used1;
+        compoundedLiquidity[tokenId] += liquidity;
+        emit Compounded(tokenId, msg.sender, liquidity, used0, used1);
+    }
+
+    /// @dev 1. collect: a zero decrease pays accrued fees here. Returns what THIS position just earned plus its
+    ///      own residue; other positions' balances sitting here are not ours to spend.
+    function _collect(uint256 tokenId, PoolKey memory key) private returns (uint256 amt0, uint256 amt1) {
+        uint256 b0 = IERC20(key.currency0).balanceOf(address(this)); uint256 b1 = IERC20(key.currency1).balanceOf(address(this));
+        bytes[] memory p = new bytes[](2);
+        p[0] = abi.encode(tokenId, uint256(0), uint128(0), uint128(0), bytes(""));
+        p[1] = abi.encode(key.currency0, key.currency1, address(this));
+        positionManager.modifyLiquidities(abi.encode(abi.encodePacked(ACTION_DECREASE_LIQUIDITY, ACTION_TAKE_PAIR), p), block.timestamp);
+        amt0 = IERC20(key.currency0).balanceOf(address(this)) - b0 + residue0[tokenId];
+        amt1 = IERC20(key.currency1).balanceOf(address(this)) - b1 + residue1[tokenId];
+    }
+
+    /// @dev 3. add liquidity back, paying at most amt0/amt1 from here. Returns what was actually used.
+    function _add(uint256 tokenId, PoolKey memory key, uint256 liquidity, uint256 amt0, uint256 amt1) private returns (uint256 used0, uint256 used1) {
+        _approve(key.currency0, amt0);
+        _approve(key.currency1, amt1);
+        uint256 pre0 = IERC20(key.currency0).balanceOf(address(this)); uint256 pre1 = IERC20(key.currency1).balanceOf(address(this));
         bytes[] memory q = new bytes[](2);
-        q[0] = abi.encode(tokenId, liquidity, uint128(bal0), uint128(bal1), bytes(""));
+        q[0] = abi.encode(tokenId, liquidity, uint128(amt0), uint128(amt1), bytes(""));
         q[1] = abi.encode(key.currency0, key.currency1);
         positionManager.modifyLiquidities(abi.encode(abi.encodePacked(ACTION_INCREASE_LIQUIDITY, ACTION_SETTLE_PAIR), q), block.timestamp);
-        compoundedLiquidity[tokenId] += liquidity;
-        emit Compounded(tokenId, msg.sender, liquidity, bal0 - IERC20(key.currency0).balanceOf(address(this)), bal1 - IERC20(key.currency1).balanceOf(address(this)));
+        used0 = pre0 - IERC20(key.currency0).balanceOf(address(this)); used1 = pre1 - IERC20(key.currency1).balanceOf(address(this));
+    }
+
+    /// @dev 2. the pool's current sqrt price, read from the PoolManager's storage (v4-core layout: pools slot 6).
+    function _sqrtPrice(PoolKey memory key) private view returns (uint160) {
+        return uint160(uint256(poolManager.extsload(keccak256(abi.encodePacked(keccak256(abi.encode(key)), POOLS_SLOT)))));
     }
 
     /// @dev LiquidityAmounts.getLiquidityForAmounts, with a hair of headroom so rounding never overdraws.

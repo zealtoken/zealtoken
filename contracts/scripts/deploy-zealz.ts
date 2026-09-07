@@ -32,7 +32,7 @@ async function main() {
   const nonce = await ethers.provider.getTransactionCount(wallet.address)
   const factoryAddr = ethers.getCreateAddress({ from: wallet.address, nonce: nonce + 1 }) // hook deploy is nonce, factory is nonce + 1
   const initCode = ethers.concat([Hook.bytecode, abi.encode(['address', 'address', 'address', 'address', 'address'], [POOL_MANAGER, factoryAddr, FURNACE, treasury, ZZEC])])
-  const { salt, address: hookAddr } = mineSalt(ethers.keccak256(initCode), 0x00ccn)
+  const { salt, address: hookAddr } = mineSalt(ethers.keccak256(initCode), 0x20ccn)
   console.log(`\nDeployer   ${wallet.address}\nTreasury   ${treasury}\nOpening    ${capZzec} zZEC cap · ticks ${openTick0} / ${openTick1}\nLaunch fee ${launchFee} zats\nHook       ${hookAddr} (salt ${salt})\nFactory    ${factoryAddr} (predicted)\n`)
   if ((await ethers.provider.getCode(hookAddr)) !== '0x') throw new Error('hook already deployed at that address')
 

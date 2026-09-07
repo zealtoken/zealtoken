@@ -102,7 +102,7 @@ export function LiquidityDesk() {
     } catch (e) { setMsg({ kind: 'err', text: (e as Error).message }) }
   }
   const send = async (to: string, data: string, value = 0n) => {
-    const p = eth()!; const tx: Record<string, string> = { from: account!, to, data }; if (value > 0n) tx.value = '0x' + value.toString(16)
+    const p = eth()!; const tx: Record<string, string> = { from: account!, to, data, chainId: CHAIN_HEX }; if (value > 0n) tx.value = '0x' + value.toString(16)
     const hash = (await p.request({ method: 'eth_sendTransaction', params: [tx] })) as string
     for (let i = 0; i < 80; i++) { const r = (await p.request({ method: 'eth_getTransactionReceipt', params: [hash] })) as { status: string } | null; if (r) { if (r.status !== '0x1') throw new Error('transaction reverted'); return hash } await new Promise((res) => setTimeout(res, 1500)) }
     throw new Error('timed out waiting for the transaction')

@@ -28,7 +28,8 @@ contract ZealzToken is ERC20 {
 
     uint256 public perShare; // zZEC (magnified) per eligible token
     uint256 public distributedTotal; // zZEC ever distributed
-    uint256 public pending; // zZEC waiting for enough eligible holders
+    uint256 public pending; // zZEC received but not yet folded into perShare: it folds in a LATER block, so a balance held only inside one transaction earns nothing
+    uint64 public pendingBlock; // block of the last distribute()
     uint64 public pendingSince; // when pending first became non-zero; after SWEEP_AFTER anyone may send it to the Furnace
     uint64 private constant SWEEP_AFTER = 90 days;
     mapping(address => int256) private corrections;
@@ -68,33 +69,47 @@ contract ZealzToken is ERC20 {
     /// @notice Called by the hook after it has moved `zats` of zZEC here. Spreads it over every eligible token.
     function distribute(uint256 zats) external {
         if (msg.sender != hook) revert NotHook();
-        uint256 amount = zats + pending;
+        _fold();
+        if (pending == 0) pendingSince = uint64(block.timestamp);
+        pending += zats;
+        pendingBlock = uint64(block.number);
+    }
+
+    /// @dev Fold pending zZEC into perShare, but never in the block it arrived: balances are read at the
+    ///      first touch of a later block, so a flash-borrowed or same-transaction balance earns nothing.
+    function _fold() private {
+        uint256 amount = pending;
+        if (amount == 0 || block.number == pendingBlock) return;
         uint256 elig = eligibleSupply();
-        if (elig < MIN_ELIGIBLE) { if (pending == 0) pendingSince = uint64(block.timestamp); pending = amount; return; }
+        if (elig < MIN_ELIGIBLE) return;
         pending = 0; pendingSince = 0;
         perShare += (amount * MAG) / elig;
         distributedTotal += amount;
         emit Distributed(amount, elig);
     }
 
+    /// @notice Burn your own tokens. The factory burns the launch's rounding dust so nobody holds it.
+    function burn(uint256 amount) external { _burn(msg.sender, amount); }
+
     function _accumulated(address a) private view returns (uint256) {
         return uint256(int256(perShare * balanceOf(a)) + corrections[a]) / MAG;
     }
 
-    /// @notice zZEC this holder can claim right now.
+    /// @notice zZEC this holder can claim right now (pending zZEC that has not folded yet is not included).
     function dividendsOf(address a) public view returns (uint256) {
         if (excluded[a]) return 0;
         return _accumulated(a) - withdrawn[a];
     }
 
-    function claimDividends() external returns (uint256 zats) { return _pay(msg.sender); }
+    function claimDividends() external returns (uint256 zats) { _fold(); return _pay(msg.sender); }
 
     /// @notice Pay a holder's dividends out to them. Anyone may call, so a keeper can pay every holder daily
     ///         and nobody has to remember to claim. Funds only ever go to the holder.
-    function claimFor(address holder) external returns (uint256 zats) { return _pay(holder); }
+    function claimFor(address holder) external returns (uint256 zats) { _fold(); return _pay(holder); }
 
     /// @notice Pay many holders in one transaction; skips anyone with nothing owed instead of reverting.
     function claimForMany(address[] calldata holders) external returns (uint256 total) {
+        _fold();
         for (uint256 i = 0; i < holders.length; i++) {
             address h = holders[i];
             if (excluded[h]) continue;
@@ -126,6 +141,7 @@ contract ZealzToken is ERC20 {
 
     /// @dev Keep every balance's accumulated share constant across transfers.
     function _update(address from, address to, uint256 value) internal override {
+        _fold(); // with the balances as they stand before this transfer
         super._update(from, to, value);
         int256 c = int256(perShare * value);
         if (from != address(0)) corrections[from] += c;

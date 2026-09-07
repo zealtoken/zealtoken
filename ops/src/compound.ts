@@ -18,13 +18,24 @@ async function signerFromEnv() {
   return (await ethers.Wallet.fromEncryptedJson(readFileSync(file, 'utf8'), pass)).connect(provider)
 }
 
-const FACTORY = process.env.ZEALZ_FACTORY ?? '', LOCKER = process.env.ZEALZ_LOCKER ?? ''
+const FACTORY = process.env.ZEALZ_FACTORY ?? '', LOCKER = process.env.ZEALZ_LOCKER ?? '', HOOK = process.env.ZEALZ_HOOK ?? ''
 async function main() {
   if (!ethers.isAddress(FACTORY) || !ethers.isAddress(LOCKER)) { console.log(`${new Date().toISOString()} launchpad not deployed; nothing to compound`); return }
   const factory = new ethers.Contract(FACTORY, ['function launchCount() view returns (uint256)', 'function launches(uint256) view returns (address token, address creator, bytes32 poolId, uint256 positionId, uint8 curve, uint8 opening, uint64 at, uint16 burnBps, uint16 creatorBps)'], provider)
   const signer = await signerFromEnv()
   const locker = new ethers.Contract(LOCKER, ['function compound(uint256 tokenId)', 'function compoundedLiquidity(uint256) view returns (uint256)'], signer)
   const n = Number(await factory.launchCount())
+  // 1. flush: the hook books every fee as a PoolManager claim; this turns the claims into real zZEC for the
+  //    Furnace, the platform, every creator and every token's dividend ledger
+  if (ethers.isAddress(HOOK)) {
+    const hook = new ethers.Contract(HOOK, ['function furnace() view returns (address)', 'function treasury() view returns (address)', 'function owed(address) view returns (uint256)', 'function owedToHolders(address) view returns (uint256)', 'function flush(address[] recipients, address[] tokens)'], signer)
+    const recipients = new Set<string>([await hook.furnace(), await hook.treasury()]), tokens: string[] = []
+    for (let i = 0; i < n; i++) { const l = await factory.launches(i); recipients.add(l.creator); tokens.push(l.token) }
+    const rs = [] as string[]; for (const r of recipients) if ((await hook.owed(r)) > 0n) rs.push(r)
+    const ts = [] as string[]; for (const t of tokens) if ((await hook.owedToHolders(t)) > 0n) ts.push(t)
+    if (rs.length || ts.length) { const tx = await hook.flush(rs, ts); await tx.wait(); console.log(`${new Date().toISOString()} flushed ${rs.length} recipients and ${ts.length} dividend ledgers tx ${tx.hash}`) }
+    else console.log(`${new Date().toISOString()} nothing to flush`)
+  }
   let done = 0
   for (let i = 0; i < n; i++) {
     const l = await factory.launches(i)

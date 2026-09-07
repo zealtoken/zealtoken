@@ -19,12 +19,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   res.setHeader('access-control-allow-headers', 'content-type')
   if (req.method === 'OPTIONS') { res.statusCode = 204; res.end(); return }
   if (req.method !== 'POST') { res.statusCode = 405; res.end('{"error":"POST only"}'); return }
+  // our own pages only: this is a relay for the site, not a public RPC
+  const from = String(req.headers.origin ?? req.headers.referer ?? '')
+  const host = (() => { try { return new URL(from).hostname } catch { return '' } })()
+  const ours = ['zealtoken.com', 'www.zealtoken.com', 'zealz.fun', 'www.zealz.fun', 'localhost', '127.0.0.1'].includes(host) || host.endsWith('.vercel.app')
+  if (!ours) { res.statusCode = 403; res.end('{"error":"not for you"}'); return }
   let raw = ''
   for await (const chunk of req) { raw += chunk; if (raw.length > MAX_BODY) { res.statusCode = 413; res.end('{"error":"body too large"}'); return } }
   let body: unknown
   try { body = JSON.parse(raw) } catch { res.statusCode = 400; res.end('{"error":"bad json"}'); return }
   const calls = Array.isArray(body) ? body : [body]
-  if (calls.length > 120 || calls.some((c) => !c || typeof c !== 'object' || !ALLOW.has((c as { method?: string }).method ?? ''))) { res.statusCode = 400; res.end('{"error":"method not allowed"}'); return }
+  if (calls.length > 24 || calls.some((c) => !c || typeof c !== 'object' || !ALLOW.has((c as { method?: string }).method ?? ''))) { res.statusCode = 400; res.end('{"error":"method not allowed"}'); return }
   const hit = cache.get(raw)
   if (hit && Date.now() - hit.at < CACHE_MS) { res.statusCode = hit.status; res.setHeader('content-type', 'application/json'); res.setHeader('x-relay-cache', 'hit'); res.end(hit.text); return }
   try {

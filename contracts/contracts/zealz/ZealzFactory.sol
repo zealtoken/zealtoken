@@ -16,6 +16,7 @@ interface IPositionManagerF {
     function nextTokenId() external view returns (uint256);
     function safeTransferFrom(address from, address to, uint256 tokenId) external;
 }
+interface IPoolManagerInitF { function initialize(PoolKey memory key, uint160 sqrtPriceX96) external returns (int24); }
 interface IPermit2F { function approve(address token, address spender, uint160 amount, uint48 expiration) external; }
 interface IERC721OwnerF { function ownerOf(uint256) external view returns (address); }
 
@@ -146,7 +147,8 @@ contract ZealzFactory is ReentrancyGuard {
         uint160 sB = TickMath.getSqrtPriceAtTick(tu);
         // Open exactly at the edge that makes the position 100% token: at tickLower when the token is
         // currency0 (range above the price), at tickUpper when it is currency1 (range below).
-        positionManager.initializePool(key, tokenIs0 ? sA : sB);
+        // straight on the PoolManager, so the hook's beforeInitialize sees this factory as the sender
+        IPoolManagerInitF(poolManager).initialize(key, tokenIs0 ? sA : sB);
         uint256 liquidity = _seedLiquidity(tokenIs0, sA, sB);
         _approve(token, SUPPLY);
         positionId = positionManager.nextTokenId();
@@ -171,10 +173,10 @@ contract ZealzFactory is ReentrancyGuard {
         return address(new ZealzToken(name, symbol, metadataURI, SUPPLY, address(this), ZealzToken.Wiring(zzec, hook, poolManager, IZealzHook(hook).furnace())));
     }
 
-    /// @dev Rounding dust of the supply goes to the treasury; nothing stays here.
+    /// @dev Rounding dust of the supply is burned; nothing stays here and nobody is gifted a dividend-earning balance.
     function _sweep(address token) private {
         uint256 dust = IERC20(token).balanceOf(address(this));
-        if (dust != 0) IERC20(token).safeTransfer(treasury, dust);
+        if (dust != 0) ZealzToken(token).burn(dust);
     }
 
     function _approve(address t, uint256 amount) private {

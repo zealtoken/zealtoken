@@ -76,6 +76,7 @@ async function main() {
     }
   }
   const desk = (process.env.DESK_ADDRESS ?? '').toLowerCase()
+  if (!desk) throw new Error('DESK_ADDRESS is not set: refusing to run, every desk redemption would be paid a second time')
   const enqueue = (id: bigint, from: string, amount: bigint, zaddr: string, block: number) => {
     const key = id.toString()
     // Redemptions burned by the Desk were already paid (fulfil() runs after the ZEC is sent). Never pay them again.

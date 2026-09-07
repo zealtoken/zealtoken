@@ -164,6 +164,11 @@ contract MockPoolManagerV4 {
     mapping(bytes32 => uint160) private slotPrice;
     function initPool(PoolKey calldata key, uint160 p) external { bytes32 id = keccak256(abi.encode(key)); sqrtPrice[id] = p; slotPrice[keccak256(abi.encodePacked(id, bytes32(uint256(6))))] = p; }
     function fund(address token, uint256 amount) external { MockERC20(token).mint(address(this), amount); }
+    /// ERC-6909 claims, enough for the hook: mint credits the caller's delta, burn debits it.
+    mapping(address => mapping(uint256 => uint256)) public claims;
+    function mint(address to, uint256 id, uint256 amount) external { claims[to][id] += amount; owed[address(uint160(id))] += int256(amount); }
+    function burn(address from, uint256 id, uint256 amount) external { require(from == msg.sender, "from"); claims[from][id] -= amount; owed[address(uint160(id))] -= int256(amount); }
+    function initialize(PoolKey calldata key, uint160 p) external returns (int24) { bytes32 id = keccak256(abi.encode(key)); sqrtPrice[id] = p; slotPrice[keccak256(abi.encodePacked(id, bytes32(uint256(6))))] = p; return 0; }
     receive() external payable {}
 
     function unlock(bytes calldata data) external returns (bytes memory r) {
