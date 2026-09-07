@@ -4,7 +4,7 @@ group: Using it
 ---
 # Redeeming zZEC for native ZEC
 
-> **In one breath.** Put your zZEC into the Redemption Desk with a transparent Zcash address. An automatic payer sends you real ZEC, usually within minutes, records the Zcash transaction on chain, and only then is your zZEC burned. If a payout ever failed, the contract lets you take your zZEC back yourself. No permission, no pause, ever. Open since **September 6, 2026**.
+> **In one breath.** Put your zZEC into the Redemption Desk with a transparent Zcash address. An automatic payer sends you real ZEC, usually within minutes, records the Zcash transaction on chain, and only then is your zZEC burned. If a request remains unpaid for seven days, you can reclaim your zZEC yourself. Open since **September 6, 2026**.
 
 ## Status
 
@@ -19,10 +19,10 @@ The zZEC contract's own `requestRedeem` burns first and trusts the operator to p
 ## Step by step, as a holder
 
 1. In the Redeem section, connect a wallet on Robinhood Chain.
-2. Enter the amount (minimum 0.001 zZEC) and your **transparent** Zcash address (starts with `t1` or `t3`, 35 characters). Shielded addresses are refused because a payment to one cannot be shown to have happened.
+2. Enter the amount (0.001–0.05 zZEC for automatic payouts) and your **transparent** Zcash address (starts with `t1` or `t3`, 35 characters). Shielded addresses are refused because a payment to one cannot be shown to have happened.
 3. Approve the desk to move your zZEC, then confirm the request. Your zZEC moves into the desk.
 4. Watch your request in the list. When it shows **paid**, the Zcash transaction is linked. Shield the ZEC on the Zcash side if you want privacy.
-5. If a payout ever failed and the request stayed **open**, a **reclaim** button appears and your zZEC returns to your wallet.
+5. If the request remains **open** and unpaid after seven days, a **reclaim** button appears and your zZEC returns to your wallet.
 
 ## Behind the scenes: the automatic payer
 
@@ -33,7 +33,7 @@ Payouts are automatic. Every five minutes the payer reads the desk, pays each op
 3. With the Zcash transaction id in hand it calls `fulfill(id, txid)`. The desk marks the request fulfilled, burns the escrow through ZZEC's `requestRedeem` (so it is recorded on the wrapper too), and stores the txid on chain.
 4. Requests above the limits are flagged to the operator and paid by hand the same way.
 
-The reserve then reimburses the float: each payout burns zZEC while the reserve stays put, so the reserve over-covers by the paid amount and the operator moves that excess to the float. The public coverage figure never dips.
+AWS checks every minute to reimburse completed redemptions from the reserve. Outstanding reimbursement debt remains excluded from mint capacity until the transfer has three verified confirmations. Fees use excess backing; the process stops if its required margin is unavailable.
 
 ## Fees and rounding
 

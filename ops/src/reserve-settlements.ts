@@ -18,13 +18,13 @@ export function transferLedger(): Transfer[] {
   }
   return value as Transfer[]
 }
-export function reserveSigner() { return process.env.RESERVE_SIGNER ?? new URL('../reserve-signer/target/release/zeal-reserve-signer', import.meta.url).pathname }
+export function reserveSigner() { return process.env.RESERVE_SIGNER ?? (process.platform === 'linux' ? '/usr/local/bin/zeal-reserve-signer' : new URL('../reserve-signer/target/release/zeal-reserve-signer', import.meta.url).pathname) }
 export function inspectTransaction(raw: string, branch_id: number): any {
   try { return JSON.parse(execFileSync(reserveSigner(), ['inspect'], { input: JSON.stringify({ raw, branch_id }), encoding: 'utf8', maxBuffer: 4 << 20, stdio: ['pipe', 'pipe', 'pipe'] })) }
   catch { throw new Error('Reserve transaction decoding failed') }
 }
 const script = (a: string) => '76a914' + ethers.toBeHex(ethers.decodeBase58(a), 26).slice(6, 46) + '88ac'
-export async function confirmedTransfer(t: Transfer): Promise<boolean> {
+export function validateTransfer(t: Transfer): void {
   const decoded = inspectTransaction(t.raw, t.branch_id)
   if (decoded.txid !== t.txid || !decoded.transparent_only || decoded.outputs.length !== 2 || decoded.outputs[0].script !== script(FLOAT_ADDRESS) || decoded.outputs[1].script !== script(RESERVE_ADDRESS) || decoded.outputs[0].value_zats !== t.amount_zats || decoded.outputs[1].value_zats !== t.change_zats) throw new Error('Reserve settlement output mismatch')
   if (!Array.isArray(t.inputs) || !t.inputs.length || decoded.inputs.length !== t.inputs.length) throw new Error('Reserve settlement inputs missing')
@@ -35,6 +35,9 @@ export async function confirmedTransfer(t: Transfer): Promise<boolean> {
     total += coin.value_zats
   }
   if (!Number.isSafeInteger(total) || total - t.amount_zats - t.change_zats !== t.fee_zats || t.fee_zats !== 5000*Math.max(2,t.inputs.length) || t.fee_zats>50000 || t.amount_zats>10000000) throw new Error('Reserve settlement amount or fee mismatch')
+}
+export async function confirmedTransfer(t: Transfer): Promise<boolean> {
+  validateTransfer(t)
   const results = await Promise.all(RESERVE_NODES.map(async host => {
     const [tip, tx] = await Promise.all([reserveRpc(host,'GetLatestBlock',{}), reserveRpc(host,'GetTransaction',{hash:Buffer.from(t.txid,'hex').reverse()})])
     if (Buffer.from(tx.data).toString('hex') !== t.raw) throw new Error('Reserve settlement chain bytes mismatch')

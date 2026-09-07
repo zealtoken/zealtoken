@@ -12,7 +12,7 @@ No. It is reserve-backed and checkable. A key the operator holds custodies the Z
 
 ## Can I wrap my own ZEC?
 
-From Sep 7, 19:16 UTC, yes: open a request, send the exact deposit, receive zZEC 1:1 with no fee. See [Wrapping](#/wrap).
+After the WrapDesk role change and operator readiness checks are complete, open a request, send the exact deposit, receive zZEC 1:1 with no fee. See [Wrapping](#/wrap).
 
 ## Can I get my ZEC back?
 

@@ -51,6 +51,15 @@ const PHASES = [
 const src = (addr: string) => `${CONTRACTS.explorer}/address/${addr}?tab=contract`
 
 /** Dated, linkable, and only things that already happened. */
+/** One line per build-log day, so a collapsed log still tells the story. */
+const DAYS: Record<string, string> = {
+  'Sep 03': 'Launch, the fee route, the wrapper deployed',
+  'Sep 04': 'First ZEC in the reserve, first mint, the market opens, first burn',
+  'Sep 05': 'Peg keeper, the burn hook, both desks deployed',
+  'Sep 06': 'Redemption opens and pays, docs, the launchpad passes a fork',
+  'Sep 07': 'zZEC runs to 21x par, the peg is defended, the largest burn',
+}
+
 const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 03', t: `$${TOKEN.symbol} live on ${PONS.launchpad}. Graduated in under an hour.`, href: LINKS.pons, label: 'Pons' },
   { d: 'Sep 03', t: 'ZealFoundry deployed. 60/25/15 split, no owner, no admin. Source verified.', href: CONTRACTS.foundry ? src(CONTRACTS.foundry) : undefined, label: 'source' },
@@ -130,6 +139,7 @@ function Faq() {
 }
 
 export function Close() {
+  const [openDay, setOpenDay] = useState<string | null>(null)
   return (
     <>
       {/* ---------------- roadmap ---------------- */}
@@ -169,21 +179,55 @@ export function Close() {
           <div className="log" data-reveal>
             <div className="log-head">
               <p className="eyebrow">Build log</p>
-              <p className="log-note mono">dated · linked · nothing here is a promise</p>
+              <p className="log-note mono">{LOG.filter((l) => l.d !== 'next').length} entries · dated · linked · nothing here is a promise</p>
             </div>
-            {LOG.map((l, i) => (
-              <div className={`log-row ${l.d === 'next' ? 'log-next' : ''}`} key={i} data-reveal style={stagger(i, 60)}>
-                <span className="log-date mono">{l.d}</span>
-                <span className="log-text">{l.t}</span>
-                {l.href ? (
-                  <a className="log-link mono" href={l.href} target="_blank" rel="noreferrer">
-                    {l.label} ↗
-                  </a>
-                ) : (
-                  <span />
-                )}
-              </div>
-            ))}
+            {(() => {
+              const days: { d: string; rows: typeof LOG }[] = []
+              for (const l of LOG) {
+                const last = days[days.length - 1]
+                if (last && last.d === l.d) last.rows.push(l)
+                else days.push({ d: l.d, rows: [l] })
+              }
+              const dated = days.filter((g) => g.d !== 'next').reverse() // newest first
+              const next = days.find((g) => g.d === 'next')
+              return (
+                <>
+                  {dated.map((g, gi) => {
+                    const open = openDay === null ? gi === 0 : openDay === g.d
+                    return (
+                      <div className={`log-day ${open ? 'is-open' : ''}`} key={g.d}>
+                        <button className="log-day-head" onClick={() => setOpenDay(open ? '' : g.d)} aria-expanded={open}>
+                          <span className="log-date mono">{g.d}</span>
+                          <span className="log-day-title">{DAYS[g.d] ?? `${g.rows.length} entries`}</span>
+                          <span className="log-day-n mono">{g.rows.length}</span>
+                          <span className="log-day-caret" aria-hidden>&#8964;</span>
+                        </button>
+                        <div className="log-day-body"><div className="log-day-inner">
+                          {g.rows.map((l, i) => (
+                            <div className="log-row" key={i}>
+                              <span className="log-bullet" aria-hidden />
+                              <span className="log-text">{l.t}</span>
+                              {l.href ? (
+                                <a className="log-link mono" href={l.href} target="_blank" rel="noreferrer">{l.label} ↗</a>
+                              ) : (
+                                <span />
+                              )}
+                            </div>
+                          ))}
+                        </div></div>
+                      </div>
+                    )
+                  })}
+                  {next && next.rows.map((l, i) => (
+                    <div className="log-row log-next" key={`n${i}`}>
+                      <span className="log-date mono">next</span>
+                      <span className="log-text">{l.t}</span>
+                      <span />
+                    </div>
+                  ))}
+                </>
+              )
+            })()}
           </div>
         </div>
       </section>

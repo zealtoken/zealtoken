@@ -12,6 +12,7 @@ ConditionPathExists=/etc/zeal/RESERVE_ACTIVE
 Type=oneshot
 ExecStart=/usr/bin/python3 /var/lib/zeal/runtime/cloud/load-reserve-secret.py
 RemainAfterExit=yes
+ExecStop=/bin/rm -f /run/zeal/reserve
 UMask=0077
 ''')
 (base/'zeal-reserve-reimburse.service').write_text('''[Unit]

@@ -224,6 +224,9 @@
                     },
                     {
                       "Ref": "FloatWalletSecret"
+                    },
+                    {
+                      "Ref": "ReserveSecret"
                     }
                   ],
                   "Condition": {
@@ -588,6 +591,27 @@
           }
         ]
       }
+    },
+    "ReserveSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": "ZEAL single-address transparent reserve signing credential; no mnemonic or account root",
+        "KmsKeyId": {
+          "Ref": "SecretKey"
+        },
+        "Tags": [
+          {
+            "Key": "Project",
+            "Value": "ZEAL"
+          },
+          {
+            "Key": "Purpose",
+            "Value": "ReserveReimbursement"
+          }
+        ]
+      }
     }
   },
   "Outputs": {
@@ -634,6 +658,12 @@
     "FloatWalletSecret": {
       "Value": {
         "Ref": "FloatWalletSecret"
+      }
+    },
+    "ReserveSecret": {
+      "Description": "Encrypted single-address reserve signer secret",
+      "Value": {
+        "Ref": "ReserveSecret"
       }
     }
   },

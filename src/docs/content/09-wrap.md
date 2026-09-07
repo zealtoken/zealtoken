@@ -8,7 +8,7 @@ group: Using it
 
 ## Status
 
-The WrapDesk is deployed at `0xb53E3CD58668D1fC9082b51a7d74879733e9E118`. The 48-hour role timelock makes activation eligible on **2026-09-07 at 19:16 UTC**; the owner must then commit the role change. The public wrap opening is scheduled four hours later, at **2026-09-07 at 23:16 UTC**. The site form stays closed until both the scheduled opening and desk activation.
+The WrapDesk is deployed at `0xb53E3CD58668D1fC9082b51a7d74879733e9E118`. The 48-hour role timelock makes activation eligible on **2026-09-07 at 19:16 UTC**; the owner must then commit the role change. There is no additional website countdown. The form stays closed until the on-chain role change and operator readiness checks are complete. Do not send a deposit before opening your own request.
 
 ## Why a desk, not a bridge
 

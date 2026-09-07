@@ -20,7 +20,7 @@ group: Ahead
 ## Near term
 
 - **Sep 7, 16:04 UTC:** Furnace pool rotation commits; hook-delivered zZEC starts converting.
-- **Sep 7, 19:16 UTC:** WrapDesk becomes the zZEC minter; the wrap form opens.
+- **Sep 7, 19:16 UTC:** WrapDesk role change becomes eligible; the form opens after activation and readiness checks.
 - **Pons fee re-point:** filed with Pons; unblocks the Foundry's 60/25/15 flow for every future fee.
 - **Key separation:** cold owner key, hot igniter, so a compromise of the operator machine cannot reach ownership.
 - **Both desks verified** on Blockscout and Sourcify.

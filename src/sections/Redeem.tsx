@@ -10,6 +10,7 @@ import { stagger } from '../useReveal'
  * never left with nothing.
  */
 const SEL = { request: '0x8163ba11', reclaim: '0x2dabbeed', approve: '0x095ea7b3', allowance: '0xdd62ed3e', balanceOf: '0x70a08231', requestCount: '0x5badbe4c', summary: '0x6152e655', zcashAddressOf: '0x0d6d49c2', minAmount: '0x9b2cb5d8', requestsPaused: '0xe43b7531' } as const
+const AUTO_MAX = 5_000_000n // Current operator payout limit: 0.05 ZEC per request.
 const WINDOW = 7 * 86400
 const CHAIN_HEX = '0x' + CHAIN.id.toString(16)
 type Eip1193 = { request: (a: { method: string; params?: unknown[] }) => Promise<unknown> }
@@ -95,7 +96,7 @@ export function Redeem() {
     setMine(account ? reqs.filter((r) => r.holder.toLowerCase() === account.toLowerCase()) : [])
     setRecent(paid.slice(0, 6))
   }, [desk, account])
-  useEffect(() => { void load(); const t = window.setInterval(load, 30_000); return () => window.clearInterval(t) }, [load])
+  useEffect(() => { const refresh = () => load().catch(() => { setInfo(null); setMsg({ kind: 'err', text: 'Unable to refresh desk status. Please wait for the connection to recover before submitting.' }) }); void refresh(); const t = window.setInterval(refresh, 30_000); return () => window.clearInterval(t) }, [load])
 
   const connect = async () => {
     const p = eth(); if (!p) { setMsg({ kind: 'err', text: 'No wallet found. Install a browser wallet with Robinhood Chain added.' }); return }
@@ -110,8 +111,8 @@ export function Redeem() {
     for (let i = 0; i < 80; i++) { const r = (await p.request({ method: 'eth_getTransactionReceipt', params: [hash] })) as { status: string } | null; if (r) { if (r.status !== '0x1') throw new Error('transaction reverted'); return hash } await new Promise((res) => setTimeout(res, 1500)) }
     throw new Error('timed out waiting for the transaction')
   }
-  const zats = BigInt(Math.round((Number(amount) || 0) * 1e8))
-  const step = !account ? 0 : !(zats > 0n && (!info || zats >= info.min) && zats <= balance) ? 1 : !isT(zaddr) ? 2 : 3
+  const zats = /^\d{1,16}(\.\d{0,8})?$/.test(amount) ? BigInt(amount.split('.')[0]) * 100_000_000n + BigInt((amount.split('.')[1] ?? '').padEnd(8, '0')) : 0n
+  const step = !account ? 0 : !(zats > 0n && info && !info.paused && zats >= info.min && zats <= balance && zats <= AUTO_MAX) ? 1 : !isT(zaddr) ? 2 : 3
   const submit = async () => {
     if (!desk || !account || !CONTRACTS.zzec || step < 3) return
     setBusy('checking allowance'); setMsg(null)
@@ -141,8 +142,7 @@ export function Redeem() {
             <span className="green">Get native ZEC.</span>
           </h2>
           <p className="lede" data-reveal style={stagger(2)}>
-            Your {TOKEN.wrapper} waits in escrow, not in a burn. The desk pays real ZEC to your address, records the Zcash transaction on chain, and only then is the escrow burned. Payouts run automatically, usually within minutes. If one
-            ever failed, the contract lets you take your {TOKEN.wrapper} back yourself. No permission, no pause, ever.
+            Your {TOKEN.wrapper} waits in escrow, not in a burn. The desk pays real ZEC to your address, records the Zcash transaction on chain, and only then is the escrow burned. Payouts run automatically, usually within minutes. If a request remains unpaid for seven days, you can reclaim your {TOKEN.wrapper} yourself.
           </p>
         </div>
 
@@ -151,9 +151,9 @@ export function Redeem() {
         ) : (
           <>
             <div className="rd-badges" data-reveal style={stagger(3)}>
-              <span><b>no fee</b>1:1, the reserve pays the Zcash network fee</span>
+              <span><b>no fee</b>1:1 · you pay Robinhood Chain gas only</span>
               <span><b>escrow, not burn</b>your zZEC is held, and burned only after you are paid</span>
-              <span><b>automatic payout</b>usually within minutes · no human in the loop</span>
+              <span><b>automatic payout</b>checked every 5 minutes · within available payout capacity</span>
               <span><b>on-chain receipt</b>every payout's Zcash txid is recorded in the contract</span>
             </div>
             <div className="rd-flow-wrap" data-reveal style={stagger(3)}><RedeemFlow paid={info?.paid ?? 0} /></div>
@@ -162,7 +162,7 @@ export function Redeem() {
               <div><span>paid out</span><b>{info ? `${zec(info.paidAmount)} ZEC` : '…'}</b><i>{info ? `${info.paid} redemptions` : ''}</i></div>
               <div><span>minimum</span><b>{info ? `${zec(info.min)} ${TOKEN.wrapper}` : '…'}</b></div>
               <div><span>fee</span><b>none</b><i>the reserve pays the Zcash network fee</i></div>
-              <div><span>payout</span><b>automatic</b><i>usually within minutes</i></div>
+              <div><span>automatic limit</span><b>0.05 ZEC / request</b><i>0.25 ZEC total per rolling 24 hours</i></div>
             </div>
 
             <div className="rd-grid" data-reveal style={stagger(4)}>
@@ -181,15 +181,15 @@ export function Redeem() {
                 ) : (
                   <>
                     <div className="rd-acct mono"><span className="dot" />{account.slice(0, 6)}…{account.slice(-4)}<em>balance {zec(balance)} {TOKEN.wrapper}</em></div>
-                    <label className="redeem-l mono">amount to redeem</label>
+                    <label htmlFor="redeem-amount" className="redeem-l mono">amount to redeem</label>
                     <div className={`rd-amt ${zats > balance ? 'bad' : ''}`}>
-                      <input className="mono" inputMode="decimal" placeholder="0.00000000" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                      <input id="redeem-amount" className="mono" inputMode="decimal" placeholder="0.00000000" value={amount} onChange={(e) => setAmount(e.target.value)} />
                       <span className="mono rd-unit">{TOKEN.wrapper}</span>
-                      <button type="button" className="rd-max mono" onClick={() => setAmount(zec(balance).replace(/,/g, ''))}>max</button>
+                      <button type="button" className="rd-max mono" onClick={() => setAmount(zec(balance < AUTO_MAX ? balance : AUTO_MAX).replace(/,/g, ''))}>max</button>
                     </div>
-                    <div className="rd-sub mono">{zats > 0n ? <>you receive <b>{zec(zats)} ZEC</b>{zecUsd ? ` · about $${(Number(zats) / 1e8 * zecUsd).toFixed(2)}` : ''}</> : 'exactly what you escrow, 1:1'}{zats > balance && <span className="rd-warn"> · more than you hold</span>}{info && zats > 0n && zats < info.min && <span className="rd-warn"> · below the minimum</span>}</div>
-                    <label className="redeem-l mono">your transparent Zcash address</label>
-                    <div className={`rd-amt ${zaddr && !isT(zaddr) ? 'bad' : ''}`}><input className="mono" placeholder="t1…" value={zaddr} onChange={(e) => setZaddr(e.target.value)} spellCheck={false} /><span className={`mono rd-unit ${isT(zaddr) ? 'ok' : ''}`}>{isT(zaddr) ? 'valid' : 't1 / t3'}</span></div>
+                    <div className="rd-sub mono">{zats > 0n ? <>you receive <b>{zec(zats)} ZEC</b>{zecUsd ? ` · about $${(Number(zats) / 1e8 * zecUsd).toFixed(2)}` : ''}</> : 'exactly what you escrow, 1:1'}{zats > AUTO_MAX && <span className="rd-warn"> · automatic limit is 0.05 ZEC per request</span>}{zats > balance && <span className="rd-warn"> · more than you hold</span>}{info && zats > 0n && zats < info.min && <span className="rd-warn"> · below the minimum</span>}</div>
+                    <label htmlFor="redeem-address" className="redeem-l mono">your transparent Zcash address</label>
+                    <div className={`rd-amt ${zaddr && !isT(zaddr) ? 'bad' : ''}`}><input id="redeem-address" className="mono" placeholder="t1…" value={zaddr} onChange={(e) => setZaddr(e.target.value)} spellCheck={false} /><span className={`mono rd-unit ${isT(zaddr) ? 'ok' : ''}`}>{isT(zaddr) ? 'format OK' : 't1 / t3'}</span></div>
                     <div className="rd-sub mono">transparent only, so the payout can be shown on chain. Shield it on the Zcash side afterwards.</div>
                     <button className="btn btn-primary btn-lg rd-go" type="button" disabled={!!busy || !!info?.paused || step < 3} onClick={submit}>
                       {busy ?? (info?.paused ? 'new requests paused' : step < 3 ? 'fill in the two fields' : `Redeem ${zec(zats)} ${TOKEN.wrapper} → ZEC`)}
@@ -197,11 +197,12 @@ export function Redeem() {
                   </>
                 )}
                 {msg && <p className={`rd-msg mono ${msg.kind}`}>{msg.text}</p>}
+                <p className="redeem-fine mono">Automatic payouts: up to 0.05 ZEC per request and 0.25 ZEC across the desk per rolling 24 hours. Capacity or confirmation delays can make payouts take longer. Larger redemptions require operator coordination.</p>
                 <div className="rd-how mono">
                   <div><b>01</b>your {TOKEN.wrapper} moves into escrow. It is still yours.</div>
                   <div><b>02</b>the desk pays native ZEC to your address, automatically</div>
                   <div><b>03</b>the Zcash transaction id is recorded on chain and the escrow is burned</div>
-                  <div><b>04</b>if a payout ever failed, <em>reclaim</em> your {TOKEN.wrapper} yourself</div>
+                  <div><b>04</b>if still unpaid after 7 days, <em>reclaim</em> your {TOKEN.wrapper}</div>
                 </div>
                 <p className="redeem-fine mono"><a href={`${CONTRACTS.explorer}/address/${desk}?tab=contract`} target="_blank" rel="noreferrer">desk contract ↗</a> · <a href="/docs/#/redeem">how it works ↗</a></p>
               </div>

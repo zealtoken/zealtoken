@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CHAIN, CONTRACTS, LINKS, TOKEN, WRAP_OPENS_AT } from '../config'
+import { CHAIN, CONTRACTS, LINKS, TOKEN } from '../config'
 import { encAddress, hexToBig, readBatchRaw, word, wordAddress } from '../lib/chain'
 import { stagger } from '../useReveal'
 
 /**
- * Wrap desk. Before the desk is the zZEC minter it shows a live countdown to
- * the scheduled opening, with the on-chain role timelock tracked separately.
+ * Wrap desk. The form requires both operator readiness and the on-chain minter role.
  * Once live: open a request, send the exact deposit, receive zZEC 1:1.
  */
 const SEL = { request: '0xd845a4b3', cancel: '0x40e58ee5', requestCount: '0x5badbe4c', summary: '0x6152e655', minAmount: '0x9b2cb5d8', requestsPaused: '0xe43b7531', pendingMinter: '0x91c5df49', minter: '0x07546172' } as const
@@ -18,48 +17,20 @@ const u256 = (n: bigint) => n.toString(16).padStart(64, '0')
 const zec = (z: bigint) => (Number(z) / 1e8).toFixed(8)
 type Req = { id: number; requester: string; amount: bigint; at: number; status: number; txid: string; deposit: bigint }
 const STATUS = ['', 'awaiting your ZEC', 'minted', 'cancelled', 'rejected']
-const pad = (n: number) => String(Math.max(0, n)).padStart(2, '0')
-
-function Countdown({ eta, minterIsDesk }: { eta: number; minterIsDesk: boolean }) {
-  const [now, setNow] = useState(Date.now() / 1000)
-  useEffect(() => { const t = window.setInterval(() => setNow(Date.now() / 1000), 1000); return () => window.clearInterval(t) }, [])
-  const openingAt = Math.max(WRAP_OPENS_AT, eta)
-  const left = openingAt - now
-  const timelockPending = !minterIsDesk && eta > now
-  const d = Math.floor(left / 86400), h = Math.floor((left % 86400) / 3600), m = Math.floor((left % 3600) / 60), s = Math.floor(left % 60)
-  const phase = left > 0 ? 'scheduled' : minterIsDesk ? 'committed' : 'ready'
+function ActivationStatus({ eta }: { eta: number | null }) {
   return (
     <div className="wd-clock" data-reveal style={stagger(3)}>
-      <div className="wd-clock-l mono">{phase === 'scheduled' ? 'the wrap desk opens in' : phase === 'ready' ? 'scheduled opening reached · activation pending' : 'desk activated · opening pending'}</div>
-      {phase === 'scheduled' ? (
-        <div className="wd-digits">
-          <div><b>{pad(d)}</b><span className="mono">days</span></div><i>:</i>
-          <div><b>{pad(h)}</b><span className="mono">hours</span></div><i>:</i>
-          <div><b>{pad(m)}</b><span className="mono">min</span></div><i>:</i>
-          <div><b>{pad(s)}</b><span className="mono">sec</span></div>
-        </div>
-      ) : <div className="wd-digits one"><b>opening pending</b></div>}
-      <div className="wd-clock-f mono">{new Date(openingAt * 1000).toUTCString().replace(' GMT', ' UTC')} · scheduled public opening</div>
-      <ol className="wd-timeline mono">
-        <li className="done"><b>✓</b><span>WrapDesk deployed and verified</span><a href={`${CONTRACTS.explorer}/address/${WRAP_DESK_DEPLOYED}?tab=contract`} target="_blank" rel="noreferrer">{WRAP_DESK_DEPLOYED.slice(0, 8)}… ↗</a></li>
-        <li className="done"><b>✓</b><span>minter rotation proposed on {TOKEN.wrapper}</span><a href={`${CONTRACTS.explorer}/tx/${PROPOSAL_TX}`} target="_blank" rel="noreferrer">tx ↗</a></li>
-        <li className={timelockPending ? 'now' : eta || minterIsDesk ? 'done' : ''}><b>{timelockPending ? '…' : eta || minterIsDesk ? '✓' : '3'}</b><span>48-hour public timelock</span><em>{eta ? `eligible ${new Date(eta * 1000).toUTCString().replace(' GMT', ' UTC')}` : minterIsDesk ? 'complete' : 'reading chain status…'}</em></li>
-        <li className={minterIsDesk ? 'done' : !timelockPending && eta ? 'now' : ''}><b>{minterIsDesk ? '✓' : '4'}</b><span>commit: the desk becomes the only minter</span></li>
-        <li className={phase === 'committed' ? 'now' : ''}><b>5</b><span>this form opens · send ZEC, get {TOKEN.wrapper} 1:1</span></li>
-      </ol>
+      <div className="wd-clock-l mono">wrapping · activation pending</div>
+      <h3>Redemption is live. Wrapping is next.</h3>
+      <p>The wrap form opens after the contract activation and operator checks are complete. Please wait for your own request before sending ZEC.</p>
+      {eta && <p className="mono">Contract activation eligible: {new Date(eta * 1000).toUTCString().replace(' GMT', ' UTC')}</p>}
+      <p><a href="#redeem">Redeem zZEC → ZEC</a> · <a href={`${CONTRACTS.explorer}/tx/${PROPOSAL_TX}`} target="_blank" rel="noreferrer">View activation proposal ↗</a></p>
     </div>
   )
 }
 
 export function Wrap() {
   const desk = CONTRACTS.wrapDesk
-  const [scheduledOpen, setScheduledOpen] = useState(() => Date.now() / 1000 >= WRAP_OPENS_AT)
-  useEffect(() => {
-    const delay = WRAP_OPENS_AT * 1000 - Date.now()
-    if (delay <= 0) return
-    const timer = window.setTimeout(() => setScheduledOpen(true), delay + 1)
-    return () => window.clearTimeout(timer)
-  }, [])
   const [eta, setEta] = useState<number | null>(null)
   const [minterIsDesk, setMinterIsDesk] = useState(false)
   const [info, setInfo] = useState<{ min: bigint; paused: boolean; count: number; minted: bigint } | null>(null)
@@ -72,7 +43,7 @@ export function Wrap() {
   const [zecUsd, setZecUsd] = useState<number | null>(null)
   useEffect(() => { fetch('https://api.coinbase.com/v2/prices/ZEC-USD/spot').then((r) => r.json()).then((j: { data: { amount: string } }) => setZecUsd(Number(j.data.amount))).catch(() => {}) }, [])
 
-  // the countdown reads the real timelock
+  // Read the real role status; website timing cannot activate a contract.
   useEffect(() => {
     if (!CONTRACTS.zzec) return
     const run = async () => { try { const [pm, mi] = await readBatchRaw([{ to: CONTRACTS.zzec!, data: SEL.pendingMinter }, { to: CONTRACTS.zzec!, data: SEL.minter }]); const e = Number(hexToBig(word(pm, 1))); setEta(e || null); setMinterIsDesk(wordAddress(mi, 0).toLowerCase() === WRAP_DESK_DEPLOYED.toLowerCase()) } catch { /* keep */ } }
@@ -92,7 +63,7 @@ export function Wrap() {
     setInfo({ min: hexToBig(min), paused: hexToBig(paused) !== 0n, count: n, minted: reqs.filter((r) => r.status === 2).reduce((s, r) => s + r.amount, 0n) })
     setMine(account ? reqs.filter((r) => r.requester.toLowerCase() === account.toLowerCase()) : [])
   }, [desk, account])
-  useEffect(() => { void load(); const t = window.setInterval(load, 30_000); return () => window.clearInterval(t) }, [load])
+  useEffect(() => { const refresh = () => load().catch(() => { setInfo(null); setMsg({ kind: 'err', text: 'Unable to refresh desk status. Please wait for the connection to recover before submitting.' }) }); void refresh(); const t = window.setInterval(refresh, 30_000); return () => window.clearInterval(t) }, [load])
 
   const connect = async () => {
     const p = eth(); if (!p) { setMsg({ kind: 'err', text: 'No wallet found. Install a browser wallet with Robinhood Chain added.' }); return }
@@ -107,11 +78,11 @@ export function Wrap() {
     for (let i = 0; i < 80; i++) { const r = (await p.request({ method: 'eth_getTransactionReceipt', params: [hash] })) as { status: string } | null; if (r) { if (r.status !== '0x1') throw new Error('transaction reverted'); return hash } await new Promise((res) => setTimeout(res, 1500)) }
     throw new Error('timed out waiting for the transaction')
   }
-  const zats = BigInt(Math.round((Number(amount) || 0) * 1e8))
+  const zats = /^\d{1,16}(\.\d{0,8})?$/.test(amount) ? BigInt(amount.split('.')[0]) * 100_000_000n + BigInt((amount.split('.')[1] ?? '').padEnd(8, '0')) : 0n
   const aligned = zats > 0n && zats % 100000n === 0n
   const step = !account ? 0 : !(aligned && (!info || zats >= info.min)) ? 1 : 2
   const submit = async () => {
-    if (!desk || !scheduledOpen || !minterIsDesk || !account || step < 2) return
+    if (!desk || !minterIsDesk || !account || !info || info.paused || step < 2) return
     setBusy('confirm the request in your wallet'); setMsg(null)
     try { await send(desk, SEL.request + u256(zats)); setMsg({ kind: 'ok', text: 'Request opened. Your deposit line is below: send the exact figure from any Zcash wallet.' }); setAmount(''); await load() }
     catch (e) { setMsg({ kind: 'err', text: (e as Error).message }) } finally { setBusy(null) }
@@ -131,15 +102,15 @@ export function Wrap() {
             <span className="green">Get {TOKEN.wrapper}, 1:1.</span>
           </h2>
           <p className="lede" data-reveal style={stagger(2)}>
-            Open a request, get an exact deposit figure that is unique to you, send it from any Zcash wallet, and the desk
+            When wrapping opens, request an exact deposit figure that is unique to you, send it from your Zcash wallet, and the desk
             mints your {TOKEN.wrapper} after three confirmations. No fee. Every mint passes through the desk with its reason
-            recorded, because the desk is the only thing allowed to mint.
+            recorded. The form stays closed until activation is verified.
           </p>
         </div>
 
-        {!desk || !scheduledOpen || !minterIsDesk ? (
+        {!desk || !minterIsDesk ? (
           <>
-            <Countdown eta={eta ?? 0} minterIsDesk={minterIsDesk} />
+            <ActivationStatus eta={eta} />
             <div className="wd-preview" data-reveal style={stagger(4)}>
               <div className="wd-pv-h mono">what it will look like</div>
               <div className="wd-pv-grid">
@@ -172,14 +143,14 @@ export function Wrap() {
                 ) : (
                   <>
                     <div className="rd-acct mono"><span className="dot" />{account.slice(0, 6)}…{account.slice(-4)}<em>receives the {TOKEN.wrapper}</em></div>
-                    <label className="redeem-l mono">ZEC to wrap</label>
+                    <label htmlFor="wrap-amount" className="redeem-l mono">ZEC to wrap</label>
                     <div className={`rd-amt ${amount && !aligned ? 'bad' : ''}`}>
-                      <input className="mono" inputMode="decimal" placeholder="0.100" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                      <input id="wrap-amount" className="mono" inputMode="decimal" placeholder="0.100" value={amount} onChange={(e) => setAmount(e.target.value)} />
                       <span className="mono rd-unit">ZEC</span>
                       {['0.01', '0.1', '1'].map((q) => <button key={q} type="button" className="rd-max mono" onClick={() => setAmount(q)}>{q}</button>)}
                     </div>
                     <div className="rd-sub mono">{zats > 0n ? <>you receive <b>{zec(zats)} {TOKEN.wrapper}</b>{zecUsd ? ` · about $${(Number(zats) / 1e8 * zecUsd).toFixed(2)}` : ''}</> : 'exactly what you send, 1:1'}{amount && !aligned && <span className="rd-warn"> · use steps of 0.001</span>}</div>
-                    <button className="btn btn-primary btn-lg rd-go" type="button" disabled={!!busy || !!info?.paused || step < 2} onClick={submit}>{busy ?? (info?.paused ? 'new requests paused' : step < 2 ? 'enter an amount' : `Open request for ${zec(zats)} ${TOKEN.wrapper}`)}</button>
+                    <button className="btn btn-primary btn-lg rd-go" type="button" disabled={!!busy || !info || info.paused || step < 2} onClick={submit}>{busy ?? (info?.paused ? 'new requests paused' : step < 2 ? 'enter an amount' : `Open request for ${zec(zats)} ${TOKEN.wrapper}`)}</button>
                   </>
                 )}
                 {msg && <p className={`rd-msg mono ${msg.kind}`}>{msg.text}</p>}

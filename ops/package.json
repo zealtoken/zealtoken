@@ -34,7 +34,10 @@
     "cloud:unlock": "tsx src/cloud-unlock.ts",
     "cloud:finish-burn": "tsx src/cloud-finish-burn.ts",
     "lp:reinvest": "tsx src/lp-reinvest.ts",
-    "reserve:prepare": "tsx src/reserve-prepare.ts"
+    "reserve:prepare": "tsx src/reserve-prepare.ts",
+    "reserve:cloud-unlock": "tsx src/reserve-cloud-unlock.ts",
+    "reserve:preview": "tsx src/reserve-reimburse.ts",
+    "reserve:activate": "tsx src/reserve-activate.ts"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "3.1127.0",

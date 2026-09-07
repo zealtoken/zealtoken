@@ -1,6 +1,7 @@
 /** Bounded reserve reimbursement. Preview by default. Cloud activation is explicit. */
 import { ethers } from 'ethers'
 import { readFileSync, existsSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { CHAIN, CONTRACTS } from './config.js'
 import { withLock, atomicJson } from './ops-lock.js'
@@ -8,7 +9,7 @@ import { redemptionAccounting } from './redemption-accounting.js'
 import { RESERVE_ADDRESS, transparentAddress } from './reserve-key.js'
 import { RESERVE_NODES, reserveRpc } from './reserve-rpc.js'
 import { planReimbursement, type ReserveCoin } from './reserve-policy.js'
-import { transferLedger, TRANSFERS, confirmedTransfer, reserveSigner, inspectTransaction, type Transfer } from './reserve-settlements.js'
+import { transferLedger, TRANSFERS, confirmedTransfer, reserveSigner, inspectTransaction, validateTransfer, type Transfer } from './reserve-settlements.js'
 
 const execute=process.argv.includes('--execute')
 async function main() {
@@ -52,6 +53,8 @@ async function main() {
     if(!plan){console.log('No eligible reserve reimbursement');return}
     console.log(JSON.stringify({mode:execute?'execute':'preview',reserveZec:Number(live)/1e8,supply:Number(a.supply)/1e8,owedToFloat:Number(a.reimbursementZats)/1e8,repayZec:Number(plan.amount)/1e8,feeZec:Number(plan.fee)/1e8,inputs:plan.inputs.length,retainedChangeZec:Number(plan.change)/1e8}))
     if(!execute)return
+    const stage=JSON.parse(readFileSync('/etc/zeal/reserve-stage.json','utf8'))
+    if(stage.address!==RESERVE_ADDRESS||createHash('sha256').update(readFileSync(reserveSigner())).digest('hex')!==stage.signerSha256)throw new Error('Reserve signer integrity check failed')
     const credential=process.env.CREDENTIALS_DIRECTORY
     if(!credential)throw new Error('Reserve service credential missing')
     const secret=JSON.parse(readFileSync(credential+'/reserve','utf8'))
@@ -65,6 +68,7 @@ async function main() {
     const decoded=inspectTransaction(signed.raw,signed.branch_id)
     if(decoded.txid!==signed.txid||signed.amount_zats!==Number(plan.amount)||signed.fee_zats!==Number(plan.fee))throw new Error('Signed reserve transfer mismatch')
     const t:Transfer={...signed,inputs:plan.inputs,at:new Date().toISOString(),status:'signed'}
+    validateTransfer(t)
     all.push(t);atomicJson(TRANSFERS,all)
     // Persist exact txid/raw before one broadcast attempt. No automatic re-sign/re-send.
     const result=await reserveRpc(RESERVE_NODES[0],'SendTransaction',{data:Buffer.from(t.raw,'hex'),height:0})
