@@ -192,3 +192,6 @@ export const STATIONS = {
 
 /** Redemption opens to the public at this moment (UTC). Until then the desk refuses new requests and the site shows a countdown. */
 export const REDEEM_OPENS_AT = Date.UTC(2026, 8, 6, 16, 20, 0) // opened early: tested end to end at 16:20 UTC
+
+/** Scheduled public wrap opening; contract activation is also required. */
+export const WRAP_OPENS_AT = Date.parse('2026-09-07T23:16:00Z') / 1000

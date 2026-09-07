@@ -77,7 +77,7 @@ const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 05', t: 'Redemption desk deployed. Escrow zZEC with a transparent Zcash address; the operator pays native ZEC and records the Zcash transaction on chain before anything burns. If a payout ever failed, you reclaim it yourself. Nobody can stop that.', href: CONTRACTS.desk ? `${CONTRACTS.explorer}/address/${CONTRACTS.desk}` : undefined, label: 'desk' },
   { d: 'Sep 05', t: 'Redeem form on this page. Connect a wallet, approve, request, watch your own queue. Phase 03 is open.', href: '#redeem', label: 'redeem' },
   { d: 'Sep 05', t: 'WrapDesk deployed and verified: send ZEC to the reserve, receive zZEC 1:1. Each request carries a unique deposit tag so payments match without trusting anyone to say which is which. Every mint passes through the desk with its reason.', href: `${CONTRACTS.explorer}/address/0xb53E3CD58668D1fC9082b51a7d74879733e9E118`, label: 'desk' },
-  { d: 'Sep 05', t: 'zZEC minter rotation proposed to the WrapDesk. The wrapper enforces a 48-hour timelock on role changes, so the desk takes over on Sep 07 at 19:16 UTC and the wrap form opens then.', href: `${CONTRACTS.explorer}/tx/0x7e38dabb29bb3ca49acd7318c1b0c2178308ce40e6d16495403688b90d5cb3dc`, label: 'tx' },
+  { d: 'Sep 05', t: 'zZEC minter rotation proposed to the WrapDesk. The wrapper enforces a 48-hour timelock on role changes, so activation becomes eligible on Sep 07 at 19:16 UTC. The public wrap opening is scheduled for 23:16 UTC, after activation.', href: `${CONTRACTS.explorer}/tx/0x7e38dabb29bb3ca49acd7318c1b0c2178308ce40e6d16495403688b90d5cb3dc`, label: 'tx' },
   { d: 'next', t: 'Pons routes $ZEAL fees to the Tap, and loop one turns too.' },
 ]
 

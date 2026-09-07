@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CHAIN, CONTRACTS, LINKS, TOKEN } from '../config'
+import { CHAIN, CONTRACTS, LINKS, TOKEN, WRAP_OPENS_AT } from '../config'
 import { encAddress, hexToBig, readBatchRaw, word, wordAddress } from '../lib/chain'
 import { stagger } from '../useReveal'
 
 /**
  * Wrap desk. Before the desk is the zZEC minter it shows a live countdown to
- * the on-chain timelock (read from ZZEC.pendingMinter, not a hardcoded date).
+ * the scheduled opening, with the on-chain role timelock tracked separately.
  * Once live: open a request, send the exact deposit, receive zZEC 1:1.
  */
 const SEL = { request: '0xd845a4b3', cancel: '0x40e58ee5', requestCount: '0x5badbe4c', summary: '0x6152e655', minAmount: '0x9b2cb5d8', requestsPaused: '0xe43b7531', pendingMinter: '0x91c5df49', minter: '0x07546172' } as const
@@ -23,26 +23,28 @@ const pad = (n: number) => String(Math.max(0, n)).padStart(2, '0')
 function Countdown({ eta, minterIsDesk }: { eta: number; minterIsDesk: boolean }) {
   const [now, setNow] = useState(Date.now() / 1000)
   useEffect(() => { const t = window.setInterval(() => setNow(Date.now() / 1000), 1000); return () => window.clearInterval(t) }, [])
-  const left = eta - now
+  const openingAt = Math.max(WRAP_OPENS_AT, eta)
+  const left = openingAt - now
+  const timelockPending = !minterIsDesk && eta > now
   const d = Math.floor(left / 86400), h = Math.floor((left % 86400) / 3600), m = Math.floor((left % 3600) / 60), s = Math.floor(left % 60)
-  const phase = minterIsDesk ? 'committed' : left > 0 ? 'timelock' : 'ready'
+  const phase = left > 0 ? 'scheduled' : minterIsDesk ? 'committed' : 'ready'
   return (
     <div className="wd-clock" data-reveal style={stagger(3)}>
-      <div className="wd-clock-l mono">{phase === 'timelock' ? 'the wrap desk opens in' : phase === 'ready' ? 'timelock elapsed · commit pending' : 'the desk is the minter'}</div>
-      {phase === 'timelock' ? (
+      <div className="wd-clock-l mono">{phase === 'scheduled' ? 'the wrap desk opens in' : phase === 'ready' ? 'scheduled opening reached · activation pending' : 'desk activated · opening pending'}</div>
+      {phase === 'scheduled' ? (
         <div className="wd-digits">
           <div><b>{pad(d)}</b><span className="mono">days</span></div><i>:</i>
           <div><b>{pad(h)}</b><span className="mono">hours</span></div><i>:</i>
           <div><b>{pad(m)}</b><span className="mono">min</span></div><i>:</i>
           <div><b>{pad(s)}</b><span className="mono">sec</span></div>
         </div>
-      ) : <div className="wd-digits one"><b>{phase === 'ready' ? 'any moment' : 'live'}</b></div>}
-      <div className="wd-clock-f mono">{new Date(eta * 1000).toUTCString().replace(' GMT', ' UTC')} · read from the wrapper's 48-hour role timelock, not from a calendar</div>
+      ) : <div className="wd-digits one"><b>opening pending</b></div>}
+      <div className="wd-clock-f mono">{new Date(openingAt * 1000).toUTCString().replace(' GMT', ' UTC')} · scheduled public opening</div>
       <ol className="wd-timeline mono">
         <li className="done"><b>✓</b><span>WrapDesk deployed and verified</span><a href={`${CONTRACTS.explorer}/address/${WRAP_DESK_DEPLOYED}?tab=contract`} target="_blank" rel="noreferrer">{WRAP_DESK_DEPLOYED.slice(0, 8)}… ↗</a></li>
         <li className="done"><b>✓</b><span>minter rotation proposed on {TOKEN.wrapper}</span><a href={`${CONTRACTS.explorer}/tx/${PROPOSAL_TX}`} target="_blank" rel="noreferrer">tx ↗</a></li>
-        <li className={phase === 'timelock' ? 'now' : 'done'}><b>{phase === 'timelock' ? '…' : '✓'}</b><span>48-hour public timelock</span><em>anyone can watch it count</em></li>
-        <li className={phase === 'ready' ? 'now' : phase === 'committed' ? 'done' : ''}><b>{phase === 'committed' ? '✓' : '4'}</b><span>commit: the desk becomes the only minter</span></li>
+        <li className={timelockPending ? 'now' : eta || minterIsDesk ? 'done' : ''}><b>{timelockPending ? '…' : eta || minterIsDesk ? '✓' : '3'}</b><span>48-hour public timelock</span><em>{eta ? `eligible ${new Date(eta * 1000).toUTCString().replace(' GMT', ' UTC')}` : minterIsDesk ? 'complete' : 'reading chain status…'}</em></li>
+        <li className={minterIsDesk ? 'done' : !timelockPending && eta ? 'now' : ''}><b>{minterIsDesk ? '✓' : '4'}</b><span>commit: the desk becomes the only minter</span></li>
         <li className={phase === 'committed' ? 'now' : ''}><b>5</b><span>this form opens · send ZEC, get {TOKEN.wrapper} 1:1</span></li>
       </ol>
     </div>
@@ -51,6 +53,13 @@ function Countdown({ eta, minterIsDesk }: { eta: number; minterIsDesk: boolean }
 
 export function Wrap() {
   const desk = CONTRACTS.wrapDesk
+  const [scheduledOpen, setScheduledOpen] = useState(() => Date.now() / 1000 >= WRAP_OPENS_AT)
+  useEffect(() => {
+    const delay = WRAP_OPENS_AT * 1000 - Date.now()
+    if (delay <= 0) return
+    const timer = window.setTimeout(() => setScheduledOpen(true), delay + 1)
+    return () => window.clearTimeout(timer)
+  }, [])
   const [eta, setEta] = useState<number | null>(null)
   const [minterIsDesk, setMinterIsDesk] = useState(false)
   const [info, setInfo] = useState<{ min: bigint; paused: boolean; count: number; minted: bigint } | null>(null)
@@ -102,7 +111,7 @@ export function Wrap() {
   const aligned = zats > 0n && zats % 100000n === 0n
   const step = !account ? 0 : !(aligned && (!info || zats >= info.min)) ? 1 : 2
   const submit = async () => {
-    if (!desk || !account || step < 2) return
+    if (!desk || !scheduledOpen || !minterIsDesk || !account || step < 2) return
     setBusy('confirm the request in your wallet'); setMsg(null)
     try { await send(desk, SEL.request + u256(zats)); setMsg({ kind: 'ok', text: 'Request opened. Your deposit line is below: send the exact figure from any Zcash wallet.' }); setAmount(''); await load() }
     catch (e) { setMsg({ kind: 'err', text: (e as Error).message }) } finally { setBusy(null) }
@@ -128,9 +137,9 @@ export function Wrap() {
           </p>
         </div>
 
-        {!desk ? (
+        {!desk || !scheduledOpen || !minterIsDesk ? (
           <>
-            {eta ? <Countdown eta={eta} minterIsDesk={minterIsDesk} /> : <div className="wd-clock" data-reveal style={stagger(3)}><div className="wd-clock-l mono">reading the timelock from chain…</div></div>}
+            <Countdown eta={eta ?? 0} minterIsDesk={minterIsDesk} />
             <div className="wd-preview" data-reveal style={stagger(4)}>
               <div className="wd-pv-h mono">what it will look like</div>
               <div className="wd-pv-grid">
