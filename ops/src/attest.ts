@@ -1,3 +1,4 @@
+import { managedSend } from './managed-send.js'
 import { RESERVE } from './config.js'
 import { zzec, roleSigner } from './chain.js'
 import { reserveBalanceZats, chainTipHash, fmtZec } from './zcash.js'
@@ -21,7 +22,8 @@ async function main() {
     if (i >= 3) throw new Error('Zcash tip kept moving during the read; try again')
   }
   const proof = tip.hash
-  const c = zzec(await roleSigner('attestor'))
+  const signer = await roleSigner('attestor')
+  const c = zzec(signer)
   const [prev, supply] = (await Promise.all([c.reserveZats(), c.totalSupply()])) as [bigint, bigint]
   console.log(`reserve   ${fmtZec(zats)}  (previous attestation ${fmtZec(prev)})`)
   console.log(`supply    ${fmtZec(supply)}  -> coverage after: ${supply === 0n ? 'n/a' : (Number(zats) / Number(supply)).toFixed(4)}`)
@@ -33,7 +35,7 @@ async function main() {
   if (!force && zats < supply && prev > 0n && zats === 0n) throw new Error('reading is 0 below supply; refusing (ATTEST_FORCE=1 to override)')
   if (!force && zats < supply && prev > 0n && zats * 100n < prev * 80n) throw new Error(`reading ${fmtZec(zats)} is >20% below the previous ${fmtZec(prev)} and below supply; refusing (ATTEST_FORCE=1 to override)`)
   if (zats < supply) console.log('WARNING: reserve below supply. Attesting anyway; the contract will emit CoverageBreach.')
-  const tx = await c.attest(zats, proof)
+  const tx = await managedSend(signer, await c.attest.populateTransaction(zats, proof))
   console.log(`attest    ${tx.hash}`)
   await tx.wait()
   console.log('done')

@@ -1,0 +1,11 @@
+{
+  "commit": "3a0f5a7e5cf917389d184ff4c9d76d906b31dd2e",
+  "rust": "1.98.1",
+  "features": [
+    "clearnet-test-mode"
+  ],
+  "defaultFeatures": false,
+  "target": "x86_64-unknown-linux-gnu",
+  "sha256": "2b88497e4a37ba9ec6986b63c8b1d17de9f5a51e21ade65626875c7fd2ba4c45",
+  "artifact": "s3://zeal-operator-artifacts-z0jy5fu8vvsh/releases/zingo-cli-3a0f5a7-linux-x64"
+}

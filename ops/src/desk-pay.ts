@@ -18,12 +18,15 @@
  *  - Refuses if the float cannot cover amount + fee reserve.
  */
 import { ethers } from 'ethers'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { CHAIN, RESERVE, requireEnv } from './config.js'
 import { roleSigner } from './chain.js'
 import { sendZec } from './zcash.js'
+import { atomicJson, withLock } from './ops-lock.js'
+import { managedSend } from './managed-send.js'
+import { assertLocalSigningActive } from './local-signing.js'
 
 const run = promisify(execFile)
 const provider = new ethers.JsonRpcProvider(CHAIN.rpc, CHAIN.id, { staticNetwork: true })
@@ -36,7 +39,7 @@ const ABI = ['function requestCount() view returns (uint256)', 'function getRequ
 type Entry = { txid: string; at: string; amountZats: string; to: string; fulfilTx?: string }
 type Ledger = Record<string, Entry>
 const load = (): Ledger => (existsSync(LEDGER) ? JSON.parse(readFileSync(LEDGER, 'utf8')) : {})
-const save = (l: Ledger) => writeFileSync(LEDGER, JSON.stringify(l, null, 2))
+const save = (l: Ledger) => atomicJson(LEDGER, l)
 const fmt = (z: bigint) => (Number(z) / 1e8).toFixed(8)
 
 /** Confirmed transparent+shielded balance of the float wallet, in zats, via zingo-cli. */
@@ -56,10 +59,13 @@ async function floatBalanceZats(): Promise<bigint> {
 }
 
 async function main() {
+  assertLocalSigningActive('fulfiller')
+  if (process.platform === 'linux' && existsSync('/etc/zeal/PAYOUT_ACTIVE') && process.env.ZEAL_WALLET_LOCK_HELD !== '1') throw new Error('Run cloud payouts through zeal-desk-pay.service so wallet and backup operations share their lock')
   const desk = new ethers.Contract(requireEnv('DESK_ADDRESS'), ABI, provider)
   const ledger = load()
   const stuck = Object.entries(ledger).filter(([, e]) => e.txid === 'PENDING')
   for (const [id, e] of stuck) console.error(`!! #${id} is PENDING from an earlier run (${e.amountZats} zat -> ${e.to} at ${e.at}); check the float wallet's history, then set txid or delete the entry. Not retried.`)
+  if (stuck.length) throw new Error('Uncertain Zcash payout requires reconciliation before additional automatic payouts')
   const n = Number(await desk.requestCount())
   const now = Math.floor(Date.now() / 1000)
   const paid24 = Object.values(ledger).filter((e) => e.txid !== 'PENDING' && Date.parse(e.at) > Date.now() - 86400e3).reduce((s, e) => s + BigInt(e.amountZats), 0n)
@@ -93,10 +99,10 @@ async function main() {
       console.log(`#${t.id} paid ${fmt(t.amount)} ZEC -> ${t.to}  zcash ${txid}`)
     }
     try {
-      const tx = await d.fulfill(t.id, '0x' + txid.replace(/^0x/, ''))
+      const tx = await managedSend(signer, await d.fulfill.populateTransaction(t.id, '0x' + txid.replace(/^0x/, '')))
       await tx.wait(); ledger[key].fulfilTx = tx.hash; save(ledger)
       console.log(`#${t.id} fulfilled on chain ${tx.hash}: escrow burned, txid recorded`)
     } catch (e) { console.error(`#${t.id} paid but fulfil failed (${(e as Error).message}); will retry next run`); process.exitCode = 2 }
   }
 }
-main().catch((e) => { console.error(e?.shortMessage ?? e?.message ?? e); process.exitCode = 1 })
+withLock('desk-pay', main).catch((e) => { console.error(e?.shortMessage ?? e?.message ?? e); process.exitCode = 1 })

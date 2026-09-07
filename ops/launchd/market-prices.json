@@ -1,0 +1,9 @@
+{
+  "at": 1788769245084,
+  "zecUsd": 1181.5425,
+  "ethUsd": 2491.385,
+  "sources": [
+    "Coinbase",
+    "Kraken"
+  ]
+}

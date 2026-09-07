@@ -10,26 +10,35 @@
  * To sign, point SWEEPER_KEYSTORE at an encrypted keystore for the reserve sink
  * (prompted for its passphrase, or SWEEPER_PASS). A raw SWEEPER_KEY is refused
  * unless ALLOW_RAW_KEY=1. Every sweep is appended to sweeps.json
- * so a re-run can never double-send.
+ * and an unfinished entry blocks another execution. Interrupted runs require
+ * checking the recorded bridge/swap before proceeding; they are not retried.
  *
  *   SWEEP_ETH=0.05 npm run sweep            # quote + plan, nothing moves
- *   SWEEP_ETH=0.05 SWEEPER_KEY=... npm run sweep --execute
+ *   SWEEP_ROLE=keeper SWEEP_ETH=0.5 SWEEP_MIN_ZEC=1 npm run sweep
+ *   Add -- --execute only after reviewing the plan; keeper signer uses KEEPER_PASS.
+ *   Keeper mode retains 1 ETH by default (SWEEP_RETAIN_ETH overrides it).
  */
 import { ethers } from 'ethers'
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, openSync, closeSync, unlinkSync, renameSync } from 'node:fs'
 import { createInterface } from 'node:readline'
 import { CHAIN, RESERVE, requireEnv } from './config.js'
+import { managedSend } from './managed-send.js'
+import { roleSigner } from './chain.js'
+import { checkRelay, checkOneClick, checkRetainedBalance } from './sweep-checks.js'
 
 const RELAY = process.env.RELAY_API ?? 'https://api.relay.link'
 const ONECLICK = process.env.ONECLICK_API ?? 'https://1click.chaindefuser.com'
 const ARB = { id: 42161, rpc: process.env.ARB_RPC ?? 'https://arb1.arbitrum.io/rpc' }
 const ETH0 = ethers.ZeroAddress
 const ASSET = { ethArb: 'nep141:arb.omft.near', zec: 'nep141:zec.omft.near' } as const
-const LEDGER = new URL('../sweeps.json', import.meta.url).pathname
+const LEDGER = process.env.SWEEP_LEDGER ?? new URL('../sweeps.json', import.meta.url).pathname
 
 type Sweep = {
   startedAt: string
   ethIn: string
+  source?: string
+  reserve?: string
+  minZec?: string
   relay?: { requestId?: string; txHash?: string; amountOutArb?: string }
   oneclick?: { depositAddress?: string; txHash?: string; amountOutZec?: string; status?: string }
   done?: boolean
@@ -50,13 +59,17 @@ function askHidden(q: string): Promise<string> {
 const json = async (url: string, init?: RequestInit) => {
   const headers: Record<string, string> = { 'content-type': 'application/json', ...(init?.headers as Record<string, string>) }
   if (process.env.ONECLICK_JWT && url.startsWith(ONECLICK)) headers.authorization = `Bearer ${process.env.ONECLICK_JWT}`
-  const r = await fetch(url, { ...init, headers })
+  const r = await fetch(url, { ...init, headers, signal: AbortSignal.timeout(20_000) })
   const body = await r.json().catch(() => ({}))
   if (!r.ok) throw new Error(`${url} -> ${r.status}: ${JSON.stringify(body).slice(0, 300)}`)
   return body
 }
 const loadLedger = (): Sweep[] => (existsSync(LEDGER) ? JSON.parse(readFileSync(LEDGER, 'utf8')) : [])
-const saveLedger = (l: Sweep[]) => writeFileSync(LEDGER, JSON.stringify(l, null, 2))
+const saveLedger = (l: Sweep[]) => {
+  const temp = `${LEDGER}.tmp`
+  writeFileSync(temp, JSON.stringify(l, null, 2))
+  renameSync(temp, LEDGER)
+}
 
 async function relayQuote(user: string, amountWei: bigint) {
   return json(`${RELAY}/quote`, {
@@ -89,20 +102,36 @@ async function main() {
   const execute = process.argv.includes('--execute')
   const ethIn = ethers.parseEther(requireEnv('SWEEP_ETH'))
   const tAddr = RESERVE.zcashTAddress
-  const sinkEvm = RESERVE.sinkEvm
+  const role = process.env.SWEEP_ROLE
+  if (role && role !== 'keeper') throw new Error('SWEEP_ROLE must be keeper or omitted for the reserve sink')
+  const sinkEvm = role === 'keeper' ? '0x19cece80126b79F76D8b8297B876310a56349738' : RESERVE.sinkEvm
+  const minZec = ethers.parseUnits(process.env.SWEEP_MIN_ZEC ?? '0', 8)
+  const retain = ethers.parseEther(process.env.SWEEP_RETAIN_ETH ?? (role === 'keeper' ? '1' : '0.02'))
+  if (ethIn <= 0n || retain < 0n || minZec < 0n) throw new Error('invalid sweep amount or limits')
+  if (execute && minZec <= 0n) throw new Error('SWEEP_MIN_ZEC must set a positive minimum before execution')
+  if (!/^t[13][a-zA-Z0-9]{33}$/.test(tAddr)) throw new Error('invalid reserve Zcash address')
   let signer: ethers.Wallet | null = null
-  if (process.env.SWEEPER_KEYSTORE) {
+  if (execute && role === 'keeper') {
+    signer = await roleSigner('keeper')
+  } else if (execute && process.env.SWEEPER_KEYSTORE) {
     const pass = process.env.SWEEPER_PASS ?? (await askHidden('passphrase for the reserve sink keystore: '))
     const w = await ethers.Wallet.fromEncryptedJson(readFileSync(process.env.SWEEPER_KEYSTORE, 'utf8'), pass)
     delete process.env.SWEEPER_PASS
     signer = new ethers.Wallet(w.privateKey)
-  } else if (process.env.SWEEPER_KEY) {
+  } else if (execute && process.env.SWEEPER_KEY) {
     if (process.env.ALLOW_RAW_KEY !== '1') throw new Error('SWEEPER_KEY is set; use SWEEPER_KEYSTORE (or ALLOW_RAW_KEY=1 on purpose)')
     signer = new ethers.Wallet(process.env.SWEEPER_KEY)
   }
   if (signer && signer.address.toLowerCase() !== sinkEvm.toLowerCase()) {
     throw new Error(`SWEEPER_KEY is ${signer.address}, not the reserve sink ${sinkEvm}. Refusing.`)
   }
+
+  if (execute && !signer) throw new Error('execution requires a configured signer')
+  const rh = new ethers.JsonRpcProvider(CHAIN.rpc, CHAIN.id)
+  const arb = new ethers.JsonRpcProvider(ARB.rpc, ARB.id)
+  const [sourceBalance, sourceFees] = await Promise.all([rh.getBalance(sinkEvm), rh.getFeeData()])
+  const gasPrice = sourceFees.maxFeePerGas ?? sourceFees.gasPrice
+  if (!gasPrice) throw new Error('source gas price unavailable')
 
   const ledger = loadLedger()
   const open = ledger.find((s) => !s.done)
@@ -113,40 +142,47 @@ async function main() {
 
   // hop 1 quote
   const rq = await relayQuote(sinkEvm, ethIn)
-  const out1 = BigInt(rq.details.currencyOut.amount)
-  const dep = rq.steps[0].items[0].data
-  if (Number(dep.chainId) !== CHAIN.id || BigInt(dep.value) !== ethIn || !ethers.isAddress(dep.to)) throw new Error(`Relay deposit does not match the quote: chain ${dep.chainId} value ${dep.value} to ${dep.to}`)
+  const { output: out1, minimum: relayMinimum, dep } = checkRelay(rq, sinkEvm, ethIn, CHAIN.id, ARB.id)
+  const gas = await rh.estimateGas({ from: sinkEvm, to: dep.to, value: ethIn, data: dep.data ?? '0x' })
+  checkRetainedBalance(sourceBalance, ethIn, gas * gasPrice * 2n, retain)
+  console.log(`source ${sinkEvm} · keep at least ${ethers.formatEther(retain)} ETH on Robinhood Chain`)
   console.log(`hop 1  Relay      in ${ethers.formatEther(ethIn)}  out ${ethers.formatEther(out1)} ETH on Arbitrum  (~${rq.details.timeEstimate}s)`)
   console.log(`       deposit tx to ${dep.to}  value ${dep.value}  chainId ${dep.chainId}`)
 
   // hop 2 quote (dry). Use 99.5% of hop-1 output so gas on Arbitrum is covered.
   const in2 = (out1 * 995n) / 1000n
   const oq = await oneclickQuote(in2, true, sinkEvm, tAddr)
+  checkOneClick(oq, in2, sinkEvm, tAddr, minZec, true)
   const q = oq.quote
   console.log(`hop 2  1Click     in ${ethers.formatEther(in2)} ETH  out ${q.amountOutFormatted} ZEC  (min ${ethers.formatUnits(q.minAmountOut, 8)}, ~${q.timeEstimate}s, withdraw fee ${q.withdrawFee ?? '0'} zat)`)
-  console.log(`       usd in ${q.amountInUsd}  usd out ${q.amountOutUsd}  platform fee ${process.env.ONECLICK_JWT ? '0 (jwt)' : '0.2% (no jwt)'}\n`)
+  console.log(`       usd in ${q.amountInUsd}  usd out ${q.amountOutUsd} · minimum required ${ethers.formatUnits(minZec, 8)} ZEC\n`)
 
   if (!execute || !signer) {
-    console.log('Plan only. To run it: add --execute and SWEEPER_KEY for the reserve sink.\n')
+    console.log('Plan only. Execution requires --execute, a signer, and SWEEP_MIN_ZEC.\n')
     return
   }
 
-  const sweep: Sweep = { startedAt: new Date().toISOString(), ethIn: ethIn.toString() }
+  const sweep: Sweep = { startedAt: new Date().toISOString(), ethIn: ethIn.toString(), source: sinkEvm, reserve: tAddr, minZec: minZec.toString() }
   ledger.push(sweep); saveLedger(ledger)
 
   // hop 1 execute
-  const rh = new ethers.JsonRpcProvider(CHAIN.rpc, CHAIN.id)
-  const arb = new ethers.JsonRpcProvider(ARB.rpc, ARB.id)
+  checkRetainedBalance(await rh.getBalance(sinkEvm), ethIn, gas * gasPrice * 2n, retain)
   const arbBefore = await arb.getBalance(sinkEvm)
-  const tx = await signer.connect(rh).sendTransaction({ to: dep.to, value: BigInt(dep.value), data: dep.data ?? '0x' })
+  const tx = await managedSend(signer.connect(rh), { to: dep.to, value: BigInt(dep.value), data: dep.data ?? '0x' })
   sweep.relay = { requestId: rq.steps[0].requestId, txHash: tx.hash }; saveLedger(ledger)
   console.log(`hop 1  sent ${tx.hash}`)
   await tx.wait()
-  // arrival is judged by balance, so the status endpoint's shape cannot strand us
+  // Require Relay to identify this deposit as filled before considering balance changes.
   for (let i = 0; i < 60; i++) {
+    const status = await json(`${RELAY}/intents/status/v3?requestId=${encodeURIComponent(rq.steps[0].requestId)}`)
+    if (status.status === 'refund' || status.status === 'failure') throw new Error(`Relay ${status.status}; review the recorded request before retrying`)
+    const matches = status.status === 'success' && Number(status.originChainId) === CHAIN.id &&
+      Number(status.destinationChainId) === ARB.id && status.inTxHashes?.some((hash: string) => hash.toLowerCase() === tx.hash.toLowerCase())
     const b = await arb.getBalance(sinkEvm)
-    // must look like THIS fill, not some unrelated dust credit
-    if (b - arbBefore >= (out1 * 9n) / 10n) { sweep.relay.amountOutArb = (b - arbBefore).toString(); break }
+    if (matches && b - arbBefore >= relayMinimum) {
+      // Never include more than this conversion's quoted bridge output.
+      sweep.relay.amountOutArb = (b - arbBefore < out1 ? b - arbBefore : out1).toString(); break
+    }
     await sleep(5_000)
   }
   if (!sweep.relay.amountOutArb) throw new Error('hop 1: ETH never arrived on Arbitrum (or arrived short); check Relay status for ' + sweep.relay.requestId)
@@ -157,11 +193,15 @@ async function main() {
   const got = BigInt(sweep.relay.amountOutArb)
   const send2 = (got * 995n) / 1000n
   const real = await oneclickQuote(send2, false, sinkEvm, tAddr)
-  if (!ethers.isAddress(real.quote.depositAddress)) throw new Error('1Click deposit address is not an EVM address: ' + real.quote.depositAddress)
-  if (BigInt(real.quote.amountIn) !== send2) throw new Error(`1Click amountIn ${real.quote.amountIn} != requested ${send2}`)
-  if (real.quoteRequest?.recipient !== tAddr) throw new Error('1Click quote recipient is not our reserve address')
+  checkOneClick(real, send2, sinkEvm, tAddr, minZec, false)
+  const [arbGas, arbFees, arbBalance] = await Promise.all([
+    arb.estimateGas({ from: sinkEvm, to: real.quote.depositAddress, value: send2 }), arb.getFeeData(), arb.getBalance(sinkEvm),
+  ])
+  const arbGasPrice = arbFees.maxFeePerGas ?? arbFees.gasPrice
+  if (!arbGasPrice) throw new Error('Arbitrum gas price unavailable')
+  checkRetainedBalance(arbBalance, send2, arbGas * arbGasPrice * 2n, arbBefore)
   sweep.oneclick = { depositAddress: real.quote.depositAddress }; saveLedger(ledger)
-  const tx2 = await signer.connect(arb).sendTransaction({ to: real.quote.depositAddress, value: BigInt(real.quote.amountIn) })
+  const tx2 = await managedSend(signer.connect(arb), { to: real.quote.depositAddress, value: BigInt(real.quote.amountIn) })
   sweep.oneclick.txHash = tx2.hash; saveLedger(ledger)
   console.log(`hop 2  sent ${tx2.hash} -> ${real.quote.depositAddress}`)
   await tx2.wait()
@@ -181,4 +221,13 @@ async function main() {
   throw new Error('hop 2 still pending after 20 minutes; keep polling /v0/status')
 }
 
-main().catch((e) => { console.error(e.message ?? e); process.exit(1) })
+async function run() {
+  if (!process.argv.includes('--execute')) return main()
+  const lock = `${LEDGER}.lock`
+  let fd: number
+  try { fd = openSync(lock, 'wx', 0o600) }
+  catch { throw new Error('sweep execution lock exists; check the running process and ledger before retrying') }
+  try { writeFileSync(fd, String(process.pid)); await main() }
+  finally { closeSync(fd); unlinkSync(lock) }
+}
+run().catch((e) => { console.error(e.message ?? e); process.exitCode = 1 })

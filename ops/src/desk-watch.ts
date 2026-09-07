@@ -19,7 +19,22 @@ async function main() {
   const alerts: string[] = []
   const notes: string[] = []
   // gas
+  const cloudBurner = process.env.BURNER_ADDRESS
+  if (cloudBurner && ethers.isAddress(cloudBurner)) {
+    const gas = await provider.getBalance(cloudBurner)
+    if (gas < MIN_GAS) alerts.push(`burner wallet ${cloudBurner} has ${ethers.formatEther(gas)} ETH: top up`)
+  }
   for (const [role, addr] of Object.entries(ROLES)) { const b = await provider.getBalance(addr); if (b < MIN_GAS) alerts.push(`${role} wallet ${addr} has ${ethers.formatEther(b)} ETH: top up`) }
+  // Keeper inventory and funding that can constrain the automated refill loop.
+  const keeperEth = await provider.getBalance(ROLES.keeper)
+  const inventory = await new ethers.Contract(CONTRACTS.zzec, ['function balanceOf(address) view returns(uint256)'], provider).balanceOf(ROLES.keeper)
+  if (keeperEth < ethers.parseEther('1.05')) alerts.push(`KEEPER FUNDING: ${ethers.formatEther(keeperEth)} ETH remains at ${ROLES.keeper}; refill preserves 1 ETH plus gas. Add ETH if more refill capacity is needed.`)
+  if (BigInt(inventory) < 35_000_000n) {
+    const statePath = new URL('../launchd/refill.json', import.meta.url).pathname
+    const jobs = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : []
+    const active = jobs.find((j: {phase:string}) => j.phase !== 'complete')
+    if (!active || active.phase === 'attention') alerts.push(`KEEPER INVENTORY: ${fmt(BigInt(inventory))} zZEC remains; replenishment is not progressing. Check funding, budget/cooldown and refill status before topping up.`)
+  }
   // redemption desk
   if (process.env.DESK_ADDRESS) {
     const desk = new ethers.Contract(process.env.DESK_ADDRESS, ['function requestCount() view returns (uint256)', 'function summary(uint256) view returns (address,uint256,uint64,uint8,bytes32)', 'function zcashAddressOf(uint256) view returns (string)'], provider)
@@ -70,9 +85,16 @@ async function main() {
     }
   }
   // zZEC attestation freshness (the attest job has its own alert; this catches a dead scheduler)
-  const zz = new ethers.Contract(CONTRACTS.zzec, ['function lastAttestationAt() view returns (uint64)'], provider)
+  const zz = new ethers.Contract(CONTRACTS.zzec, ['function lastAttestationAt() view returns (uint64)', 'function reserveZats() view returns(uint256)', 'function totalSupply() view returns(uint256)'], provider)
+  const [backing, supply] = await Promise.all([zz.reserveZats(), zz.totalSupply()])
+  if (backing < supply) alerts.push('BACKING: attested ZEC reserve is below minted zZEC supply. Investigate immediately; do not mint more.')
+  if (RESERVE.zcashTAddress) {
+    const utxos = await addressUtxos(RESERVE.zcashTAddress)
+    const liveBacking = utxos.filter(u => u.height > 0).reduce((total,u) => total + u.valueZat,0n)
+    if (liveBacking < supply) alerts.push('LIVE BACKING: confirmed ZEC at the reserve address is below minted supply. Investigate the reserve and pending deposits immediately.')
+  }
   const ageH = (Date.now() / 1000 - Number(await zz.lastAttestationAt())) / 3600
-  if (ageH > 9) alerts.push(`last attestation is ${ageH.toFixed(1)}h old (job runs every 6h): check launchd/attest.err`)
+  if (ageH > 9) alerts.push(`last attestation is ${ageH.toFixed(1)}h old (job runs every 6h): check the attestation service`)
   const stamp = new Date().toISOString()
   for (const n of notes) console.log(`${stamp} note ${n}`)
   if (alerts.length) { for (const a of alerts) console.log(`${stamp} ALERT ${a}`); process.exitCode = 2 }

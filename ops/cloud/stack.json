@@ -1,0 +1,650 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "ZEAL isolated operator using the existing OENBOT VPC. Signing starts disabled.",
+  "Parameters": {
+    "VpcId": {
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "SubnetId": {
+      "Type": "AWS::EC2::Subnet::Id"
+    },
+    "Ami": {
+      "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+      "Default": "/aws/service/canonical/ubuntu/server/24.04/stable/current/amd64/hvm/ebs-gp3/ami-id"
+    },
+    "AlertTopic": {
+      "Type": "String",
+      "AllowedPattern": "arn:aws:sns:.*"
+    },
+    "ZealAlertEmail": {
+      "Type": "String",
+      "AllowedPattern": "[^@ ]+@[^@ ]+\\.[^@ ]+"
+    },
+    "RemainingLaptopBurn": {
+      "Type": "String",
+      "Default": "true",
+      "AllowedValues": [
+        "true",
+        "false"
+      ]
+    }
+  },
+  "Resources": {
+    "SecretKey": {
+      "Type": "AWS::KMS::Key",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": "ZEAL operational secrets",
+        "EnableKeyRotation": true,
+        "KeyPolicy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+                }
+              },
+              "Action": "kms:*",
+              "Resource": "*"
+            }
+          ]
+        },
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": "ZEAL"
+          }
+        ]
+      }
+    },
+    "KeeperSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": "ZEAL keeper encrypted keystore and unlock secret; populated locally",
+        "KmsKeyId": {
+          "Ref": "SecretKey"
+        },
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": "ZEAL"
+          }
+        ]
+      }
+    },
+    "AttestorSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": "ZEAL attestor encrypted keystore and unlock secret; populated locally",
+        "KmsKeyId": {
+          "Ref": "SecretKey"
+        },
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": "ZEAL"
+          }
+        ]
+      }
+    },
+    "MinterSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": "ZEAL minter encrypted keystore and unlock secret; populated locally",
+        "KmsKeyId": {
+          "Ref": "SecretKey"
+        },
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": "ZEAL"
+          }
+        ]
+      }
+    },
+    "Artifacts": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "IgnorePublicAcls": true,
+          "BlockPublicPolicy": true,
+          "RestrictPublicBuckets": true
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": "ZEAL"
+          }
+        ]
+      }
+    },
+    "BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "Artifacts"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "Artifacts",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Sub": "${Artifacts.Arn}/*"
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "Role": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ec2.amazonaws.com"
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        ],
+        "Policies": [
+          {
+            "PolicyName": "ZealRuntimeOnly",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "secretsmanager:GetSecretValue",
+                    "secretsmanager:DescribeSecret"
+                  ],
+                  "Resource": [
+                    {
+                      "Ref": "KeeperSecret"
+                    },
+                    {
+                      "Ref": "AttestorSecret"
+                    },
+                    {
+                      "Ref": "MinterSecret"
+                    },
+                    {
+                      "Ref": "FulfillerSecret"
+                    },
+                    {
+                      "Ref": "BurnerSecret"
+                    },
+                    {
+                      "Ref": "FloatWalletSecret"
+                    }
+                  ],
+                  "Condition": {
+                    "Bool": {
+                      "aws:SecureTransport": "true"
+                    }
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "kms:Decrypt",
+                    "kms:DescribeKey"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "SecretKey",
+                      "Arn"
+                    ]
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "kms:ViaService": {
+                        "Fn::Sub": "secretsmanager.${AWS::Region}.amazonaws.com"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "s3:GetObject",
+                  "Resource": {
+                    "Fn::Sub": "${Artifacts.Arn}/releases/*"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "s3:PutObject",
+                  "Resource": {
+                    "Fn::Sub": "${Artifacts.Arn}/backups/*"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "cloudwatch:PutMetricData",
+                  "Resource": "*",
+                  "Condition": {
+                    "StringEquals": {
+                      "cloudwatch:namespace": "ZEAL/Operator"
+                    }
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "sns:Publish",
+                  "Resource": {
+                    "Ref": "ZealAlerts"
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "kms:Decrypt",
+                    "kms:GenerateDataKey"
+                  ],
+                  "Resource": {
+                    "Fn::GetAtt": [
+                      "NotificationKey",
+                      "Arn"
+                    ]
+                  },
+                  "Condition": {
+                    "StringEquals": {
+                      "kms:ViaService": {
+                        "Fn::Sub": "sns.${AWS::Region}.amazonaws.com"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": "sns:ListSubscriptionsByTopic",
+                  "Resource": {
+                    "Ref": "ZealAlerts"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": "ZEAL"
+          }
+        ]
+      }
+    },
+    "Profile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Roles": [
+          {
+            "Ref": "Role"
+          }
+        ]
+      }
+    },
+    "Group": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "ZEAL worker no inbound access; SSM only",
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "-1",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": "ZEAL"
+          }
+        ]
+      }
+    },
+    "Worker": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "ImageId": {
+          "Ref": "Ami"
+        },
+        "InstanceType": "t3a.small",
+        "IamInstanceProfile": {
+          "Ref": "Profile"
+        },
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "AssociatePublicIpAddress": true,
+            "SubnetId": {
+              "Ref": "SubnetId"
+            },
+            "GroupSet": [
+              {
+                "Ref": "Group"
+              }
+            ]
+          }
+        ],
+        "MetadataOptions": {
+          "HttpTokens": "required",
+          "HttpPutResponseHopLimit": 1
+        },
+        "CreditSpecification": {
+          "CPUCredits": "unlimited"
+        },
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/sda1",
+            "Ebs": {
+              "VolumeSize": 30,
+              "VolumeType": "gp3",
+              "Encrypted": true,
+              "DeleteOnTermination": false
+            }
+          }
+        ],
+        "UserData": {
+          "Fn::Base64": "#!/bin/bash\nset -eu\nexport DEBIAN_FRONTEND=noninteractive\napt-get update\napt-get install -y ca-certificates curl unzip python3\ncurl --fail --silent --show-error https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/aws.zip\nunzip -q /tmp/aws.zip -d /tmp/aws-install\n/tmp/aws-install/aws/install\nuseradd --system --create-home --home-dir /var/lib/zeal --shell /usr/sbin/nologin zeal\nmkdir -p /opt/zeal /var/lib/zeal/runtime /etc/zeal\nchmod 700 /etc/zeal\nchown -R zeal:zeal /var/lib/zeal\n# Services and signers are installed separately; no transactions at boot.\n"
+        },
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": "ZEAL"
+          },
+          {
+            "Key": "Name",
+            "Value": "zeal-operator"
+          }
+        ]
+      }
+    },
+    "HostAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": "ZEAL host status check failure",
+        "Namespace": "AWS/EC2",
+        "MetricName": "StatusCheckFailed",
+        "Dimensions": [
+          {
+            "Name": "InstanceId",
+            "Value": {
+              "Ref": "Worker"
+            }
+          }
+        ],
+        "Statistic": "Maximum",
+        "Period": 60,
+        "EvaluationPeriods": 2,
+        "Threshold": 0,
+        "ComparisonOperator": "GreaterThanThreshold",
+        "TreatMissingData": "missing",
+        "AlarmActions": [
+          {
+            "Ref": "AlertTopic"
+          },
+          {
+            "Ref": "ZealAlerts"
+          }
+        ]
+      }
+    },
+    "ProcessAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": "ZEAL core operator unhealthy or heartbeat missing",
+        "Namespace": "ZEAL/Operator",
+        "MetricName": "Healthy",
+        "Statistic": "Minimum",
+        "Period": 60,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 3,
+        "Threshold": 1,
+        "ComparisonOperator": "LessThanThreshold",
+        "TreatMissingData": "breaching",
+        "AlarmActions": [
+          {
+            "Ref": "AlertTopic"
+          },
+          {
+            "Ref": "ZealAlerts"
+          }
+        ]
+      }
+    },
+    "NotificationKey": {
+      "Type": "AWS::KMS::Key",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "EnableKeyRotation": true,
+        "KeyPolicy": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+                }
+              },
+              "Action": "kms:*",
+              "Resource": "*"
+            },
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudwatch.amazonaws.com"
+              },
+              "Action": [
+                "kms:Decrypt",
+                "kms:GenerateDataKey*"
+              ],
+              "Resource": "*"
+            }
+          ]
+        }
+      }
+    },
+    "ZealAlerts": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "DisplayName": "ZEAL system alerts",
+        "KmsMasterKeyId": {
+          "Fn::GetAtt": [
+            "NotificationKey",
+            "Arn"
+          ]
+        },
+        "Subscription": [
+          {
+            "Protocol": "email",
+            "Endpoint": {
+              "Ref": "ZealAlertEmail"
+            }
+          }
+        ]
+      }
+    },
+    "LaptopAlarm": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": "ZEAL remaining laptop burn monitor failed or stopped reporting; retired after dedicated burner handoff",
+        "Namespace": "ZEAL/Operator",
+        "MetricName": "LaptopHealthy",
+        "Statistic": "Minimum",
+        "Period": 300,
+        "EvaluationPeriods": 3,
+        "DatapointsToAlarm": 3,
+        "Threshold": 1,
+        "ComparisonOperator": "LessThanThreshold",
+        "TreatMissingData": "breaching",
+        "AlarmActions": [
+          {
+            "Ref": "ZealAlerts"
+          }
+        ]
+      },
+      "Condition": "LaptopBurnPending"
+    },
+    "FulfillerSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": "ZEAL Fulfiller operational credential; populated during verified migration",
+        "KmsKeyId": {
+          "Ref": "SecretKey"
+        },
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": "ZEAL"
+          }
+        ]
+      }
+    },
+    "BurnerSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": "ZEAL Burner operational credential; populated during verified migration",
+        "KmsKeyId": {
+          "Ref": "SecretKey"
+        },
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": "ZEAL"
+          }
+        ]
+      }
+    },
+    "FloatWalletSecret": {
+      "Type": "AWS::SecretsManager::Secret",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "Description": "ZEAL FloatWallet operational credential; populated during verified migration",
+        "KmsKeyId": {
+          "Ref": "SecretKey"
+        },
+        "Tags": [
+          {
+            "Key": "Application",
+            "Value": "ZEAL"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "InstanceId": {
+      "Value": {
+        "Ref": "Worker"
+      }
+    },
+    "Bucket": {
+      "Value": {
+        "Ref": "Artifacts"
+      }
+    },
+    "KeeperSecret": {
+      "Value": {
+        "Ref": "KeeperSecret"
+      }
+    },
+    "AttestorSecret": {
+      "Value": {
+        "Ref": "AttestorSecret"
+      }
+    },
+    "MinterSecret": {
+      "Value": {
+        "Ref": "MinterSecret"
+      }
+    },
+    "ZealAlerts": {
+      "Value": {
+        "Ref": "ZealAlerts"
+      }
+    },
+    "FulfillerSecret": {
+      "Value": {
+        "Ref": "FulfillerSecret"
+      }
+    },
+    "BurnerSecret": {
+      "Value": {
+        "Ref": "BurnerSecret"
+      }
+    },
+    "FloatWalletSecret": {
+      "Value": {
+        "Ref": "FloatWalletSecret"
+      }
+    }
+  },
+  "Conditions": {
+    "LaptopBurnPending": {
+      "Fn::Equals": [
+        {
+          "Ref": "RemainingLaptopBurn"
+        },
+        "true"
+      ]
+    }
+  }
+}

@@ -13,6 +13,10 @@ import { ethers } from 'ethers'
 import { readFileSync } from 'node:fs'
 import { createInterface } from 'node:readline'
 import { CHAIN, CONTRACTS } from './config.js'
+import { roleSigner } from './chain.js'
+import { assertLocalSigningActive } from './local-signing.js'
+import { managedSend } from './managed-send.js'
+import { withLock } from './ops-lock.js'
 
 const V4 = { positionManager: '0x58daec3116aae6d93017baaea7749052e8a04fa7', stateView: '0xf3334192d15450cdd385c8b70e03f9a6bd9e673b' } as const
 const ZEAL = '0x9fA1C5E90A11294F83A9F135b81ad1b537A5FFdC'
@@ -43,14 +47,17 @@ function askHidden(q: string): Promise<string> {
 
 async function main() {
   const execute = process.argv.includes('--execute')
+  const collect = process.env.COLLECT_LP_FEES === '1'
+  if (execute) assertLocalSigningActive('burner')
+  if (collect && process.env.CLOUD_BURNER === '1') throw new Error('Cloud burner cannot collect owner LP fees')
   const furnaceAddr = process.env.FURNACE_ADDRESS ?? ''
   if (!ethers.isAddress(furnaceAddr)) throw new Error('FURNACE_ADDRESS not set (deploy with `npm run furnace` in contracts/)')
   const tokenIds = (process.env.LP_TOKEN_IDS ?? process.env.LP_TOKEN_ID ?? '').split(',').map((x) => x.trim()).filter(Boolean).map(BigInt)
-  if (tokenIds.length === 0) throw new Error('LP_TOKEN_IDS required (comma-separated)')
+  if (collect && tokenIds.length === 0) throw new Error('LP_TOKEN_IDS required (comma-separated)')
   const zzec = CONTRACTS.zzec
   const furnace = new ethers.Contract(furnaceAddr, furnaceAbi, provider)
-  const owners: string[] = await Promise.all(tokenIds.map((id) => posm.ownerOf(id)))
-  const lpOwner = owners[0]
+  const owners: string[] = collect ? await Promise.all(tokenIds.map((id) => posm.ownerOf(id))) : []
+  const lpOwner = owners[0] ?? ethers.ZeroAddress
   if (owners.some((o) => o.toLowerCase() !== lpOwner.toLowerCase())) throw new Error('all positions must share one owner')
 
   // Fees collectable = what a zero-liquidity decrease would pay out. Simulate it from the owner.
@@ -67,19 +74,24 @@ async function main() {
   const ethPerZzec = 1 / (Number(z.sqrtPriceX96) ** 2 / 2 ** 192) / 1e10 // raw1/raw0 with 8dp vs 18dp
 
   console.log(`\nFurnace ${furnaceAddr}  burned so far ${ethers.formatEther(burned)} ZEAL in ${count} burns  impact bound ${impact} bps (sqrt)`)
-  console.log(`LP #${tokenIds.join(', #')} owner ${lpOwner}  |  Furnace holds ${ethers.formatEther(ethHeldF)} ETH + ${Number(zzecHeldF) / 1e8} zZEC`)
+  if (collect) console.log(`LP #${tokenIds.join(', #')} owner ${lpOwner}`)
+  console.log(`Furnace holds ${ethers.formatEther(ethHeldF)} ETH + ${Number(zzecHeldF) / 1e8} zZEC`)
   console.log(`prices  1 ETH = ${zealPerEth.toFixed(0)} ZEAL   1 zZEC = ${ethPerZzec.toFixed(5)} ETH`)
 
-  const collect = process.env.COLLECT_LP_FEES === '1'
   if (!execute) {
     console.log(`\nPlan: ${collect ? `collect LP fees from #${tokenIds.join(', #')} -> ${lpOwner}, forward them to the Furnace, then ` : ''}ignite what the Furnace holds.\nAdd --execute to sign (deployer keystore).\n`)
     return
   }
-  const ksPath = process.env.LP_KEYSTORE ?? new URL('../../contracts/.keystore.json', import.meta.url).pathname
-  const pass = process.env.LP_PASS ?? (await askHidden('keystore passphrase: '))
-  const wallet = (await ethers.Wallet.fromEncryptedJson(readFileSync(ksPath, 'utf8'), pass)).connect(provider)
-  delete process.env.LP_PASS
-  if (wallet.address.toLowerCase() !== lpOwner.toLowerCase()) throw new Error(`keystore ${wallet.address} does not own these positions`)
+  let wallet: ethers.Wallet
+  if (process.env.CLOUD_BURNER === '1') wallet = await roleSigner('burner')
+  else {
+    const ksPath = process.env.LP_KEYSTORE ?? new URL('../../contracts/.keystore.json', import.meta.url).pathname
+    const pass = process.env.LP_PASS ?? (await askHidden('keystore passphrase: '))
+    const unlocked = await ethers.Wallet.fromEncryptedJson(readFileSync(ksPath, 'utf8'), pass)
+    wallet = new ethers.Wallet(unlocked.privateKey, provider)
+    delete process.env.LP_PASS
+  }
+  if (collect && wallet.address.toLowerCase() !== lpOwner.toLowerCase()) throw new Error(`keystore ${wallet.address} does not own these positions`)
   if ((await furnace.igniter()).toLowerCase() !== wallet.address.toLowerCase()) throw new Error('keystore is not the Furnace igniter')
 
   if (collect) {
@@ -107,8 +119,8 @@ async function main() {
   const dry = (await (furnace.connect(wallet) as ethers.Contract).ignite.staticCall(0n)) as bigint
   if (dry === 0n) { console.log('ignite    dry run returns 0 ZEAL: the Furnace zZEC pool has no depth yet (pool rotation pending). Skipping, nothing lost; funds stay in the Furnace.'); return }
   if (dry < minOut) console.log(`ignite    dry run ${ethers.formatEther(dry)} ZEAL is under the floor; sending anyway with the dry-run figure as floor`)
-  const tx3 = await (furnace.connect(wallet) as ethers.Contract).ignite(dry < minOut ? dry * 97n / 100n : minOut)
+  const tx3 = await managedSend(wallet, await furnace.ignite.populateTransaction(dry < minOut ? dry * 97n / 100n : minOut))
   console.log(`ignite    ${tx3.hash}`); await tx3.wait()
   console.log(`\nDONE  burned total ${ethers.formatEther(await furnace.totalZealBurned())} ZEAL in ${await furnace.burnCount()} burns\n`)
 }
-main().catch((e) => { console.error(e?.shortMessage ?? e?.message ?? e); process.exit(1) })
+withLock('burn', main).catch((e) => { console.error(e?.shortMessage ?? e?.message ?? e); process.exit(1) })

@@ -11,4 +11,4 @@ npm run --silent desk:pay >> launchd/desk-pay.log 2>&1
 rc=$?
 if [[ $rc -ne 0 ]]; then ./launchd/notify.sh "ZEAL redemption payer" "$(tail -1 launchd/desk-pay.log | cut -c1-180)"; fi
 if tail -5 launchd/desk-pay.log | grep -q " paid "; then ./launchd/notify.sh "ZEAL redemption paid" "$(tail -5 launchd/desk-pay.log | grep ' paid ' | tail -1 | cut -c1-160)"; fi
-exit 0
+exit "$rc"

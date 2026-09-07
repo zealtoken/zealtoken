@@ -3,6 +3,9 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { provider, roleSigner } from './chain.js'
 import { CONTRACTS, RESERVE } from './config.js'
+import { redemptionAccounting, mintCapacity } from './redemption-accounting.js'
+import { reserveBalanceZats } from './zcash.js'
+import { withLock } from './ops-lock.js'
 import { addressUtxos, chainTip } from './zcash-light.js'
 
 /**
@@ -86,6 +89,9 @@ async function fulfil(desk: ethers.Contract, zzec: ethers.Contract, items: { id:
   const d = desk.connect(signer) as ethers.Contract
   const journal: Record<string, unknown>[] = existsSync(JOURNAL) ? JSON.parse(readFileSync(JOURNAL, 'utf8')) : []
   for (const it of items) {
+    const live = await reserveBalanceZats(RESERVE.zcashTAddress)
+    const accounting = await redemptionAccounting()
+    if (it.amount <= 0n || it.amount > mintCapacity(live, accounting.supply, accounting.reimbursementZats, owed)) throw new Error('Wrap exceeds available backing after redemption reimbursement obligations')
     const tx = await d.fulfill(it.id, it.txid)
     console.log(`fulfil #${it.id}  ${fmt(it.amount)} zZEC  zcash ${it.txid}  ${tx.hash}`); await tx.wait()
     journal.push({ at: new Date().toISOString(), id: it.id, amountZats: it.amount.toString(), zcashTxid: it.txid, tx: tx.hash })
@@ -93,4 +99,4 @@ async function fulfil(desk: ethers.Contract, zzec: ethers.Contract, items: { id:
   }
   console.log('done')
 }
-main().catch((e) => { console.error(e?.shortMessage ?? e?.message ?? e); process.exitCode = 1 })
+withLock('issuance', main).catch((e) => { console.error(e?.shortMessage ?? e?.message ?? e); process.exitCode = 1 })

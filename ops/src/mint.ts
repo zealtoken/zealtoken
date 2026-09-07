@@ -1,8 +1,11 @@
+import { managedSend } from './managed-send.js'
 import { ethers } from 'ethers'
 import { existsSync, readFileSync } from 'node:fs'
 import { zzec, roleSigner } from './chain.js'
 import { fmtZec, reserveBalanceZats } from './zcash.js'
 import { RESERVE } from './config.js'
+import { redemptionAccounting, mintCapacity } from './redemption-accounting.js'
+import { withLock } from './ops-lock.js'
 
 /**
  * Mint zZEC up to the attested reserve. Usage:
@@ -23,7 +26,8 @@ function pendingPayoutsZats(): bigint {
 async function main() {
   const to = process.env.MINT_TO
   if (!to || !ethers.isAddress(to)) throw new Error('MINT_TO must be an address')
-  const c = zzec(await roleSigner('minter'))
+  const signer = await roleSigner('minter')
+  const c = zzec(signer)
   const [reserve, supply, fresh, paused] = (await Promise.all([c.reserveZats(), c.totalSupply(), c.attestationIsFresh(), c.mintingPaused()])) as [bigint, bigint, boolean, boolean]
   const headroom = reserve - supply
   console.log(`reserve ${fmtZec(reserve)}  supply ${fmtZec(supply)}  headroom ${fmtZec(headroom)}`)
@@ -32,10 +36,12 @@ async function main() {
   const raw = process.env.MINT_ZEC
   if (raw !== undefined && !/^\d+(\.\d+)?$/.test(raw)) throw new Error('MINT_ZEC must be a positive decimal, e.g. 2.14')
   if (raw === undefined && process.env.MINT_ALL !== '1') throw new Error('set MINT_ZEC=<amount> or MINT_ALL=1')
-  const want: bigint = raw !== undefined ? BigInt(Math.round(parseFloat(raw) * 1e8)) : headroom
   const live = await reserveBalanceZats(RESERVE.zcashTAddress)
   const inflight = pendingPayoutsZats()
-  const liveHeadroom = live > supply + inflight ? live - supply - inflight : 0n
+  const accounting = await redemptionAccounting()
+  const liveHeadroom = mintCapacity(live, accounting.supply, accounting.reimbursementZats, inflight)
+  const want = raw !== undefined ? ethers.parseUnits(raw, 8) : (headroom < liveHeadroom ? headroom : liveHeadroom)
+  console.log(`reserved for payout-wallet reimbursement ${fmtZec(accounting.reimbursementZats)}`)
   if (inflight > 0n) console.log(`in-flight redemption payouts ${fmtZec(inflight)} (subtracted)`)
   console.log(`live ZEC ${fmtZec(live)}  -> live headroom ${fmtZec(liveHeadroom)}`)
   if (want <= 0n) throw new Error('nothing to mint')
@@ -46,12 +52,12 @@ async function main() {
   let tx
   if (desk && minter.toLowerCase() === desk.toLowerCase()) {
     const ref = ethers.id(`fee-route:${new Date().toISOString().slice(0, 10)}:${want}`)
-    const d = new ethers.Contract(desk, ['function operatorMint(address,uint256,bytes32)'], await roleSigner('minter'))
-    tx = await d.operatorMint(to, want, ref)
+    const d = new ethers.Contract(desk, ['function operatorMint(address,uint256,bytes32)'], signer)
+    tx = await managedSend(signer, await d.operatorMint.populateTransaction(to, want, ref))
     console.log(`via WrapDesk.operatorMint ref ${ref}`)
-  } else tx = await c.mint(to, want)
+  } else tx = await managedSend(signer, await c.mint.populateTransaction(to, want))
   console.log(`mint ${fmtZec(want)} -> ${to}  ${tx.hash}`)
   await tx.wait()
   console.log('done')
 }
-main().catch((e) => { console.error(e?.shortMessage ?? e?.message ?? e); process.exitCode = 1 })
+withLock('issuance', main).catch((e) => { console.error(e?.shortMessage ?? e?.message ?? e); process.exitCode = 1 })

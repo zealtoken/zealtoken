@@ -1,0 +1,14 @@
+{
+  "address": "0xe6E6304FDb8bc831cAf45Cb4AF4f5371163c75c0",
+  "owner": "0x1C083F2f85aCadae452C7512C45cD7c8a3ddbF03",
+  "operator": "0x19cece80126b79F76D8b8297B876310a56349738",
+  "tokenId": "1909208",
+  "poolId": "0xa6d41767e205c89fe05d7ad78354af7bb98cbe9b0c3c60f8371b05e7087fdb84",
+  "positionManager": "0x58daec3116aae6d93017baaea7749052e8a04fa7",
+  "stateView": "0xf3334192d15450cdd385c8b70e03f9a6bd9e673b",
+  "permit2": "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+  "deployTx": "0xf9cd058d5e4c080fe1b14b274a998bd7cc42581e84b3bfde977c2ac4abed5aba",
+  "createdAt": "2026-09-07T07:52:56.030Z",
+  "runtimeHash": "0x863405d517819ae9f344502c1f5983c313620ab91812f25c682d0c7076c4cbb3",
+  "approvalTx": "0x787d0fc10a145c212c6ed3b6c5a0fa2a00224dc8032a06578c5907f88cd1d159"
+}

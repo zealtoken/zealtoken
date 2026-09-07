@@ -5,11 +5,18 @@ set -euo pipefail
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 RT="$HOME/zeal-ops"
 mkdir -p "$RT/launchd"
-rsync -a --delete --exclude '.float' --exclude 'desk-ledger.json' --exclude 'redemptions.json' --exclude 'launchd/*.log' --exclude 'launchd/*.out' --exclude 'launchd/*.err' --exclude 'launchd/*.json' --exclude 'launchd/desk-alerted' --exclude 'launchd/roles-alerted' --exclude 'launchd/keeper-pricefail' "$SRC/" "$RT/"
+rsync -a --delete --exclude '.float' --exclude 'sweeps.json*' --exclude 'desk-ledger.json' --exclude 'redemptions.json' --exclude 'launchd/*.log' --exclude 'launchd/*.out' --exclude 'launchd/*.err' --exclude 'launchd/*.json' --exclude 'launchd/*.lock' --exclude 'launchd/keeper-failed' --exclude 'launchd/refill-failed' --exclude 'launchd/desk-alerted' --exclude 'launchd/roles-alerted' --exclude 'launchd/keeper-pricefail' "$SRC/" "$RT/"
 chmod 700 "$RT/.keys" 2>/dev/null || true
 # The LP/burn job signs with the deployer keystore; launchd cannot read ~/Documents, so keep a copy beside the role keys.
 if [ -f "$SRC/../contracts/.keystore.json" ]; then install -m 600 "$SRC/../contracts/.keystore.json" "$RT/.keys/deployer.json"; fi
-for job in attest watch-roles keeper burn desk-watch desk-pay ${EXTRA_JOBS:-}; do
+for job in attest watch-roles keeper burn desk-watch desk-pay email-health ${EXTRA_JOBS:-}; do
+  if [ "$job" = "email-health" ] && [ ! -f "$RT/launchd/email-config.json" ]; then continue; fi
+  if [ -f "$RT/launchd/cloud-migrated.json" ]; then
+    case "$job" in attest|watch-roles|keeper|desk-watch) continue ;; esac
+  fi
+  if [ "$job" = "desk-pay" ] && [ -f "$RT/launchd/cloud-fulfiller-migrated.json" ]; then continue; fi
+  if [ "$job" = "burn" ] && [ -f "$RT/launchd/cloud-burner-migrated.json" ]; then continue; fi
+  if [ "$job" = "email-health" ] && [ -f "$RT/launchd/cloud-fulfiller-migrated.json" ] && [ -f "$RT/launchd/cloud-burner-migrated.json" ]; then continue; fi
   PLIST="$HOME/Library/LaunchAgents/com.zealtoken.$job.plist"
   NEW="$(sed "s#__OPS__#$RT#g" "$SRC/launchd/com.zealtoken.$job.plist")"
   # Reload only when the job definition changed or it is not loaded: every reload triggers a macOS

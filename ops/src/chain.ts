@@ -1,4 +1,5 @@
 import { ethers } from 'ethers'
+import { assertLocalSigningActive } from './local-signing.js'
 import { CHAIN, CONTRACTS } from './config.js'
 
 /** The slice of ZZEC the operator drives. Kept in step with contracts/ZZEC.sol. */
@@ -28,7 +29,7 @@ export function zzec(signer?: ethers.Signer) {
 
 /** A role key from the environment. Attestor and minter are separate on purpose. */
 export const KEYS_DIR = new URL('../.keys/', import.meta.url).pathname
-export type Role = 'attestor' | 'minter' | 'keeper' | 'fulfiller'
+export type Role = 'attestor' | 'minter' | 'keeper' | 'fulfiller' | 'burner'
 export const keyPath = (role: Role) => `${KEYS_DIR}${role}.json`
 
 /**
@@ -37,6 +38,7 @@ export const keyPath = (role: Role) => `${KEYS_DIR}${role}.json`
  * for hosts that inject secrets themselves.
  */
 export async function roleSigner(role: Role): Promise<ethers.Wallet> {
+  assertLocalSigningActive(role)
   const { existsSync, readFileSync } = await import('node:fs')
   const file = keyPath(role)
   const envKey = process.env[`${role.toUpperCase()}_KEY`]

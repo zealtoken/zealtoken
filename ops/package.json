@@ -24,9 +24,20 @@
     "watch:desk": "tsx src/desk-watch.ts",
     "desk:pay": "tsx src/desk-pay.ts",
     "compound": "tsx src/compound.ts",
-    "dividends": "tsx src/dividends.ts"
+    "dividends": "tsx src/dividends.ts",
+    "withdraw": "tsx src/withdraw.ts",
+    "test": "tsx --test src/*.test.ts",
+    "replenish": "tsx src/replenish.ts",
+    "replenish:session": "tsx src/replenish.ts --execute --daemon --session",
+    "replenish:daemon": "tsx src/replenish.ts --execute --daemon",
+    "replenish:background": "tsx src/replenish-background.ts",
+    "cloud:unlock": "tsx src/cloud-unlock.ts",
+    "cloud:finish-burn": "tsx src/cloud-finish-burn.ts",
+    "lp:reinvest": "tsx src/lp-reinvest.ts",
+    "reserve:prepare": "tsx src/reserve-prepare.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "3.1127.0",
     "@grpc/grpc-js": "^1.14.4",
     "@grpc/proto-loader": "^0.8.1",
     "ethers": "^6.13.4"
