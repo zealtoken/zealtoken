@@ -123,9 +123,11 @@ describe('ZZEC', () => {
   describe('attestation', () => {
     it('records the reading and the supply it was checked against', async () => {
       const { zzec, attestor } = await loadFixture(deploy)
+      const at = (await time.latest()) + 10
+      await time.setNextBlockTimestamp(at)
       await expect(zzec.connect(attestor).attest(ONE_ZEC * 42n, PROOF))
         .to.emit(zzec, 'Attested')
-        .withArgs(ONE_ZEC * 42n, 0n, PROOF, await time.latest().then((t) => t + 1))
+        .withArgs(ONE_ZEC * 42n, 0n, PROOF, at)
       expect(await zzec.reserveZats()).to.equal(ONE_ZEC * 42n)
     })
 

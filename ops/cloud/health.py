@@ -13,18 +13,11 @@ if not pathlib.Path('/etc/zeal/BURN_ACTIVE').exists() and config.get('BurnerElig
   problems['burn-handoff']='The 48-hour burner delay has elapsed. On the laptop run: cd ~/zeal-ops && npm run cloud:finish-burn. This completes the owner-only role change and moves daily burns to AWS.'
 jobs={'keeper':120,'attest':25200,'replenish':4200,'roles':900,'desk-watch':900,'backup':7500}
 if pathlib.Path('/etc/zeal/PAYOUT_ACTIVE').exists(): jobs.update({'desk-pay':2400,'float-health':2400})
+if pathlib.Path('/etc/zeal/RESERVE_ACTIVE').exists(): jobs['reserve-reimburse']=600
 if pathlib.Path('/etc/zeal/BURN_ACTIVE').exists(): jobs['burn']=108000
 if pathlib.Path('/etc/zeal/LP_REINVEST_ACTIVE').exists(): jobs['lp-reinvest']=7500
-if pathlib.Path('/etc/zeal/RESERVE_ACTIVE').exists():
- jobs['reserve-reimburse']=900
- try:
-  import datetime
-  transfers=json.loads(pathlib.Path('/var/lib/zeal/runtime/launchd/reserve-transfers.json').read_text())
-  for transfer in transfers:
-   if transfer['status']!='confirmed' and time.time()-datetime.datetime.fromisoformat(transfer['at'].replace('Z','+00:00')).timestamp()>900:
-    healthy=False;problems['reserve-settlement']='Reserve reimbursement is pending or uncertain for over 15 minutes. Minting is blocked until reconciliation; do not resend blindly.'
- except Exception:
-  healthy=False;problems['reserve-journal']='Reserve transfer journal missing or unreadable. Stop reserve spending and reconcile before restoring.'
+if pathlib.Path('/etc/zeal/WRAP_ACTIVE').exists(): jobs['wrap']=360
+if pathlib.Path('/etc/zeal/WRAP_INTERIM_ACTIVE').exists(): jobs['wrap-public']=180
 for job,max_age in jobs.items():
  raw=subprocess.check_output(['systemctl','show','zeal-'+job+'.service','--property=ExecMainStatus,ExecMainExitTimestampMonotonic,ExecMainStartTimestampMonotonic,ActiveState'],text=True)
  props=dict(l.split('=',1) for l in raw.splitlines() if '=' in l)
@@ -51,6 +44,17 @@ for job,max_age in jobs.items():
      match=re.match(r'(\w+ wallet|(?:DIRECT )?REDEEM #\d+|WRAP #\d+|[^:]+:)',alert)
      key=match.group(0) if match else alert[:60]
      problems[job+':'+key]=alert
+if pathlib.Path('/etc/zeal/WRAP_INTERIM_ACTIVE').exists():
+ try:
+  w=json.loads(pathlib.Path('/var/lib/zeal/runtime/launchd/wrap-public-status.json').read_text())
+  if not w.get('feeCapacity',False):
+   healthy=False;problems['wrap-fee-funding']='Wrapping needs unencumbered ZEC for consolidation fees. New deposit instructions are held. Review backing before adding project funds.'
+  if w.get('capacityReached'):
+   healthy=False;problems['wrap-capacity']='Public wrapping onboarding capacity reached. Existing assigned routes continue processing; expand/reconcile indexing before reopening onboarding.'
+  if w.get('review'):
+   healthy=False;problems['wrap-deposit-review']='A wrapping payment is outside automatic policy and needs review. Inspect the public wrapping status and deposit journal; do not clear it without reconciliation.'
+ except Exception:
+  healthy=False;problems['wrap-status']='Public wrapping status is unavailable. Check zeal-wrap-public.service.'
 if pathlib.Path('/etc/zeal/PAYOUT_ACTIVE').exists():
  try:
   f=json.loads(pathlib.Path('/var/lib/zeal/runtime/launchd/float-health.json').read_text())
@@ -72,6 +76,11 @@ try:
 except Exception:
  healthy=False
  problems['website']='The ZEAL website did not respond successfully from the AWS monitor. Check hosting and DNS.'
+# Keep approved routine notices out of both email and the external health alarm.
+import runpy
+problems=runpy.run_path('/var/lib/zeal/runtime/cloud/alert-policy.py')['actionable'](problems,time.time())
+problems=runpy.run_path('/var/lib/zeal/runtime/cloud/alert-persistence.py')['persistent'](problems,'/var/lib/zeal/runtime/launchd/alert-persistence.json',time.time())
+healthy=not problems
 subprocess.run(['/usr/local/bin/aws','cloudwatch','put-metric-data','--region','us-east-2','--namespace','ZEAL/Operator','--metric-data',json.dumps([{'MetricName':'Healthy','Value':int(healthy),'Unit':'Count'}])],check=True)
 print('ZEAL health: '+('healthy' if healthy else 'attention'))
 

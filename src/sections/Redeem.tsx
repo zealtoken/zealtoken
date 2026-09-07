@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CHAIN, CONTRACTS, LINKS, TOKEN, ZZEC_MARKET } from '../config'
+import { CHAIN, CONTRACTS, LINKS, TOKEN } from '../config'
 import { encAddress, hexToBig, readBatchRaw, word, wordAddress } from '../lib/chain'
 import { stagger } from '../useReveal'
 
@@ -132,12 +132,12 @@ export function Redeem() {
   }
 
   return (
-    <section className="band band-ink rd-band" id="redeem">
+    <section className="band rd-band" id="redeem">
       <div className="wrap">
         <div className="sec-head">
           <p className="eyebrow" data-reveal>Redemption desk</p>
           <h2 className="h2" data-reveal style={stagger(1)}>
-            Burn {TOKEN.wrapper}.
+            Redeem {TOKEN.wrapper}.
             <br />
             <span className="green">Get native ZEC.</span>
           </h2>
@@ -150,14 +150,14 @@ export function Redeem() {
           <div className="redeem-soon" data-reveal style={stagger(3)}><span className="tag tag-wait"><span className="dot" /> pending</span><p>The desk deploys with Phase 03.</p></div>
         ) : (
           <>
-            <div className="rd-badges" data-reveal style={stagger(3)}>
+            <details className="home-more"><summary>How redemption works</summary><div className="rd-badges" data-reveal style={stagger(3)}>
               <span><b>no fee</b>1:1 · you pay Robinhood Chain gas only</span>
               <span><b>escrow, not burn</b>your zZEC is held, and burned only after you are paid</span>
               <span><b>automatic payout</b>checked every 5 minutes · within available payout capacity</span>
               <span><b>on-chain receipt</b>every payout's Zcash txid is recorded in the contract</span>
             </div>
             <div className="rd-flow-wrap" data-reveal style={stagger(3)}><RedeemFlow paid={info?.paid ?? 0} /></div>
-            <div className="rd-strip mono" data-reveal style={stagger(3)}>
+            </details><div className="rd-strip mono" data-reveal style={stagger(3)}>
               <div><span>requests</span><b>{info?.count ?? '…'}</b></div>
               <div><span>paid out</span><b>{info ? `${zec(info.paidAmount)} ZEC` : '…'}</b><i>{info ? `${info.paid} redemptions` : ''}</i></div>
               <div><span>minimum</span><b>{info ? `${zec(info.min)} ${TOKEN.wrapper}` : '…'}</b></div>
@@ -248,16 +248,6 @@ export function Redeem() {
                   ))}
                 </div>
               </div>
-            </div>
-            <div className="rd-inc" data-reveal style={stagger(5)}>
-              <div className="rd-inc-h"><span className="eyebrow">What is in it for you</span><h3 className="h3">Holding {TOKEN.wrapper} should pay. Leaving should cost nothing.</h3></div>
-              <div className="rd-inc-grid">
-                <a className="rd-inc-card" href="#wrap"><span className="rd-inc-n mono">in</span><b>Wrap for free</b><p>ZEC in, {TOKEN.wrapper} out, one for one. No fee on the way in, no fee on the way out. Opens Sep 7.</p><i className="mono">wrap desk →</i></a>
-                <a className="rd-inc-card" href="#liquidity"><span className="rd-inc-n mono">earn</span><b>{ZZEC_MARKET.lpFeePct}% of every trade</b><p>Provide {TOKEN.wrapper} and ETH and you earn the pool fee on every swap, pro rata, withdrawable any time. The burn's {ZZEC_MARKET.hookFeePct}% comes from traders, not from you.</p><i className="mono">join the herd →</i></a>
-                <a className="rd-inc-card" href="#liquidity"><span className="rd-inc-n mono">rank</span><b>A public place in the herd</b><p>Liquidity providers are ranked live from chain: Foal, Zebra, Stallion, Herd Leader. Your share, your burns hosted, your fees, in the open.</p><i className="mono">see the board →</i></a>
-                <a className="rd-inc-card" href="#wrap"><span className="rd-inc-n mono">burn</span><b>Every trade you host burns ${TOKEN.symbol}</b><p>{ZZEC_MARKET.hookFeePct}% of every swap goes to the Furnace and comes out as burned ${TOKEN.symbol}. More depth, more volume, more burn.</p><i className="mono">how it compounds →</i></a>
-              </div>
-              <div className="rd-inc-soon mono"><span className="tag tag-wait"><span className="dot" /> under consideration</span> a {TOKEN.wrapper}-paid rewards program for liquidity providers and a launch bonus for early wraps. Not live, not promised. If either ships, the budget and end date appear here first.</div>
             </div>
           </>
         )}

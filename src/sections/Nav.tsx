@@ -1,21 +1,22 @@
 import { useEffect, useState } from 'react'
 import { LINKS, TOKEN } from '../config'
 
-/** Four groups instead of twelve flat links. Order is what a visitor wants first: do something, understand it, check it. */
+/** Primary actions plus grouped explanations and verification links. */
 const GROUPS: { label: string; href?: string; external?: boolean; items?: { href: string; label: string; note: string }[] }[] = [
+  { label: 'Liquidity', href: '#liquidity' },
+  { label: 'Launchpad', href: '#launchpad' },
   {
-    label: 'Use it',
+    label: 'Use zZEC',
     items: [
       { href: '#wrap', label: 'Wrap', note: 'ZEC in, zZEC out, 1:1' },
       { href: '#redeem', label: 'Redeem', note: 'zZEC back to native ZEC' },
       { href: '#market', label: 'Market', note: 'trade zZEC against ETH' },
-      { href: '#liquidity', label: 'The Herd', note: 'add depth, earn fees' },
     ],
   },
   {
     label: 'How it works',
     items: [
-      { href: '#gap', label: 'The Gap', note: 'why any of this exists' },
+      { href: '#participate', label: 'The ecosystem', note: '$ZEAL, zZEC, liquidity and zealz.fun' },
       { href: '#foundry', label: 'The Foundry', note: 'where the fees go' },
       { href: '#furnace', label: 'The Furnace', note: 'buys back and burns $ZEAL' },
       { href: '#lore', label: 'Lore', note: 'the short version' },
@@ -24,18 +25,19 @@ const GROUPS: { label: string; href?: string; external?: boolean; items?: { href
   {
     label: 'Proof',
     items: [
-      { href: '#proof', label: 'Live proof', note: 'reserve, coverage, burns' },
+      { href: '#ledger', label: 'Live accounting', note: 'reserve, coverage, fee routing' },
+      { href: '#proof', label: 'Contracts', note: 'published code and addresses' },
       { href: '#phases', label: 'Roadmap', note: 'what is done, what is next' },
       { href: '#faq', label: 'FAQ', note: 'the awkward questions' },
     ],
   },
-  { label: 'zealz.fun', href: 'https://zealz.fun', external: true },
   { label: 'Docs', href: '/docs/' },
 ]
 
 export function Nav() {
   const [stuck, setStuck] = useState(false)
   const [open, setOpen] = useState(false)
+  const [submenu, setSubmenu] = useState<string | null>(null)
 
   useEffect(() => {
     const onScroll = () => setStuck(window.scrollY > 24)
@@ -45,25 +47,30 @@ export function Nav() {
   }, [])
 
   return (
-    <header className={`nav ${stuck ? 'is-stuck' : ''}`}>
+    <header className={`nav ${stuck ? 'is-stuck' : ''}`} onKeyDown={(event) => {
+      if (event.key === 'Escape') {
+        const trigger = event.currentTarget.querySelector<HTMLButtonElement>('.nav-top[aria-expanded="true"]')
+        setSubmenu(null); setOpen(false); trigger?.focus()
+      }
+    }}>
       <div className="nav-in">
         <a className="brand" href="#top" aria-label="Zeal home">
           <img src="/img/zeal-mark.png" alt="" width={44} height={44} />
           <span>ZEAL</span>
         </a>
 
-        <nav className={`nav-links ${open ? 'is-open' : ''}`}>
+        <nav aria-label="Main navigation" className={`nav-links ${open ? 'is-open' : ''}`}>
           {GROUPS.map((g) =>
             g.href ? (
-              <a key={g.label} className="nav-top" href={g.href} onClick={() => setOpen(false)} {...(g.external ? { target: '_blank', rel: 'noreferrer' } : {})}>
+              <a key={g.label} className="nav-top" href={g.href} onClick={() => { setOpen(false); setSubmenu(null) }} {...(g.external ? { target: '_blank', rel: 'noreferrer' } : {})}>
                 {g.label}{g.external && <span className="nav-ext" aria-hidden> &#8599;</span>}
               </a>
             ) : (
-              <div key={g.label} className="nav-group">
-                <button className="nav-top" aria-haspopup="true">{g.label}<span className="nav-caret" aria-hidden>&#8964;</span></button>
-                <div className="nav-menu">
+              <div key={g.label} className="nav-group" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setSubmenu(null) }}>
+                <button className="nav-top" type="button" aria-expanded={submenu === g.label} aria-controls={`menu-${g.label.replace(/ /g, "-")}`} onClick={() => setSubmenu(submenu === g.label ? null : g.label)}>{g.label}<span className="nav-caret" aria-hidden>&#8964;</span></button>
+                <div className="nav-menu" id={`menu-${g.label.replace(/ /g, "-")}`} hidden={submenu !== g.label}>
                   {g.items!.map((it) => (
-                    <a key={it.href} href={it.href} onClick={() => setOpen(false)}>
+                    <a key={it.href} href={it.href} onClick={() => { setOpen(false); setSubmenu(null) }}>
                       <b>{it.label}</b><i>{it.note}</i>
                     </a>
                   ))}

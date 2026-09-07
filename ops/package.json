@@ -37,7 +37,10 @@
     "reserve:prepare": "tsx src/reserve-prepare.ts",
     "reserve:cloud-unlock": "tsx src/reserve-cloud-unlock.ts",
     "reserve:preview": "tsx src/reserve-reimburse.ts",
-    "reserve:activate": "tsx src/reserve-activate.ts"
+    "reserve:activate": "tsx src/reserve-activate.ts",
+    "wrapv2:prepare": "tsx src/wrap-v2-prepare.ts",
+    "wrapv2:cloud-unlock": "tsx src/wrap-v2-cloud-unlock.ts",
+    "wrap:interim:preview": "tsx src/wrap-interim-observe.ts"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "3.1127.0",

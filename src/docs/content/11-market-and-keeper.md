@@ -51,3 +51,10 @@ The keeper is a market maker, not a peg guarantee. It has finite inventory. Its 
 ## Check it yourself
 
 `getSlot0(poolId)` and `getLiquidity(poolId)` on StateView `0xf3334192d15450cdd385c8b70e03f9a6bd9e673b`. Price in ETH per zZEC is `(sqrtPriceX96 / 2^96)^2 / 1e10` inverted. The keeper's trades are ordinary transactions from its address.
+
+
+## Operator funding notifications
+
+The routine keeper ETH funding warning begins below **0.2 ETH**. This is the keeper’s operating balance, not the ZEC reserve backing zZEC. The refill spending policy separately preserves **1 ETH plus gas**: below that floor, automated ETH-to-ZEC inventory refills cannot proceed even when no routine funding email is sent. Lowering the notification threshold does not authorize additional spending.
+
+Low-gas, service-failure, backing and redemption-float alerts remain active. The known WrapDeskV2 minter proposal is treated as expected until its exact September 9, 2026, 20:16:37 UTC eligibility time. A different recipient or timetable remains alertable, and eligibility does not automatically activate the new minter.

@@ -1,11 +1,15 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, rmSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, rmSync, openSync, closeSync, fsyncSync } from 'node:fs'
+import { join, dirname } from 'node:path'
 
 export const stateDir = (process.env.OPS_STATE_DIR ?? new URL('../launchd/', import.meta.url).pathname).replace(/\/?$/, '/')
 export function atomicJson(file: string, value: unknown) {
   const tmp = `${file}.${process.pid}.tmp`
-  writeFileSync(tmp, JSON.stringify(value, null, 2), { mode: 0o600 })
+  const fd = openSync(tmp, 'w', 0o600)
+  try { writeFileSync(fd, JSON.stringify(value, null, 2)); fsyncSync(fd) } finally { closeSync(fd) }
   renameSync(tmp, file)
+  // Flush both content and rename before signing/broadcast callers proceed.
+  const directory = openSync(dirname(file), 'r')
+  try { fsyncSync(directory) } finally { closeSync(directory) }
 }
 export function readJson<T>(file: string, fallback: T): T {
   return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) as T : fallback

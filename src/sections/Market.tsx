@@ -72,8 +72,7 @@ export function Market() {
             <span className="green">Or earn on it.</span>
           </h2>
           <p className="lede" data-reveal style={stagger(2)}>
-            {TOKEN.wrapper} trades on Uniswap v4 on {CHAIN.name}. A keeper holds it within about 1% of the ZEC
-            price. Every trade pays {ZZEC_MARKET.poolFeePct.toFixed(2)}%: {ZZEC_MARKET.lpFeePct}% to liquidity
+            {TOKEN.wrapper} trades on Uniswap v4 on {CHAIN.name}. A keeper targets the ZEC price, subject to available inventory and market conditions. Every trade pays {ZZEC_MARKET.poolFeePct.toFixed(2)}%: {ZZEC_MARKET.lpFeePct}% to liquidity
             providers, {ZZEC_MARKET.hookFeePct}% to the Furnace.
           </p>
         </div>
@@ -86,7 +85,7 @@ export function Market() {
           </div>
           <div className="mkt-stat">
             <div className="mkt-n">{tvl ? usd(tvl) : pool ? `${pool.ethDepth.toFixed(3)} ETH` : '…'}</div>
-            <div className="mkt-l mono">liquidity</div>
+            <div className="mkt-l mono">estimated active depth · not total deposits</div>
             <div className="mkt-h mono">{pool ? `${pool.ethDepth.toFixed(4)} ETH + ${pool.zzecDepth.toFixed(4)} ${TOKEN.wrapper}` : 'reading chain…'}</div>
           </div>
           <div className="mkt-stat">
@@ -100,9 +99,7 @@ export function Market() {
           <article className="check" data-reveal style={stagger(4)}>
             <h3 className="h4">Buy or sell {TOKEN.wrapper}</h3>
             <p>
-              Open Uniswap on {CHAIN.name}, paste the {TOKEN.wrapper} contract address into the token search, and swap
-              from ETH. Small trades land within a percent or two of ZEC; large ones move a small pool, so size to the
-              depth above.
+              Open the preselected {TOKEN.wrapper}/ETH pair on Uniswap for {CHAIN.name}. Check the quoted price, fees and price impact before confirming your swap.
             </p>
             <div className="mkt-actions">
               <a className="btn btn-primary" href={LINKS.uniswapSwap} target="_blank" rel="noreferrer">
@@ -114,14 +111,11 @@ export function Market() {
           <article className="check" data-reveal style={stagger(5)}>
             <h3 className="h4">Provide liquidity</h3>
             <p>
-              Hold {TOKEN.wrapper} and ETH in equal value, then add both to the pool below. You earn the{' '}
-              {ZZEC_MARKET.lpFeePct}% fee on every trade, pro rata to your share, and you can withdraw any time. The
-              pool is 0.3% fee, tick spacing 60, with the burn hook attached. Deeper liquidity means smaller price moves
-              for everyone.
+              Pair {TOKEN.wrapper} with ETH at the pool price. Earn a share of the {ZZEC_MARKET.lpFeePct}% LP fees while your liquidity is active. Preview both amounts in the liquidity desk and keep ownership of your position in your wallet.
             </p>
             <div className="mkt-actions">
-              <a className="btn btn-ghost" href={LINKS.uniswapAddLiquidity} target="_blank" rel="noreferrer">
-                Add liquidity on Uniswap
+              <a className="btn btn-ghost" href="#liquidity">
+                Preview liquidity deposit
               </a>
               <a className="mono mkt-link" href={`${CONTRACTS.explorer}/address/${ZZEC_MARKET.hook}`} target="_blank" rel="noreferrer">
                 the hook ↗

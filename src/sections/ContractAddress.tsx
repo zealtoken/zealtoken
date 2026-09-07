@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { CONTRACTS, TOKEN } from '../config'
 
-/** The $ZEAL contract address: full, copyable, linked to the explorer. */
-export function ContractAddress({ compact = false }: { compact?: boolean }) {
+/** Configured token address: full, copyable, linked to the explorer. */
+export function ContractAddress({ compact = false, wrapper = false }: { compact?: boolean; wrapper?: boolean }) {
   const [copied, setCopied] = useState(false)
-  const addr = TOKEN.address
+  const addr = wrapper ? CONTRACTS.zzec : TOKEN.address
+  const label = wrapper ? TOKEN.wrapper : `$${TOKEN.symbol}`
   if (!addr) return null
   const copy = async () => {
     try {
@@ -17,12 +18,12 @@ export function ContractAddress({ compact = false }: { compact?: boolean }) {
   }
   return (
     <div className={`ca ${compact ? 'ca-compact' : ''}`}>
-      <span className="ca-l mono">${TOKEN.symbol} CA</span>
+      <span className="ca-l mono">{label} CA</span>
       <code className="ca-addr mono" title={addr}>{addr}</code>
-      <button type="button" className="ca-btn mono" onClick={copy} aria-label="Copy contract address">
+      <button type="button" className="ca-btn mono" onClick={copy} aria-label={`Copy ${label} contract address`}>
         {copied ? 'copied' : 'copy'}
       </button>
-      <a className="ca-btn mono" href={`${CONTRACTS.explorer}/token/${addr}`} target="_blank" rel="noreferrer">
+      <a className="ca-btn mono" aria-label={`View ${label} on explorer`} href={`${CONTRACTS.explorer}/token/${addr}`} target="_blank" rel="noreferrer">
         explorer ↗
       </a>
     </div>

@@ -68,3 +68,9 @@ Contract-side commands run from `~/zeal/zealtoken.com/contracts` and prompt for 
 ## Publishing
 
 The public repository at [github.com/zealtoken/zealtoken](https://github.com/zealtoken/zealtoken) is a mirror produced by `scripts/publish-mirror.sh`, which rewrites the whole history (authors, paths, identifiers) and refuses to push if anything personal remains. CI runs the contract tests on every push. The site deploys to Vercel from a prebuilt bundle.
+
+## Automatic reserve reimbursement monitoring
+
+The reimbursement worker repays the payout wallet only for completed-redemption debt, after verifying prior transfer receipts and protected wrapping obligations. A September 7 permissions issue prevented this worker from reading the wrapping checkpoint. The checkpoint was moved out of the private credential directory into a separate read-only status directory; credentials remain private. Freshness and ledger-hash checks still apply.
+
+The cloud health monitor now explicitly checks the reserve reimbursement service. A failed run, stalled run or overdue completion is monitored even when wrapping and redemption payout jobs are healthy. Routine service failures must persist for five minutes before notification; recovery must remain stable for five minutes. Brief failures remain in the logs. Backing, funding, deposit-review and unexpected role-change alerts remain immediate. Do not infer that automatic replenishment works solely from a funded payout wallet. Existing confirmed reimbursements remain credited and must never be replayed. Transfer limits remain 0.1 ZEC per transfer and 0.25 ZEC per rolling day, with bounded fees and backing safeguards.

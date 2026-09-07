@@ -1,205 +1,145 @@
-import { useCallback, useEffect, useState } from 'react'
-import { CHAIN, CONTRACTS, LINKS, TOKEN } from '../config'
-import { encAddress, hexToBig, readBatchRaw, word, wordAddress } from '../lib/chain'
-import { stagger } from '../useReveal'
-
-/**
- * Wrap desk. The form requires both operator readiness and the on-chain minter role.
- * Once live: open a request, send the exact deposit, receive zZEC 1:1.
- */
-const SEL = { request: '0xd845a4b3', cancel: '0x40e58ee5', requestCount: '0x5badbe4c', summary: '0x6152e655', minAmount: '0x9b2cb5d8', requestsPaused: '0xe43b7531', pendingMinter: '0x91c5df49', minter: '0x07546172' } as const
-const WRAP_DESK_DEPLOYED = '0xb53E3CD58668D1fC9082b51a7d74879733e9E118'
-const PROPOSAL_TX = '0x7e38dabb29bb3ca49acd7318c1b0c2178308ce40e6d16495403688b90d5cb3dc'
-const CHAIN_HEX = '0x' + CHAIN.id.toString(16)
-type Eip1193 = { request: (a: { method: string; params?: unknown[] }) => Promise<unknown> }
-const eth = () => (window as unknown as { ethereum?: Eip1193 }).ethereum
-const u256 = (n: bigint) => n.toString(16).padStart(64, '0')
-const zec = (z: bigint) => (Number(z) / 1e8).toFixed(8)
-type Req = { id: number; requester: string; amount: bigint; at: number; status: number; txid: string; deposit: bigint }
-const STATUS = ['', 'awaiting your ZEC', 'minted', 'cancelled', 'rejected']
-function ActivationStatus({ eta }: { eta: number | null }) {
-  return (
-    <div className="wd-clock" data-reveal style={stagger(3)}>
-      <div className="wd-clock-l mono">wrapping · activation pending</div>
-      <h3>Redemption is live. Wrapping is next.</h3>
-      <p>The wrap form opens after the contract activation and operator checks are complete. Please wait for your own request before sending ZEC.</p>
-      {eta && <p className="mono">Contract activation eligible: {new Date(eta * 1000).toUTCString().replace(' GMT', ' UTC')}</p>}
-      <p><a href="#redeem">Redeem zZEC → ZEC</a> · <a href={`${CONTRACTS.explorer}/tx/${PROPOSAL_TX}`} target="_blank" rel="noreferrer">View activation proposal ↗</a></p>
+import {useCallback,useEffect,useRef,useState} from 'react'
+import {CHAIN,CONTRACTS,LINKS} from '../config'
+import {encAddress,hexToBig,readBatchRaw,wordAddress} from '../lib/chain'
+import {WRAP_REGISTRY,WRAP_MINTER,WRAP_SELECTORS as S,canDeposit,decodeRoute,parseZec,historyVerified,activeDeposit,depositProgress,type Route,type WrapStatus} from '../lib/wrapPublic'
+// Read-only AWS endpoint; populated during deployment. It cannot sign or accept deposits.
+const STATUS_URL='/api/wrap-status'
+type Wallet={request:(a:{method:string;params?:unknown[]})=>Promise<unknown>;on?:(e:string,f:()=>void)=>void;removeListener?:(e:string,f:()=>void)=>void}
+const wallet=()=> (window as unknown as {ethereum?:Wallet}).ethereum
+const CHAIN_HEX='0x'+CHAIN.id.toString(16)
+const fmt=(n:string|bigint)=>(Number(n)/1e8).toFixed(8)
+const labels:Record<string,string>={observed:'Deposit confirmed', 'sweep-signed':'Moving to reserve', 'sweep-confirmed':'Preparing your zZEC','mint-signed':'Mint confirming',minted:'Completed'}
+export function Wrap(){
+ const [account,setAccount]=useState<string|null>(null),[status,setStatus]=useState<WrapStatus|null>(null),[route,setRoute]=useState<Route|null>(null)
+ const [chainOpen,setChainOpen]=useState(false),[amount,setAmount]=useState('0.1'),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[copied,setCopied]=useState(false)
+ const [pending,setPending]=useState<string|null>(()=>{try{return localStorage.getItem('zeal-wrap-v2-request')}catch{return null}})
+ const [statusError,setStatusError]=useState('')
+ const [checkPhase,setCheckPhase]=useState<'loading'|'ready'|'error'>('loading')
+ const [known,setKnown]=useState<WrapStatus|null>(null)
+ const [showSend,setShowSend]=useState(false)
+ const history=known?.route?.recipient.toLowerCase()===account?.toLowerCase()?known:null
+ const current=activeDeposit(history?.deposits??[])
+ const progress=current?depositProgress(current.state):null
+ const currentKey=current?current.txid+':'+current.index:''
+ useEffect(()=>setShowSend(false),[currentKey,account])
+ const [now,setNow]=useState(Date.now)
+ useEffect(()=>{const t=setInterval(()=>setNow(Date.now()),5000);return()=>clearInterval(t)},[])
+ const walletHelp=useRef<HTMLDialogElement>(null)
+ const [walletHelpMessage,setWalletHelpMessage]=useState('')
+ const generation=useRef(0)
+ const refresh=useCallback(async()=>{
+  const g=++generation.current
+  setCheckPhase(previous=>previous==='ready'?previous:'loading')
+  const signal=AbortSignal.timeout(12000)
+  try{
+   const [response,reads]=await Promise.all([fetch(STATUS_URL+(account?'?account='+account:''),{signal}),readBatchRaw([{to:WRAP_REGISTRY,data:S.paused},{to:WRAP_REGISTRY,data:S.credits},{to:CONTRACTS.zzec!,data:S.minter},...(account?[{to:WRAP_REGISTRY,data:S.mine+encAddress(account)}]:[])],signal)])
+   if(!response.ok)throw Error('Wrapping status is unavailable. Please wait before sending.')
+   const next=await response.json() as WrapStatus
+   let r:Route|null=null
+   const plus=account?hexToBig(reads[3]):0n
+   if(plus>0n){const id=Number(plus-1n);if(!Number.isSafeInteger(id)||id<0)throw Error('Invalid route');const [raw]=await readBatchRaw([{to:WRAP_REGISTRY,data:S.route+(plus-1n).toString(16).padStart(64,'0')}],signal);r=decodeRoute(raw,id);if(r.recipient.toLowerCase()!==account!.toLowerCase())throw Error('Route recipient mismatch')}
+   if(g!==generation.current)return
+   if(!historyVerified(next,account,r))throw Error('We couldn’t finish checking your deposits. Retrying automatically; don’t resend your payment.')
+   setCheckPhase('ready');setStatusError('');setStatus(next);if(next.workerReady&&next.route&&r&&next.route.id===r.id&&next.route.recipient.toLowerCase()===account?.toLowerCase()&&next.route.depositAddress===r.depositAddress)setKnown(next);setRoute(r);setChainOpen(hexToBig(reads[0])===0n&&hexToBig(reads[1])===1n&&wordAddress(reads[2],0).toLowerCase()===WRAP_MINTER.toLowerCase())
+  }catch(e){if(g!==generation.current)return;setCheckPhase('error');setStatus(null);setChainOpen(false);setStatusError((e as Error).message)}
+ },[account])
+ useEffect(()=>{void refresh();const t=setInterval(()=>void refresh(),15000);return()=>{generation.current++;clearInterval(t)}},[refresh])
+ useEffect(()=>{
+  const p=wallet(),changed=()=>{walletHelp.current?.close();generation.current++;setAccount(null);setCheckPhase('loading');setStatusError('');setKnown(null);setRoute(null);setStatus(null);setChainOpen(false);setMessage('Wallet changed. Reconnect to see the correct deposit address.')}
+  p?.on?.('accountsChanged',changed);p?.on?.('chainChanged',changed)
+  return()=>{p?.removeListener?.('accountsChanged',changed);p?.removeListener?.('chainChanged',changed)}
+ },[account])
+ const connect=async()=>{
+  const p=wallet();if(!p){setMessage('Open this page in your wallet browser or install a browser wallet that supports Robinhood Chain.');return}
+  setBusy(true)
+  try{
+   const a=await p.request({method:'eth_requestAccounts'}) as string[]
+   if(!a[0])throw Error('No wallet account selected')
+   try{await p.request({method:'wallet_switchEthereumChain',params:[{chainId:CHAIN_HEX}]})}catch(e){if((e as {code?:number}).code!==4902)throw e;await p.request({method:'wallet_addEthereumChain',params:[{chainId:CHAIN_HEX,chainName:CHAIN.name,rpcUrls:[CHAIN.rpcPublic],nativeCurrency:{name:'Ether',symbol:'ETH',decimals:18},blockExplorerUrls:[CONTRACTS.explorer]}]})}
+   const chain=await p.request({method:'eth_chainId'}),current=await p.request({method:'eth_accounts'}) as string[]
+   if(String(chain).toLowerCase()!==CHAIN_HEX||current[0]?.toLowerCase()!==a[0].toLowerCase())throw Error('Reconnect after selecting Robinhood Chain and your account')
+   generation.current++;setCheckPhase('loading');setStatusError('');setChainOpen(false);setKnown(null);setRoute(null);setStatus(null);setAccount(current[0]);setMessage('')
+  }catch(e){setMessage((e as Error).message)}finally{setBusy(false)}
+ }
+ const check=async()=>{
+  if(!pending)return
+  try{const p=wallet();if(!p||String(await p.request({method:'eth_chainId'})).toLowerCase()!==CHAIN_HEX)throw Error('Connect on Robinhood Chain to check confirmation')
+   const r=await p.request({method:'eth_getTransactionReceipt',params:[pending]}) as {status:string}|null
+   if(!r){setMessage('Request is still pending. Do not send ZEC until your address is shown.');return}
+   try{localStorage.removeItem('zeal-wrap-v2-request')}catch{/* In-memory state remains */}setPending(null)
+   setMessage(r.status==='0x1'?'Request confirmed. Your deposit address will appear after assignment.':'Request reverted. You can try creating your address again.');await refresh()
+  }catch(e){setMessage((e as Error).message)}
+ }
+ const fresh=!!status&&now-Date.parse(status.at)<120000&&now-Date.parse(status.at)>=-10000
+ const open=chainOpen&&!!status?.workerReady&&!!status?.accepting&&fresh
+ const ready=chainOpen&&canDeposit(status,account,route,now)
+ const zats=parseZec(amount),valid=zats>=100000n&&zats<=100000000n
+ useEffect(()=>{if(!ready)walletHelp.current?.close()},[ready,account])
+ const create=async()=>{
+  if(!open||!account||busy||pending)return
+  setBusy(true);setMessage('')
+  try{
+   const p=wallet()!,a=await p.request({method:'eth_accounts'}) as string[],c=await p.request({method:'eth_chainId'})
+   if(a[0]?.toLowerCase()!==account.toLowerCase()||String(c).toLowerCase()!==CHAIN_HEX)throw Error('Wallet changed. Reconnect before continuing.')
+   const h=await p.request({method:'eth_sendTransaction',params:[{from:account,to:WRAP_REGISTRY,data:S.request,chainId:CHAIN_HEX}]}) as string
+   if(!/^0x[0-9a-f]{64}$/i.test(h))throw Error('Wallet returned an invalid transaction hash. Check your wallet history before retrying.')
+   setPending(h);try{localStorage.setItem('zeal-wrap-v2-request',h)}catch{/* Keep in-memory hash */}
+   setMessage('Request submitted. Check confirmation below; send ZEC only after your address appears.')
+  }catch(e){setMessage((e as Error).message)}finally{setBusy(false)}
+ }
+ const copy=async()=>{if(!chainOpen||!route||!canDeposit(status,account,route))return;try{await navigator.clipboard.writeText(route.depositAddress);setWalletHelpMessage('');setCopied(true);setTimeout(()=>setCopied(false),2000)}catch{setMessage('Clipboard unavailable. Select and copy the full displayed address.');setWalletHelpMessage('Clipboard access is unavailable. Select and copy the full address below.')}}
+ return <section className="band" id="wrap"><div className="wrap">
+  <dialog ref={walletHelp} className="zcash-wallet-help" aria-labelledby="zcash-wallet-help-title" aria-describedby="zcash-wallet-help-description" onClick={e=>{if(e.target===e.currentTarget)e.currentTarget.close()}}>
+   <div className="zcash-wallet-help-inner">
+    <form method="dialog"><button className="zcash-wallet-help-close" aria-label="Close wallet help" autoFocus>×</button></form>
+    <span className="zcash-wallet-help-icon" aria-hidden="true">↗</span>
+    <p className="eyebrow">Continue in your Zcash wallet</p>
+    <h3 id="zcash-wallet-help-title">Wallet didn’t open?</h3>
+    <p id="zcash-wallet-help-description">Your browser may ask to open a compatible wallet app. If nothing happens, open your Zcash wallet yourself and choose <strong>Send</strong>.</p>
+    {ready&&route&&<div className="zcash-wallet-help-details">
+     <div className="zcash-wallet-help-amount"><span className="mono">Amount selected</span><strong>{fmt(zats)} <small>ZEC</small></strong></div>
+     <span className="mono">Paste your deposit address</span><code className="wrap-public-address">{route.depositAddress}</code>
+     <button className="btn btn-primary" type="button" onClick={copy}>{copied?'Address copied ✓':'Copy deposit address'}</button>
+    </div>}
+    <p className="zcash-wallet-help-feedback" role="status">{walletHelpMessage||(copied?'Paste it into your wallet’s recipient field.':'Use native ZEC on the Zcash network. Check the address before sending.')}</p>
+    <p className="zcash-wallet-help-note">Opening a wallet doesn’t send a payment. If you already sent ZEC, close this message and follow Your deposits—don’t send it again.</p>
+    <form method="dialog"><button className="btn btn-ghost" type="submit">Back to my deposit</button></form>
+   </div>
+  </dialog>
+  <div className="sec-head"><p className="eyebrow">Wrap desk</p><h2 className="h2">Send ZEC.<br/><span className="green">Get zZEC, 1:1.</span></h2><p className="lede">Your wallet gets its own Zcash deposit address. Send native ZEC and receive the actual amount as zZEC on Robinhood Chain. No special trailing digits.</p></div>
+  <div className="wd-ready-note"><span className={'tag '+(open?'tag-live':'tag-wait')}>{checkPhase==='loading'?'Checking wrapping status':open?'Wrapping open':'Deposits on hold'}</span><p>{checkPhase==='loading'?'Loading availability and checking your deposit history. Please wait before sending.':open?'Automatic processing is available. Connect the wallet where you want to receive zZEC.':'New deposit instructions are unavailable while activation or service checks are pending. Already sent? Connect to check your payment; do not send again.'}</p><a href="/docs/#/wrap">How it works →</a></div>
+  <div className="rd-grid">
+   <div className="rd-form wrap-public-form">
+    <ol className="rd-steps mono"><li className={!account?'now':'done'}><b>1</b>Connect</li><li className={account&&!route?'now':route?'done':''}><b>2</b>Get address</li><li className={current&&!showSend?'done':ready?'now':''}><b>3</b>Send ZEC</li><li className={current&&!showSend?(current.state==='minted'?'done':'now'):''}><b>4</b>{current&&!showSend&&current.state==='minted'?'Received':'Receive'}</li></ol>
+    <div role="status" aria-live="polite" aria-atomic="true">
+     {current&&progress&&<div className={'wrap-progress '+(current.state==='minted'?'is-complete':'')}>
+      <span className="eyebrow">{current.state==='minted'?'Wrapping complete':'Deposit received · processing automatically'}</span>
+      <h3>{progress.title}</h3>
+      <p className="wrap-progress-amount">{fmt(current.amountZats)} <span>{current.state==='minted'?'zZEC minted':'ZEC received'}</span></p>
+      <p>{progress.detail}</p>
+      <ol className="wrap-progress-track">{['Deposit confirmed','Reserve transfer','Mint zZEC'].map((label,i)=><li className={i<progress.stage?'done':i===progress.stage?'now':''} key={label}><b>{i<progress.stage?'✓':i+1}</b>{label}</li>)}</ol>
+      {current.mintTxid&&<a href={`${CONTRACTS.explorer}/tx/${current.mintTxid}`} target="_blank" rel="noreferrer">{current.state==='minted'?'View your mint receipt':'View pending mint'} ↗</a>}
+      {!status?.workerReady||!fresh||statusError?<p className="wrap-progress-notice">Live updates are temporarily unavailable. This is your last recorded status; it does not mean your payment failed. Don’t send it again.</p>:<p className="wrap-progress-note">Updates automatically every 15 seconds. {current.state==='minted'?'Sent to your connected Robinhood Chain wallet.':'No further payment or wallet approval is needed. Block times vary.'}</p>}
+     </div>}
     </div>
-  )
-}
-
-export function Wrap() {
-  const desk = CONTRACTS.wrapDesk
-  const [eta, setEta] = useState<number | null>(null)
-  const [minterIsDesk, setMinterIsDesk] = useState(false)
-  const [info, setInfo] = useState<{ min: bigint; paused: boolean; count: number; minted: bigint } | null>(null)
-  const [account, setAccount] = useState<string | null>(null)
-  const [mine, setMine] = useState<Req[]>([])
-  const [amount, setAmount] = useState('')
-  const [busy, setBusy] = useState<string | null>(null)
-  const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
-  const [copied, setCopied] = useState<string | null>(null)
-  const [zecUsd, setZecUsd] = useState<number | null>(null)
-  useEffect(() => { fetch('https://api.coinbase.com/v2/prices/ZEC-USD/spot').then((r) => r.json()).then((j: { data: { amount: string } }) => setZecUsd(Number(j.data.amount))).catch(() => {}) }, [])
-
-  // Read the real role status; website timing cannot activate a contract.
-  useEffect(() => {
-    if (!CONTRACTS.zzec) return
-    const run = async () => { try { const [pm, mi] = await readBatchRaw([{ to: CONTRACTS.zzec!, data: SEL.pendingMinter }, { to: CONTRACTS.zzec!, data: SEL.minter }]); const e = Number(hexToBig(word(pm, 1))); setEta(e || null); setMinterIsDesk(wordAddress(mi, 0).toLowerCase() === WRAP_DESK_DEPLOYED.toLowerCase()) } catch { /* keep */ } }
-    void run(); const t = window.setInterval(run, 60_000); return () => window.clearInterval(t)
-  }, [])
-
-  const load = useCallback(async () => {
-    if (!desk) return
-    const [min, paused, count] = await readBatchRaw([{ to: desk, data: SEL.minAmount }, { to: desk, data: SEL.requestsPaused }, { to: desk, data: SEL.requestCount }])
-    const n = Number(hexToBig(count))
-    let reqs: Req[] = []
-    if (n > 0) {
-      const ids = Array.from({ length: Math.min(n, 80) }, (_, i) => n - 1 - i)
-      const sums = await readBatchRaw(ids.map((i) => ({ to: desk, data: SEL.summary + u256(BigInt(i)) })))
-      reqs = sums.map((s, k) => ({ id: ids[k], requester: wordAddress(s, 0), amount: hexToBig(word(s, 1)), at: Number(hexToBig(word(s, 2))), status: Number(hexToBig(word(s, 3))), txid: word(s, 4), deposit: hexToBig(word(s, 5)) }))
-    }
-    setInfo({ min: hexToBig(min), paused: hexToBig(paused) !== 0n, count: n, minted: reqs.filter((r) => r.status === 2).reduce((s, r) => s + r.amount, 0n) })
-    setMine(account ? reqs.filter((r) => r.requester.toLowerCase() === account.toLowerCase()) : [])
-  }, [desk, account])
-  useEffect(() => { const refresh = () => load().catch(() => { setInfo(null); setMsg({ kind: 'err', text: 'Unable to refresh desk status. Please wait for the connection to recover before submitting.' }) }); void refresh(); const t = window.setInterval(refresh, 30_000); return () => window.clearInterval(t) }, [load])
-
-  const connect = async () => {
-    const p = eth(); if (!p) { setMsg({ kind: 'err', text: 'No wallet found. Install a browser wallet with Robinhood Chain added.' }); return }
-    try {
-      const accts = (await p.request({ method: 'eth_requestAccounts' })) as string[]
-      try { await p.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN_HEX }] }) } catch { await p.request({ method: 'wallet_addEthereumChain', params: [{ chainId: CHAIN_HEX, chainName: CHAIN.name, rpcUrls: [CHAIN.rpcPublic], nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, blockExplorerUrls: [CONTRACTS.explorer] }] }) }
-      setAccount(accts[0]); setMsg(null)
-    } catch (e) { setMsg({ kind: 'err', text: (e as Error).message }) }
-  }
-  const send = async (to: string, data: string) => {
-    const p = eth()!; const hash = (await p.request({ method: 'eth_sendTransaction', params: [{ from: account, to, data }] })) as string
-    for (let i = 0; i < 80; i++) { const r = (await p.request({ method: 'eth_getTransactionReceipt', params: [hash] })) as { status: string } | null; if (r) { if (r.status !== '0x1') throw new Error('transaction reverted'); return hash } await new Promise((res) => setTimeout(res, 1500)) }
-    throw new Error('timed out waiting for the transaction')
-  }
-  const zats = /^\d{1,16}(\.\d{0,8})?$/.test(amount) ? BigInt(amount.split('.')[0]) * 100_000_000n + BigInt((amount.split('.')[1] ?? '').padEnd(8, '0')) : 0n
-  const aligned = zats > 0n && zats % 100000n === 0n
-  const step = !account ? 0 : !(aligned && (!info || zats >= info.min)) ? 1 : 2
-  const submit = async () => {
-    if (!desk || !minterIsDesk || !account || !info || info.paused || step < 2) return
-    setBusy('confirm the request in your wallet'); setMsg(null)
-    try { await send(desk, SEL.request + u256(zats)); setMsg({ kind: 'ok', text: 'Request opened. Your deposit line is below: send the exact figure from any Zcash wallet.' }); setAmount(''); await load() }
-    catch (e) { setMsg({ kind: 'err', text: (e as Error).message }) } finally { setBusy(null) }
-  }
-  const cancel = async (id: number) => { if (!desk) return; setBusy(`cancel #${id}`); setMsg(null); try { await send(desk, SEL.cancel + u256(BigInt(id))); await load() } catch (e) { setMsg({ kind: 'err', text: (e as Error).message }) } finally { setBusy(null) } }
-  const copy = async (s: string, k: string) => { try { await navigator.clipboard.writeText(s); setCopied(k); setTimeout(() => setCopied(null), 1200) } catch { /* no clipboard */ } }
-  const encAddressUnused = encAddress; void encAddressUnused
-
-  return (
-    <section className="band" id="wrap">
-      <div className="wrap">
-        <div className="sec-head">
-          <p className="eyebrow" data-reveal>Wrap desk</p>
-          <h2 className="h2" data-reveal style={stagger(1)}>
-            Send ZEC.
-            <br />
-            <span className="green">Get {TOKEN.wrapper}, 1:1.</span>
-          </h2>
-          <p className="lede" data-reveal style={stagger(2)}>
-            When wrapping opens, request an exact deposit figure that is unique to you, send it from your Zcash wallet, and the desk
-            mints your {TOKEN.wrapper} after three confirmations. No fee. Every mint passes through the desk with its reason
-            recorded. The form stays closed until activation is verified.
-          </p>
-        </div>
-
-        {!desk || !minterIsDesk ? (
-          <>
-            <ActivationStatus eta={eta} />
-            <div className="wd-preview" data-reveal style={stagger(4)}>
-              <div className="wd-pv-h mono">what it will look like</div>
-              <div className="wd-pv-grid">
-                <div className="wd-pv-card"><span className="mono">01</span><b>Choose an amount</b><p>Steps of 0.001 ZEC, minimum 0.001. One wallet click opens the request. Gas only.</p></div>
-                <div className="wd-pv-card"><span className="mono">02</span><b>Send the exact deposit</b><p>Your amount plus a few zatoshi that identify your request. From a shielded or transparent wallet, in one payment.</p></div>
-                <div className="wd-pv-card"><span className="mono">03</span><b>Receive {TOKEN.wrapper}</b><p>Three confirmations, one attestation, and the desk mints to the wallet that opened the request. The Zcash transaction is linked on chain.</p></div>
-              </div>
-              <div className="wd-pv-foot mono">until then: <a href={LINKS.uniswapSwap} target="_blank" rel="noreferrer">buy {TOKEN.wrapper} on Uniswap ↗</a> · <a href="/docs/#/wrap">read how wrapping works ↗</a></div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="rd-strip mono" data-reveal style={stagger(3)}>
-              <div><span>requests</span><b>{info?.count ?? '…'}</b></div>
-              <div><span>minted via wraps</span><b>{info ? `${zec(info.minted)} ${TOKEN.wrapper}` : '…'}</b></div>
-              <div><span>minimum</span><b>{info ? `${zec(info.min)} ZEC` : '…'}</b><i>steps of 0.001</i></div>
-              <div><span>fee</span><b>none</b><i>1:1, the tag digits stay as coverage</i></div>
-              <div><span>confirmations</span><b>3</b><i>about 4 minutes</i></div>
-            </div>
-            <div className="rd-grid" data-reveal style={stagger(4)}>
-              <div className="rd-form">
-                <ol className="rd-steps mono">
-                  <li className={step >= 1 ? 'done' : 'now'}><b>1</b>connect</li>
-                  <li className={step > 1 ? 'done' : step === 1 ? 'now' : ''}><b>2</b>amount</li>
-                  <li className={step === 2 ? 'now' : ''}><b>3</b>open request</li>
-                  <li><b>4</b>send ZEC</li>
-                </ol>
-                {!account ? (
-                  <div className="rd-connect"><button className="btn btn-primary btn-lg" type="button" onClick={connect}>Connect wallet</button><p className="mono">Robinhood Chain · {CHAIN.id}. Your {TOKEN.wrapper} arrives here.</p></div>
-                ) : (
-                  <>
-                    <div className="rd-acct mono"><span className="dot" />{account.slice(0, 6)}…{account.slice(-4)}<em>receives the {TOKEN.wrapper}</em></div>
-                    <label htmlFor="wrap-amount" className="redeem-l mono">ZEC to wrap</label>
-                    <div className={`rd-amt ${amount && !aligned ? 'bad' : ''}`}>
-                      <input id="wrap-amount" className="mono" inputMode="decimal" placeholder="0.100" value={amount} onChange={(e) => setAmount(e.target.value)} />
-                      <span className="mono rd-unit">ZEC</span>
-                      {['0.01', '0.1', '1'].map((q) => <button key={q} type="button" className="rd-max mono" onClick={() => setAmount(q)}>{q}</button>)}
-                    </div>
-                    <div className="rd-sub mono">{zats > 0n ? <>you receive <b>{zec(zats)} {TOKEN.wrapper}</b>{zecUsd ? ` · about $${(Number(zats) / 1e8 * zecUsd).toFixed(2)}` : ''}</> : 'exactly what you send, 1:1'}{amount && !aligned && <span className="rd-warn"> · use steps of 0.001</span>}</div>
-                    <button className="btn btn-primary btn-lg rd-go" type="button" disabled={!!busy || !info || info.paused || step < 2} onClick={submit}>{busy ?? (info?.paused ? 'new requests paused' : step < 2 ? 'enter an amount' : `Open request for ${zec(zats)} ${TOKEN.wrapper}`)}</button>
-                  </>
-                )}
-                {msg && <p className={`rd-msg mono ${msg.kind}`}>{msg.text}</p>}
-                <div className="rd-how mono">
-                  <div><b>01</b>request opened on chain · nothing held</div>
-                  <div><b>02</b>you send the exact deposit to the reserve</div>
-                  <div><b>03</b>3 confirmations · attest · mint to you</div>
-                  <div><b>∞</b>the tag digits stay in the reserve as extra coverage</div>
-                </div>
-                <p className="redeem-fine mono"><a href={`${CONTRACTS.explorer}/address/${desk}?tab=contract`} target="_blank" rel="noreferrer">desk contract ↗</a> · <a href="/docs/#/wrap">how it works ↗</a></p>
-              </div>
-              <div className="rd-lists">
-                {account && (
-                  <div>
-                    <div className="redeem-h mono">your requests</div>
-                    {mine.length === 0 && <div className="redeem-empty mono">none yet</div>}
-                    {mine.map((r) => (
-                      <div className={`rd-card s${r.status}`} key={r.id}>
-                        <div className="rd-card-top"><span className="mono rd-id">#{r.id}</span><span className="rd-card-amt">{zec(r.amount)} <span className="mono">{TOKEN.wrapper}</span></span><span className={`tag ${r.status === 2 ? 'tag-live' : 'tag-wait'}`}>{STATUS[r.status]}</span></div>
-                        {r.status === 1 && TOKEN.reserveAddress && (
-                          <div className="wd-pay">
-                            <div className="wd-pay-row"><span className="mono">send exactly</span><b className="mono">{zec(r.deposit)} ZEC</b><button className="copy" type="button" onClick={() => copy(zec(r.deposit), `a${r.id}`)}>{copied === `a${r.id}` ? 'copied' : 'copy'}</button></div>
-                            <div className="wd-pay-row"><span className="mono">to</span><b className="mono wd-addr">{TOKEN.reserveAddress}</b><button className="copy" type="button" onClick={() => copy(TOKEN.reserveAddress!, `t${r.id}`)}>{copied === `t${r.id}` ? 'copied' : 'copy'}</button></div>
-                            <div className="wd-pay-actions"><a className="btn btn-ghost btn-sm" href={`zcash:${TOKEN.reserveAddress}?amount=${zec(r.deposit)}`}>open in a Zcash wallet</a><button className="btn btn-ghost btn-sm" type="button" disabled={!!busy} onClick={() => cancel(r.id)}>cancel</button></div>
-                            <div className="wrap-note mono">the last digits are your tag. Send the exact figure in one payment; minting follows 3 confirmations and the next attestation.</div>
-                          </div>
-                        )}
-                        {r.status === 2 && <a className="mono redeem-tx" href={`${LINKS.zcashTx}${r.txid.slice(2)}`} target="_blank" rel="noreferrer">funded by · view on Zcash ↗</a>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
-        )}
-        <div className="ctb-compare" data-reveal>
-          <table className="mono">
-            <thead><tr><th></th><th>hold ZEC</th><th>wrap</th><th>wrap + provide</th></tr></thead>
-            <tbody>
-              <tr><td>exposure</td><td>ZEC</td><td>ZEC, on Robinhood Chain</td><td>half ZEC, half ETH, rebalancing</td></tr>
-              <tr><td>earns</td><td>nothing</td><td>nothing yet</td><td>0.3% of every trade, pro rata</td></tr>
-              <tr><td>does for the machine</td><td>nothing</td><td>grows the public reserve, adds peg inventory</td><td>deepens the market, hosts burns</td></tr>
-              <tr><td>exit</td><td>n/a</td><td>redeem via the desk, paid automatically</td><td>remove liquidity any time, then redeem</td></tr>
-              <tr><td>risk</td><td>ZEC price</td><td>operator custody of the reserve</td><td>plus impermanent loss and contract risk</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-  )
+    {current&&!showSend&&ready&&<button className="btn btn-ghost wrap-send-again" onClick={()=>setShowSend(true)}>{current.state==='minted'?'Make another deposit':'Show deposit address'}</button>}
+    {!account?<button className="btn btn-primary btn-lg rd-go" disabled={busy} onClick={connect}>Connect wallet</button>:<>
+     <p className="redeem-fine mono">zZEC recipient · <span className="wrap-public-address">{account}</span></p>
+     {checkPhase==='loading'?<p className="wrap-loading" role="status"><span className="wrap-loading-dot" aria-hidden="true"/>Loading your deposit address and payment history…</p>:checkPhase==='error'&&!history?<p role="status">Deposit check incomplete. We’ll retry automatically. Your payment is not assumed missing.</p>:!route?<button className="btn btn-primary btn-lg rd-go" disabled={!open||busy||!!pending} onClick={create}>{busy?'Confirm in wallet':!open?'Waiting for desk availability':'Get my deposit address'}</button>:!route.depositAddress?<p role="status">Your request is confirmed. The worker is assigning your address—usually on its next pass.</p>:ready&&(!current||showSend)?<>
+      <label className="redeem-l mono" htmlFor="wrap-amount">Amount to send (ZEC)</label><div className="rd-amt"><input id="wrap-amount" className="mono" inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)}/><span className="mono rd-unit">ZEC</span></div>
+      <p className="rd-sub mono">{valid?`Estimated receipt: ${fmt(zats)} zZEC`:'Send between 0.001 and 1 ZEC per payment.'}</p>
+      <div className="wrap-public-deposit"><span className="redeem-l mono">Your native Zcash deposit address</span><code className="wrap-public-address">{route.depositAddress}</code><button className="btn btn-primary" onClick={copy}>{copied?'Copied':'Copy my address'}</button>{valid&&<a className="btn btn-ghost" href={`zcash:${route.depositAddress}?amount=${fmt(zats)}`} onClick={e=>{if(!canDeposit(status,account,route)){e.preventDefault();return}setWalletHelpMessage('');walletHelp.current?.showModal()}}>Open Zcash wallet ↗</a>}</div>
+      <p className="redeem-fine">Send native ZEC on the Zcash network. Check the full destination in your wallet or bridge, especially a saved recipient. The actual amount received determines your zZEC; there are no exact-amount tags.</p>
+     </>:ready?null:<p role="status">Your address remains linked to you, but new deposit instructions are on hold. Existing payments remain recorded. Do not send another payment to speed up processing.</p>}
+    </>}
+    {pending&&<div className="rd-msg mono"><a href={`${CONTRACTS.explorer}/tx/${pending}`} target="_blank" rel="noreferrer">Request transaction ↗</a> · <button onClick={check} disabled={busy}>Check confirmation</button></div>}
+    {checkPhase==='error'&&<button className="btn btn-ghost" onClick={()=>void refresh()}>Retry deposit check</button>}
+    {(statusError||message)&&<p className="rd-msg mono" role="status">{statusError||message}</p>}
+    <p className="redeem-fine mono">0.001–1 ZEC per payment · no wrapping fee · wallet and bridge fees may apply.</p>
+   </div>
+   <div className="rd-form"><h3>From Zcash to your wallet.</h3><div className="rd-how"><div><b>01</b>Your Robinhood Chain wallet receives a permanent deposit route. Creating it requires a small ETH gas payment.</div><div><b>02</b>Send ZEC to the assigned address. We wait for three native confirmations.</div><div><b>03</b>The worker moves the deposit into the public reserve and waits for three more confirmations.</div><div><b>04</b>After checking backing, it mints the actual received amount to your linked wallet.</div></div><p className="redeem-fine">Usually several minutes; block times and service conditions vary. Below-minimum, above-limit or unusual payments need review. Wrapping uses operator custody and carries contract risk.</p><a href="#redeem">Redeem zZEC for native ZEC →</a></div>
+  </div>
+  {account&&<div className="wrap-public-history" aria-busy={checkPhase==='loading'}><h3>Your deposits</h3>{!history?<p className={checkPhase==='loading'?'wrap-loading':''} role="status">{checkPhase==='loading'?<><span className="wrap-loading-dot" aria-hidden="true"/>Loading your deposits… Checking your wallet’s history.</>:checkPhase==='ready'?'No confirmed deposits recorded yet. A new payment appears after three Zcash confirmations.':'We couldn’t load your deposits. Retrying automatically; this does not mean your payment is missing.'}</p>:<>{!history.deposits?.length&&!history.review?.length&&<p>No confirmed deposits recorded yet. A new payment appears after three Zcash confirmations.</p>}{[...history.deposits].reverse().map(d=><article className="rd-card" key={d.txid+':'+d.index}><div className="rd-card-top"><strong>{fmt(d.amountZats)} {d.state==='minted'?'zZEC minted':'ZEC received'}</strong><span className="tag">{labels[d.state]??'Under review'}</span></div><div className="wrap-public-links"><a href={`${LINKS.zcashTx}${d.txid.slice(2)}`} target="_blank" rel="noreferrer">ZEC deposit ↗</a>{d.sweepTxid&&<a href={`${LINKS.zcashTx}${d.sweepTxid.slice(2)}`} target="_blank" rel="noreferrer">Reserve transfer ↗</a>}{d.mintTxid&&<a href={`${CONTRACTS.explorer}/tx/${d.mintTxid}`} target="_blank" rel="noreferrer">zZEC mint ↗</a>}</div></article>)}{history.review?.map(d=><p key={d.txid+':'+d.index}>Payment of {fmt(d.amountZats)} ZEC needs operator review: {d.reason}. Keep your transaction receipt.</p>)}</>}</div>}
+  <p className="redeem-fine"><a href={`${CONTRACTS.explorer}/address/${WRAP_REGISTRY}`} target="_blank" rel="noreferrer">Deposit registry ↗</a> · <a href="/docs/#/wrap">Processing, recovery and trust model →</a></p>
+ </div></section>
 }

@@ -1,6 +1,5 @@
 import { EngravingScene } from '../art/EngravingScene'
 import { StationStrip } from '../art/StationStrip'
-import { FoundryCalc } from './Calculators'
 import { CHAIN, FOUNDRY_TAKE_PCT, PONS, SPLIT, TOKEN } from '../config'
 import { stagger } from '../useReveal'
 
@@ -46,33 +45,6 @@ const STEPS = [
 export function Mechanism() {
   return (
     <>
-      {/* ---------------- the gap ---------------- */}
-      <section className="band" id="gap">
-        <div className="wrap split">
-          <div>
-            <p className="eyebrow" data-reveal>
-              The gap
-            </p>
-            <h2 className="h2" data-reveal style={stagger(1)}>
-              A chain full of assets,
-              <br />
-              with nowhere to be private.
-            </h2>
-          </div>
-          <div>
-            <p className="lede" data-reveal style={stagger(2)}>
-              {CHAIN.name} is where tokenized stocks and stablecoins live. Everything on it is
-              owned in the open. The one asset it is missing is the oldest privacy coin in crypto,
-              because Zcash does not speak EVM.
-            </p>
-            <p data-reveal style={stagger(3)}>
-              <strong>Zeal puts it there first</strong>, and builds the machine that pays for it
-              out of trading volume instead of a treasury.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* ---------------- the foundry ---------------- */}
       <section className="band foundry" id="foundry">
 
@@ -85,7 +57,7 @@ export function Mechanism() {
               The Foundry.
             </h2>
             <p className="lede" data-reveal style={stagger(2)}>
-              Every ${TOKEN.symbol} trade pays a fee. {PONS.creatorSharePct}% of it goes to a
+              This intended fee route is awaiting Pons activation. Every ${TOKEN.symbol} trade pays a fee. {PONS.creatorSharePct}% of it goes to a
               contract that can only split it 60/25/15 to three published wallets. We convert the reserve share to ZEC, and every conversion is logged. Re-pointing the fee stream takes a 48-hour public notice.
             </p>
           </div>
@@ -117,12 +89,6 @@ export function Mechanism() {
         </div>
       </section>
 
-      {/* ---------------- the math ---------------- */}
-      <section className="band band-tight" id="math">
-        <div className="wrap-narrow">
-          <FoundryCalc />
-        </div>
-      </section>
     </>
   )
 }

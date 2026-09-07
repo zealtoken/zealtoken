@@ -2,9 +2,9 @@ import { managedSend } from './managed-send.js'
 import { ethers } from 'ethers'
 import { existsSync, readFileSync } from 'node:fs'
 import { zzec, roleSigner } from './chain.js'
-import { fmtZec, reserveBalanceZats } from './zcash.js'
-import { RESERVE } from './config.js'
+import { fmtZec } from './zcash.js'
 import { redemptionAccounting, mintCapacity } from './redemption-accounting.js'
+import { wrapAccounting } from './wrap-accounting.js'
 import { withLock } from './ops-lock.js'
 
 /**
@@ -36,10 +36,12 @@ async function main() {
   const raw = process.env.MINT_ZEC
   if (raw !== undefined && !/^\d+(\.\d+)?$/.test(raw)) throw new Error('MINT_ZEC must be a positive decimal, e.g. 2.14')
   if (raw === undefined && process.env.MINT_ALL !== '1') throw new Error('set MINT_ZEC=<amount> or MINT_ALL=1')
-  const live = await reserveBalanceZats(RESERVE.zcashTAddress)
+  const wrapping = await wrapAccounting()
+  const live = wrapping.live
   const inflight = pendingPayoutsZats()
   const accounting = await redemptionAccounting()
-  const liveHeadroom = mintCapacity(live, accounting.supply, accounting.reimbursementZats, inflight)
+  const liveHeadroom = mintCapacity(live, accounting.supply, accounting.reimbursementZats, inflight + wrapping.reserved)
+  console.log(`reserved for pending wraps ${fmtZec(wrapping.reserved)}`)
   const want = raw !== undefined ? ethers.parseUnits(raw, 8) : (headroom < liveHeadroom ? headroom : liveHeadroom)
   console.log(`reserved for payout-wallet reimbursement ${fmtZec(accounting.reimbursementZats)}`)
   if (inflight > 0n) console.log(`in-flight redemption payouts ${fmtZec(inflight)} (subtracted)`)

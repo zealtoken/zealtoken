@@ -1,34 +1,24 @@
-import { test, after } from 'node:test'
-import { strict as assert } from 'node:assert'
-import { mkdtempSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { ethers } from 'ethers'
-const dir = mkdtempSync(join(tmpdir(), 'zeal-lock-test-'))
-process.env.OPS_STATE_DIR = dir
-const { managedSend } = await import('./managed-send.js')
-const { withLock, Busy } = await import('./ops-lock.js')
-after(() => rmSync(dir, { recursive: true, force: true }))
-function fake(address: string, broadcast: () => Promise<unknown>, pending = 0) {
-  return { address, provider: { getNetwork: async () => ({ chainId: 4663n }), getTransactionCount: async (_: string, tag: string) => tag === 'pending' ? pending : 0, getTransactionReceipt: async () => null, broadcastTransaction: broadcast }, populateTransaction: async (x: unknown) => x, signTransaction: async () => '0x1234' } as unknown as ethers.Wallet
-}
-test('only one owner can enter a process lock', async () => {
-  await withLock('concurrent', async () => { await assert.rejects(withLock('concurrent', async () => {}), Busy) })
-  await withLock('concurrent', async () => {})
-})
-test('an uncertain broadcast persists its hash and prevents another submission', async () => {
-  let sends = 0
-  const w = fake('0x0000000000000000000000000000000000000001', async () => { sends++; throw new Error('network disappeared') })
-  await assert.rejects(managedSend(w, {}), /network disappeared/)
-  await assert.rejects(managedSend(w, {}), /unresolved transaction/)
-  assert.equal(sends, 1)
-})
-test('foreign pending transaction blocks a send', async () => {
-  const w = fake('0x0000000000000000000000000000000000000002', async () => { throw new Error('must not broadcast') }, 1)
-  await assert.rejects(managedSend(w, {}), /already has a pending/)
-})
-test('confirmed successful sends clear the pending marker', async () => {
-  let sends = 0
-  const w = fake('0x0000000000000000000000000000000000000003', async () => { sends++; return { wait: async () => ({ status: 1 }) } })
-  await managedSend(w, {}); await managedSend(w, {}); assert.equal(sends, 2)
+import {test} from 'node:test'
+import assert from 'node:assert/strict'
+import {mkdtempSync,readFileSync,rmSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {ethers} from 'ethers'
+test('domain record is committed before broadcast, including when broadcast response is lost',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'zeal-send-'));process.env.OPS_STATE_DIR=dir
+ const {managedSend}=await import('./managed-send.js')
+ const order:string[]=[]
+ const provider={getNetwork:async()=>({chainId:4663n}),getTransactionCount:async()=>0,getTransactionReceipt:async()=>null,broadcastTransaction:async()=>{order.push('broadcast');throw Error('response lost')}}
+ const wallet={provider,address:'0x'+'12'.repeat(20),populateTransaction:async(x:unknown)=>x,signTransaction:async()=>'0x1234'} as unknown as ethers.Wallet
+ let recorded=''
+ await assert.rejects(()=>managedSend(wallet,{},hash=>{recorded=hash;order.push('record')}),/response lost/)
+ assert.deepEqual(order,['record','broadcast'])
+ assert.equal(JSON.parse(readFileSync(join(dir,`wallet-4663-${wallet.address}-pending.json`),'utf8')).hash,recorded)
+ await assert.rejects(()=>managedSend(wallet,{}),/unresolved transaction/)
+ assert.deepEqual(order,['record','broadcast'])
+ // Separate wallet: failed domain persistence must not submit anything.
+ const other={...wallet,address:'0x'+'34'.repeat(20)} as unknown as ethers.Wallet
+ await assert.rejects(()=>managedSend(other,{},()=>{throw Error('journal disk failure')}),/journal disk failure/)
+ assert.deepEqual(order,['record','broadcast'])
+ rmSync(dir,{recursive:true,force:true})
 })

@@ -10,7 +10,19 @@ group: Ahead
 
 ## Why it exists
 
-Every other launchpad prices tokens in the chain's gas coin. zealz.fun prices them in Zcash. That does three things at once: it gives every buyer a reason to hold zZEC, it locks every token's liquidity permanently, and it routes a slice of every trade into the $ZEAL buyback and burn. The launchpad is not a side business. It is a demand engine for the wrapper and a burn engine for $ZEAL, and it happens to be a fair place to launch a token.
+zealz.fun is central to the ecosystem’s growth plan. The intended connection is:
+
+1. **Creators launch tokens** with markets paired against zZEC.
+2. **Trading gives zZEC more uses.** The planned ETH-buying route passes through the ETH/zZEC pool, making its depth important to launchpad execution quality.
+3. **Fees support $ZEAL.** A share of launched-token trading fees goes to the Furnace for buybacks and burns.
+
+The reserve backs zZEC, liquidity supports trading, and the launchpad gives those markets more ways to be used. Deeper ETH/zZEC liquidity can reduce price impact for the planned ETH route. Additional activity may create more LP fees; adoption, volume and returns are not guaranteed. Reserve backing is not launchpad spending money.
+
+This describes the launchpad design and growth plan, not a claim that launchpad trading is already active. The current interface is a preview with sample launches; public deployment and readiness checks remain.
+
+## Explore the token-page preview
+
+The ZEAL homepage includes a clickable, monochrome preview of the Zebra Foundry sample token page. It shows the launchpad’s chart, liquidity and ZEAL-burn presentation, and opens that sample on zealz.fun. All displayed prices, liquidity and burn totals are illustrative sample data, not live project activity or expected returns. On smaller screens, the preview sits below the introduction. The sample token page’s “Where every trade goes” section presents its fee explanation on a separate, left-aligned line below the heading, with wrapping space on mobile.
 
 ## The four contracts
 

@@ -4,6 +4,8 @@ group: Using it
 ---
 # Redeeming zZEC for native ZEC
 
+On the homepage, choose **Redeem zZEC → ZEC** in the shared Zcash desk. The Wrap tab is the opposite direction. Switching tabs preserves the form and does not submit or cancel a redemption; return to Redeem to review your requests.
+
 > **In one breath.** Put your zZEC into the Redemption Desk with a transparent Zcash address. An automatic payer sends you real ZEC, usually within minutes, records the Zcash transaction on chain, and only then is your zZEC burned. If a request remains unpaid for seven days, you can reclaim your zZEC yourself. Open since **September 6, 2026**.
 
 ## Status

@@ -4,6 +4,7 @@ import { readFileSync, existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { CHAIN, CONTRACTS } from './config.js'
+import { wrapAccounting } from './wrap-accounting.js'
 import { withLock, atomicJson } from './ops-lock.js'
 import { redemptionAccounting } from './redemption-accounting.js'
 import { RESERVE_ADDRESS, transparentAddress } from './reserve-key.js'
@@ -39,17 +40,12 @@ async function main() {
     const height=Math.min(...snapshots.map(s=>s.height))
     const coins=snapshots[0].coins.filter(c=>c.height>0&&height-c.height+1>=3)
     const live=coins.reduce((n,c)=>n+BigInt(c.value_zats),0n)
-    // Keep exact-tag deposits available until their wrap requests are fulfilled.
-    const protectedDeposits=new Set<string>()
-    const wd=process.env.WRAP_DESK_ADDRESS
-    if(!wd)throw new Error('WrapDesk must be configured before reserve spends')
-    const desk=new ethers.Contract(wd,['function requestCount() view returns(uint256)','function summary(uint256) view returns(address,uint256,uint64,uint8,bytes32,uint256)'],provider)
-    const n=Number(await desk.requestCount())
-    if(n>10000)throw new Error('Wrap index requires reconciliation')
-    for(let i=0;i<n;i++){const s=await desk.summary(i);if(Number(s[3])===1)protectedDeposits.add(String(s[5]))}
+    const wrapping=await wrapAccounting()
+    const protectedOutpoints=new Set(wrapping.holds.map(h=>h.outpoint))
+    if(wrapping.live!==live)throw new Error('Reserve snapshot changed; retry later')
     const a=await redemptionAccounting()
     const spent=all.filter(t=>Date.parse(t.at)>Date.now()-86400000).reduce((v,t)=>v+BigInt(t.amount_zats),0n)
-    const plan=planReimbursement(live,a.supply,a.reimbursementZats,coins.filter(c=>!protectedDeposits.has(String(c.value_zats))),spent)
+    const plan=planReimbursement(live,a.supply+wrapping.reserved,a.reimbursementZats,coins.filter(c=>!protectedOutpoints.has(`0x${c.txid.toLowerCase()}:${c.index}`)),spent)
     if(!plan){console.log('No eligible reserve reimbursement');return}
     console.log(JSON.stringify({mode:execute?'execute':'preview',reserveZec:Number(live)/1e8,supply:Number(a.supply)/1e8,owedToFloat:Number(a.reimbursementZats)/1e8,repayZec:Number(plan.amount)/1e8,feeZec:Number(plan.fee)/1e8,inputs:plan.inputs.length,retainedChangeZec:Number(plan.change)/1e8}))
     if(!execute)return

@@ -2,6 +2,7 @@
 """Unprivileged systemd entry point. Credentials are provided by LoadCredential."""
 import json, os, pathlib, subprocess, sys
 JOBS = {
+ 'wrap': ('wrap.ts', [], ['minter','attestor']),
  'keeper': ('keeper.ts', ['--execute', '--daemon'], ['keeper']),
  'attest': ('attest.ts', [], ['attestor']),
  'replenish': ('replenish.ts', ['--execute'], ['keeper','attestor','minter']),
@@ -24,6 +25,9 @@ if roles:
   secret=json.loads(path.read_text())
   env[role.upper()+'_PASS']=secret['passphrase']
 env['REFILL_ENABLED']='1'
+if job=='wrap':
+ if not pathlib.Path('/etc/zeal/WRAP_ACTIVE').is_file(): raise SystemExit('Wrapping is not activated')
+ env['WRAP_FULFILL']='1'
 if job=='keeper': env['ZEAL_CLOUD_KEEPER']='1'
 # No shell or secret arguments. Replace this process so systemd observes the actual job.
 os.execve('/usr/local/bin/node',['node','--import','tsx','src/'+file,*args],env)

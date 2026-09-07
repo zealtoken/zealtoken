@@ -1,50 +1,42 @@
 import { useState } from 'react'
-import { CHAIN, CONTRACTS, LINKS, PONS, PONS_V2, RESERVE_TAKE_PCT, SPLIT, TOKEN } from '../config'
+import { CHAIN, CONTRACTS, LINKS, PONS, PONS_V2, SPLIT, TOKEN, ZZEC_MARKET } from '../config'
 
 // One $100 trade, walked to the cent. Everything derives from config.
 const FEE_PER_100 = PONS.poolFeePct
 const FOUNDRY_PER_100 = (FEE_PER_100 * PONS.creatorSharePct) / 100
 const PONS_KEEP_PER_100 = FEE_PER_100 - FOUNDRY_PER_100
 const SPLIT_PER_100 = SPLIT.map((x) => (FOUNDRY_PER_100 * x.pct) / 100)
-const SPLIT_TAKE_PCT = SPLIT.map((x) => (PONS.poolFeePct * PONS.creatorSharePct * x.pct) / 10_000)
-const PONS_TAKE_PCT = (PONS.poolFeePct * (100 - PONS.creatorSharePct)) / 100
 // two decimals minimum, a third only when the number needs it ($0.175, 0.105%)
 const trim = (n: number) => (Math.round(n * 1000) % 10 === 0 ? n.toFixed(2) : n.toFixed(3))
 const money = (n: number) => `$${trim(n)}`
-const pct = (n: number) => `${trim(n)}%`
 import { stagger } from '../useReveal'
 import { ContractAddress } from './ContractAddress'
 
 const PHASES = [
   {
-    p: 'Phase 00',
-    t: 'Launch',
-    s: 'live',
-    d: `$${TOKEN.symbol} launched on ${PONS.launchpad} on Sep 3 and graduated in under an hour. The Foundry and the Tap are deployed with verified source. Fee routing to the Tap waits on Pons moving the creator-fee recipient; the request is filed and the credit accrues meanwhile.`,
+    p: 'Community', t: `Launch $${TOKEN.symbol}`, s: 'live',
+    d: `$${TOKEN.symbol} is live on ${PONS.launchpad}. Public contracts, documentation and a dated build log form the ecosystem’s foundation. Creator-fee routing remains a separate activation step; follow its live status in the ledger.`,
+    href: LINKS.pons, label: `Explore $${TOKEN.symbol}`,
   },
   {
-    p: 'Phase 01',
-    t: 'Reserve opens',
-    s: 'live',
-    d: 'First ZEC lands at the published reserve address. The live tile and the attestation agree on a non-zero number for the first time, and the first mint follows.',
+    p: 'Wrapped Zcash', t: 'Bring Zcash to Robinhood Chain', s: 'live',
+    d: `${TOKEN.wrapper}, its public reserve, trading market and redemption desk are live. Public wrapping has its own activation checks: use the wrap desk’s current status before sending any ZEC.`,
+    href: '#wrap', label: 'Check wrap and redemption availability',
   },
   {
-    p: 'Phase 02',
-    t: `${TOKEN.wrapper} mints`,
-    s: 'live',
-    d: `${TOKEN.wrapper} and the Furnace deploy together. The market runs on Uniswap v4 with a hook that hands 0.7% of every trade to the Furnace, so every ${TOKEN.wrapper} trade is a $${TOKEN.symbol} burn.`,
+    p: 'Liquidity', t: `Deepen ${TOKEN.wrapper} liquidity`, s: 'in progress',
+    d: 'The liquidity desk and deposit preview are live. Next: easier funding, better position management and a funded provider-incentive program. Additional rewards are not live; any program will publish its budget, terms and dates before it starts.',
+    href: '#liquidity', label: 'Provide liquidity',
   },
   {
-    p: 'Phase 03',
-    t: 'Redemption',
-    s: 'Sep 06',
-    d: `Burn ${TOKEN.wrapper}, receive native ZEC. Escrow first, paid automatically from a float, Zcash transaction recorded on chain before anything burns. Live since Sep 6.`,
+    p: 'Launchpad', t: 'Launch zealz.fun', s: 'in progress',
+    d: `A token launchpad built around ${TOKEN.wrapper} markets and $${TOKEN.symbol} buybacks and burns. Contracts and the interface are built, with lifecycle tests on a chain fork. Public launch still requires deployment, verification and operational readiness checks. No launch date is promised here.`,
+    href: '/docs/#/launchpad', label: 'See what is built and what remains',
   },
   {
-    p: 'Phase 04',
-    t: 'Hand off custody',
-    s: 'the goal',
-    d: 'Backing moves from operator custody to red·bridge or an equivalent trust-minimized design. The endgame is a reserve we cannot touch either.',
+    p: 'Long-term foundation', t: 'Strengthen custody and resilience', s: 'planned',
+    d: `Keep improving monitoring, reserve transparency and recovery procedures while evaluating custody with less operator dependence. ${TOKEN.wrapper} currently uses operator custody; any replacement needs review and a verified migration plan. Backing for outstanding ${TOKEN.wrapper} is not launchpad spending money.`,
+    href: '/docs/#/security-and-trust', label: 'Understand the current trust model',
   },
 ]
 
@@ -57,7 +49,7 @@ const DAYS: Record<string, string> = {
   'Sep 04': 'First ZEC in the reserve, first mint, the market opens, first burn',
   'Sep 05': 'Peg keeper, the burn hook, both desks deployed',
   'Sep 06': 'Redemption opens and pays, docs, the launchpad passes a fork',
-  'Sep 07': 'zZEC runs to 21x par, the peg is defended, the largest burn',
+  'Sep 07': 'Public wrapping, clearer deposit tracking and a shorter ecosystem homepage',
 }
 
 const LOG: { d: string; t: string; href?: string; label?: string }[] = [
@@ -97,49 +89,98 @@ const LOG: { d: string; t: string; href?: string; label?: string }[] = [
   { d: 'Sep 07', t: 'Peg defended with our own capital. ZEC added to the reserve, minted 1:1 against it, and sold back into the market by the keeper until the price returned to par. zZEC back to 0.484 ETH against a fair value of 0.485.' },
   { d: 'Sep 07', t: 'Reserve more than tripled overnight, from 0.99 to 3.39 ZEC, coverage 1.0018. Every zZEC still backed one for one.', href: TOKEN.reserveAddress ? LINKS.zcashExplorer + TOKEN.reserveAddress : undefined, label: 'reserve' },
   { d: 'Sep 07', t: 'Largest burn to date. 69,377 $ZEAL bought back and burned from that volume alone, nearly seven times everything burned before it, on a fee split nobody can switch off.', href: CONTRACTS.furnace ? src(CONTRACTS.furnace) : undefined, label: 'furnace' },
+  { d: 'Sep 07', t: 'ZEAL homepage reorganized around the broader Zcash ecosystem. Buy $ZEAL remains primary; direct liquidity and zealz.fun preview links sit beside it. A launchpad overview explains benefits for ZEAL, zZEC, creators and traders, with preview status explicit.', href: '#launchpad', label: 'launchpad overview' },
+  { d: 'Sep 07', t: 'Liquidity deposits can be previewed before connecting a wallet. Fee explanations and Uniswap position-management links added; misleading estimated historical earnings and price-impact figures removed. Exact decimal input validation and Permit2 allowance-expiry handling improved. This does not add ETH-only deposits or a public compounding program.', href: '#liquidity', label: 'liquidity desk' },
+  { d: 'Sep 07', t: 'Roadmap expanded to cover community, wrapped Zcash, liquidity, zealz.fun and custody. FAQ expanded from four to sixteen questions with topic filters and supporting links. Desktop and mobile layouts, navigation and FAQ interactions checked; production builds passed.', href: '/docs/#/roadmap', label: 'roadmap and documentation' },
+  { d: 'Sep 07', t: 'Launchpad overview now explains its central role in the ecosystem: creators launch against zZEC, trading gives the wrapper more uses, and fees support ZEAL buybacks and burns. Added a three-step flow and explained why zZEC/ETH depth matters to the planned ETH-buying route. Launchpad documentation updated; development status remains explicit.', href: '#launchpad', label: 'ecosystem connection' },
+  { d: 'Sep 07', t: 'Wrapping readiness checked against on-chain roles and AWS services. Timelock eligibility does not mean activation: the minter change is uncommitted and the wrapping worker is not installed. Public wrapping remains pending. Added local operator regression checks and a deployed-contract fork test; no real deposit-to-mint test has been completed.', href: '/docs/#/wrap', label: 'wrapping readiness' },
+  { d: 'Sep 07', t: 'Wrap deposit accounting protections deployed to AWS: pending, duplicate and cancelled-request payments stay reserved from other minting and reserve spending. Wrapping worker installed behind a disabled activation gate. Added confirmation recovery, older request history and cancellation warnings to the website. Owner activation and a real deposit-to-mint test remain outstanding; public wrapping is still closed.', href: '/docs/#/wrap', label: 'readiness and remaining limits' },
+  { d: 'Sep 07', t: 'Launchpad overview now includes a clickable token-page preview beside the introduction. Based on zealz.fun’s Zebra Foundry sample, it shows the chart, locked liquidity and ZEAL-burn presentation with sample status explicit. Responsive layout stacks the preview below the introduction on mobile.', href: '#launchpad', label: 'see the preview' },
+  { d: 'Sep 07', t: 'WrapDesk minter activation confirmed on-chain. AWS wrapping worker and timer enabled; the first no-deposit pass completed successfully. The public form remains gated until a real minimum-size deposit-to-mint test is reconciled.', href: `${CONTRACTS.explorer}/tx/0x7661cd225a5f0cf4f171e8e11e51870c8cacecba377a0c81707f508e57160c04`, label: 'activation transaction' },
+  { d: 'Sep 07', t: 'Fixed overlapping heading and fee description in the zealz.fun token preview’s “Where every trade goes” section. The explanation now sits below the heading, left-aligned, with room to wrap on smaller screens.', href: 'https://zealz.fun/#/t/0x1111111111111111111111111111111111111111', label: 'token preview' },
+  { d: 'Sep 07', t: 'Wrapping redesign started after an exact-amount test mismatch. Public wrapping stays closed; the legacy matcher is paused and the claimed test output is reserved for reconciliation. Built and locally tested a replacement contract with permanent recipient-bound deposit addresses and one-time credit per Zcash output. Dedicated custody, cloud integration and a new minter migration remain.', href: '/docs/#/wrap', label: 'unique-address migration' },
+  { d: 'Sep 07', t: 'Unique-address WrapDeskV2 deployed fully paused. Deployment bytecode and custody configuration checked; the dedicated deposit wallet is prepared locally. Public wrapping remains closed while cloud integration, off-device backup verification, the minter timelock and end-to-end tests are completed. Minter proposal tooling now guards the network, deployed code and existing proposals.', href: `${CONTRACTS.explorer}/tx/0x0ed9febfaa6e51341c4ed0fb1e139a8980761f721a7feaaab653938c3ffb141d`, label: 'paused deployment' },
+  { d: 'Sep 07', t: 'Temporary wrapping path under development through the existing minter, avoiding a new role delay for that path. Prepared secure cloud custody upload, a reserve-only deposit signer and initial receipt checks; 8 signer tests and 61 operator tests pass. Public wrapping remains closed until integration and real end-to-end verification pass.', href: '/docs/#/wrap', label: 'temporary path status' },
+  { d: 'Sep 07', t: 'Deposit custody staged in AWS with a restore-tested off-device encrypted backup. An isolated cloud wallet check passed; the reserve-only Linux signer passed 8 tests and is installed. No deposit worker is activated. Accounting, restart recovery, the user flow and a real deposit-to-mint test remain opening requirements.', href: '/docs/#/wrap', label: 'custody and launch status' },
+  { d: 'Sep 07', t: 'V2 minter proposal confirmed, eligible September 9 at 20:16:37 UTC. Deployed a worker restricted to the owner’s test route, assigned its deposit address and verified idle/reserve checks. Added durable pre-broadcast records and consolidation accounting safeguards. Public wrapping stays closed pending the funded end-to-end test and release checks.', href: `${CONTRACTS.explorer}/tx/0x3d34544d26cb076eb7175725dee91067797ef9c046b1626fa51f424238ec8a4f`, label: 'upgrade proposal' },
+  { d: 'Sep 07', t: 'A test transfer sent to the legacy reserve was held separately for reconciliation, without minting or crediting the unique-address route. Added clearer destination checks and recovery guidance. The funded unique-address test remains pending.', href: '/docs/#/wrap', label: 'deposit destination guidance' },
+  { d: 'Sep 07', t: 'First funded unique-address wrapping test completed: 0.00207 ZEC credited as 0.00207 zZEC through the existing minter. Verified confirmed reserve consolidation, project-paid network fee, exact mint receipt, protected backing and a fresh worker run with no duplicate mint. Public wrapping stays closed while automation, the user flow and broader recovery checks are completed.', href: `${CONTRACTS.explorer}/tx/0xabfde9fbb8cb36c28750f784452b584daa4238cc6c8f0359f4e1ed44b172abf1`, label: 'verified test mint' },
+  { d: 'Sep 07', t: 'Automatic dedicated-address worker deployed in AWS with off-device checkpoint recovery, fresh status reporting and alerts. Published the wallet request, deposit-address and receipt UI; verified stale-status and account-switch safeguards and mobile layout. Public requests remain gated by the final owner opening transaction. V2 credits stay paused.', href: '/docs/#/wrap', label: 'public wrapping flow and safeguards' },
+  { d: 'Sep 07', t: 'Added a wallet-opening help popup with the selected ZEC amount, copyable deposit address and manual sending instructions. It explains what to do when a browser cannot open a Zcash wallet without falsely claiming to detect installed apps. Wallet changes or unavailable deposit status close the popup.', href: '/docs/#/wrap', label: 'wallet-opening help' },
+  { d: 'Sep 07', t: 'Wrapping now shows a prominent payment-progress card, advances from sending to receiving, and announces status changes in-page. Confirmed mints display their receipt; pending deposits take priority over older completed tests. Recorded history stays visible during temporary status outages, while new sending instructions remain gated. Updated wrapping guidance.', href: '/docs/#/wrap', label: 'deposit progress' },
+  { d: 'Sep 07', t: 'Wallet reconnection now shows an explicit loading state until address and deposit-history checks finish. Empty-history messages require fresh, matching account data; failed or incomplete checks show an automatic retry message and manual retry button instead of implying deposits are missing.', href: '/docs/#/wrap', label: 'reconnection loading states' },
+  { d: 'Sep 07', t: 'Reduced routine keeper funding notifications: warning threshold is now below 0.2 ETH, while the separate 1 ETH-plus-gas refill preservation rule remains unchanged. The exact planned V2 minter proposal stays quiet until eligibility; unexpected changes, low gas, backing, payout and service failures still alert.', href: '/docs/#/market-and-keeper', label: 'funding notifications' },
   { d: 'next', t: 'Pons routes $ZEAL fees to the Tap, and loop one turns too.' },
+  { d: 'Sep 07', t: 'Homepage simplified: liquidity moves earlier, wrapping and redemption share a tabbed desk, and calculators, diagrams and the full build archive expand on demand. The ecosystem overview includes zealz.fun and its planned zZEC markets and ZEAL fee benefits, clearly labeled in development. Header links and dropdowns now share consistent sizing, spacing and readable solid backgrounds. The footer lists both token contracts with separate copy and explorer controls in compact rows. Hero action buttons and the contract-address bar use opaque backgrounds for readability over the animation. Transaction behavior and payout limits are unchanged.', href: '/docs/#/overview', label: 'Using the homepage' },
+  { d: 'Sep 07', t: 'Fixed automatic reserve reimbursement’s access to the public wrapping checkpoint while keeping credentials private. Added the reimbursement service to cloud health alerts; prior confirmed transfers remain credited, with existing backing protections and transfer limits unchanged.', href: '/docs/#/operations-runbook', label: 'reimbursement monitoring' },
+  { d: 'Sep 07', t: 'Reduced alert flapping: routine cloud service failures now require five minutes of persistence, with five minutes of stable recovery before a recovery email. Funding and safety alerts remain immediate; transaction safeguards and six-hour reminders are unchanged.', href: '/docs/#/operations-runbook', label: 'alert timing' },
 ]
 
 const FAQ = [
-  {
-    q: `Where does the money to buy ZEC come from, and where does the rest go?`,
-    a: `From $${TOKEN.symbol} trading fees, and every cent is accounted for. Take a $100 trade. Pons charges a ${money(FEE_PER_100)} pool fee. Pons keeps ${money(PONS_KEEP_PER_100)} of that for running the launchpad. The other ${money(FOUNDRY_PER_100)} goes to the Foundry, which splits it three ways: ${money(SPLIT_PER_100[0])} buys Zcash for the reserve, ${money(SPLIT_PER_100[1])} seeds ${TOKEN.wrapper} liquidity (whose fees feed the Furnace), and ${money(SPLIT_PER_100[2])} covers audits, attestation and infrastructure. So of every dollar traded: ${pct(RESERVE_TAKE_PCT)} becomes Zcash, ${pct(SPLIT_TAKE_PCT[1])} becomes ${TOKEN.wrapper} liquidity, ${pct(SPLIT_TAKE_PCT[2])} runs the operation, and ${pct(PONS_TAKE_PCT)} is Pons’s fee. Nothing goes to a founder wallet.`,
-  },
-  {
-    q: `Is this a tax token?`,
-    a: `No. The ${PONS.poolFeePct.toFixed(2)}% is the standard Pons pool fee every token on the launchpad pays. The difference is where the creator share goes: a contract that splits it to three published wallets, and the largest share buys Zcash.`,
-  },
-  {
-    q: `Why not build a real bridge?`,
-    a: `Zcash is not an EVM chain. A real bridge means verifying Zcash headers and shielded-pool proofs inside an EVM contract, a multi-year cryptography project that red·bridge (Zcash Community Grants and the Avalanche Foundation) is building now. The ZEC networks that exist today, NEAR Intents, Maya, THORChain, are swap vaults, not bridges. So the options were a reserve with public attestation, or nothing. We built the reserve, and Phase 04 adopts the bridge the day it ships. By then the reserve is already full.`,
-  },
-  {
-    q: `Does holding $${TOKEN.symbol} give me a claim on the ZEC?`,
-    a: `No. $${TOKEN.symbol} funds the reserve; ${TOKEN.wrapper} is the exposure. What $${TOKEN.symbol} holders get is a supply that shrinks every time the wrapper is used.`,
-  },
+  { group: 'ZEAL & the ecosystem', q: `What is the difference between $${TOKEN.symbol}, ${TOKEN.wrapper} and ZEC?`,
+    a: `ZEC is native Zcash. ${TOKEN.wrapper} is the reserve-backed token representing ZEC on Robinhood Chain. $${TOKEN.symbol} is the ecosystem’s community token. Buying $${TOKEN.symbol}, holding ${TOKEN.wrapper} and providing liquidity are different activities with different risks.`, href: '#participate', label: 'Compare ways to participate' },
+  { group: 'ZEAL & the ecosystem', q: `Does holding $${TOKEN.symbol} earn fees or give me a claim on the reserve?`,
+    a: `No. Holding $${TOKEN.symbol} does not give you a claim on the ZEC reserve, LP fees or guaranteed income. The Furnace uses fees it receives to buy back and burn $${TOKEN.symbol}; burns do not guarantee a higher market price. LP fees belong to liquidity positions.`, href: '#furnace', label: 'How the Furnace works' },
+  { group: 'ZEAL & the ecosystem', q: 'Where do ZEAL trading fees go?',
+    a: `The intended route for a $100 trade is: ${money(FEE_PER_100)} in Pons pool fees, with ${money(PONS_KEEP_PER_100)} retained by Pons and ${money(FOUNDRY_PER_100)} allocated to the Foundry. The Foundry splits that into ${money(SPLIT_PER_100[0])} for ZEC reserves, ${money(SPLIT_PER_100[1])} for liquidity and ${money(SPLIT_PER_100[2])} for operations, before conversion costs. Fee routing is awaiting Pons activation. Accrued or credited fees are not the same as funds already received by the reserve.`, href: '#ledger', label: 'Check the live fee route' },
+  { group: 'ZEAL & the ecosystem', q: 'Is ZEAL officially affiliated with Robinhood or Zcash?',
+    a: 'No. ZEAL is an independent project on Robinhood Chain. It is not affiliated with, endorsed by or sponsored by Robinhood Markets, the Electric Coin Company or the Zcash Foundation. Robinhood Chain refers to the blockchain, not a listing in the brokerage app.', href: '/docs/', label: 'Read the project documentation' },
+  { group: 'zZEC & redemption', q: `What backs ${TOKEN.wrapper}, and who controls it?`,
+    a: `Native ZEC is held at the published reserve address, and an attestor reports the reserve balance on chain. The operator controls the reserve signing keys. This makes ${TOKEN.wrapper} reserve-backed and publicly checkable, not trustless. Compare live reserves, the last attestation and outstanding supply in the ledger.`, href: '#ledger', label: 'Check reserve backing' },
+  { group: 'zZEC & redemption', q: `Can I wrap my ZEC into ${TOKEN.wrapper}?`,
+    a: 'Yes, the wrap desk is live. Connect your Robinhood Chain wallet, get your wallet’s own Zcash deposit address and send native ZEC there (0.001–1 ZEC per payment). The actual received amount determines your credit; no special trailing digits are required. The desk waits for confirmations and processing before minting. Never send a deposit based only on a preview or a roadmap entry.', href: '#wrap', label: 'Open the wrap desk' },
+  { group: 'zZEC & redemption', q: `How do I redeem ${TOKEN.wrapper} for native ZEC?`,
+    a: `Use the redemption desk with a supported Zcash address. Your ${TOKEN.wrapper} is escrowed, the operator sends native ZEC, and the payout is recorded before the escrow is burned. Processing is subject to the desk’s current per-request and daily limits, available payout funds and network conditions. If a request remains unpaid, the contract’s reclaim path becomes available after its waiting period.`, href: '#redeem', label: 'Check redemption limits and requests' },
+  { group: 'zZEC & redemption', q: `Why can ${TOKEN.wrapper} trade above or below ZEC?`,
+    a: 'Backing and market price are different. Trades move the pool price, especially when liquidity is shallow. The keeper trades toward the reference ZEC price, but has finite inventory and operating limits. Wrapping and redemption also take time. A 1:1 backing target is not a promise of an exact market price or an instant payout.', href: '#market', label: 'View the market' },
+  { group: 'zZEC & redemption', q: `Are ${TOKEN.wrapper} transactions private?`,
+    a: `${TOKEN.wrapper} is a transparent token on Robinhood Chain: EVM transfers are publicly visible. It does not make your wallet activity shielded. Native Zcash has separate shielding capabilities; check which address types the redemption desk currently supports.`, href: '/docs/#/security-and-trust', label: 'Read the privacy and custody limits' },
+  { group: 'Providing liquidity', q: `What do I need to provide liquidity?`,
+    a: `You need ${TOKEN.wrapper} and ETH on Robinhood Chain, plus ETH for gas. The preview shows the matching ${TOKEN.wrapper} amount in addition to your ETH contribution. Buying $${TOKEN.symbol} does not create a liquidity position. First-time deposits may require two approvals and the deposit transaction.`, href: '#liquidity', label: 'Preview your deposit' },
+  { group: 'Providing liquidity', q: 'How much do liquidity providers earn?',
+    a: `The pool’s ${ZZEC_MARKET.lpFeePct}% LP trading fee is shared among active liquidity providers. Earnings depend on volume, your active share and how long you provide liquidity. This is a fee on trades, not a daily yield or guaranteed return. The separate ${ZZEC_MARKET.hookFeePct}% hook charge funds the Furnace; it is not another LP reward.`, href: '#liquidity', label: 'See fees and deposit details' },
+  { group: 'Providing liquidity', q: 'Can I withdraw, and will I get the same assets back?',
+    a: 'The standard liquidity desk creates a position held in your wallet. You can remove its current assets through Uniswap, subject to network execution. The quantities and dollar value can differ from your original deposit as prices change. Fees may not offset losses, and contract and reserve custody risks also apply.', href: 'https://app.uniswap.org/positions', label: 'Manage positions on Uniswap' },
+  { group: 'Providing liquidity', q: 'Are extra rewards or automatic compounding available?',
+    a: 'No public bonus-reward or automatic-compounding program is being offered here today. Trading fees are the current provider incentive. Team-managed position automation does not automatically apply to your wallet. Any additional program must publish its funding, eligibility and terms before it starts.', href: '#phases', label: 'See liquidity development plans' },
+  { group: 'zealz.fun & what’s next', q: 'What is zealz.fun, and is it live?',
+    a: `zealz.fun is the launchpad being developed for the ecosystem, with token markets paired against ${TOKEN.wrapper} and a fee design that supports $${TOKEN.symbol} buybacks and burns. The interface and contracts are built and lifecycle-tested on a chain fork. That is not the same as a public mainnet launch; deployment and readiness work remain.`, href: '/docs/#/launchpad', label: 'Read the launchpad status and design' },
+  { group: 'zealz.fun & what’s next', q: 'Will the launchpad spend the ZEC backing zZEC?',
+    a: `ZEC needed to back outstanding ${TOKEN.wrapper} is not available project funding. Launchpad development, incentives and operations need separately available funds. Growth in total reserves alone does not mean there is more spendable capital: outstanding ${TOKEN.wrapper} liabilities must be accounted for.`, href: '#ledger', label: 'Compare reserves and supply' },
+  { group: 'zealz.fun & what’s next', q: 'Where can I verify progress and launch dates?',
+    a: 'The roadmap separates live features, work in progress and plans. Multiple workstreams can advance together. Use the dated build log, linked source and documentation to check evidence. Planned features and dates can change; contract tests and a preview interface are not proof that a service is publicly active.', href: '#phases', label: 'Read the roadmap and build log' },
 ]
 
 function Faq() {
-  const [open, setOpen] = useState<number | null>(0)
+  const [open, setOpen] = useState<string | null>(null)
+  const [all, setAll] = useState(false)
+  const [category, setCategory] = useState('All questions')
+  const categories = ['All questions', ...new Set(FAQ.map((f) => f.group))]
   return (
-    <ul className="faq">
-      {FAQ.map((f, i) => (
-        <li key={f.q} data-open={open === i} data-reveal style={stagger(i, 60)}>
-          <button onClick={() => setOpen(open === i ? null : i)} aria-expanded={open === i}>
-            <span>{f.q}</span>
-            <i aria-hidden="true" />
-          </button>
-          <div className="faq-a">
-            <p>{f.a}</p>
-          </div>
-        </li>
-      ))}
-    </ul>
+    <div className="faq-content">
+      <div className="faq-filters" role="group" aria-label="Filter questions by topic">
+        {categories.map((name) => <button type="button" key={name} aria-pressed={category === name} onClick={() => { setCategory(name); setOpen(null) }}>{name}</button>)}
+      </div>
+      <ul className="faq">
+        {FAQ.map((f, i) => (all || category !== 'All questions' || i < 6) && (category === 'All questions' || category === f.group) && (
+          <li key={f.q} data-open={open === f.q}>
+            <button type="button" id={`faq-question-${i}`} onClick={() => setOpen(open === f.q ? null : f.q)} aria-expanded={open === f.q} aria-controls={`faq-answer-${i}`}>
+              <span>{f.q}</span><i aria-hidden="true" />
+            </button>
+            <div className="faq-answer" id={`faq-answer-${i}`} aria-labelledby={`faq-question-${i}`} hidden={open !== f.q}>
+              <p>{f.a}</p>
+              <a href={f.href} {...(f.href.startsWith('https:') ? { target: '_blank', rel: 'noreferrer' } : {})}>{f.label} →</a>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {category === 'All questions' && <button className="btn btn-ghost" onClick={() => setAll(!all)}>{all ? 'Show fewer questions' : 'See all questions'}</button>}
+    </div>
   )
 }
 
 export function Close() {
-  const [openDay, setOpenDay] = useState<string | null>(null)
+  const [openDay, setOpenDay] = useState<string | null>('')
   return (
     <>
       {/* ---------------- roadmap ---------------- */}
@@ -150,11 +191,12 @@ export function Close() {
               Roadmap
             </p>
             <h2 className="h2" data-reveal style={stagger(1)}>
-              Five phases.
+              Built so far.
               <br />
-              Each one checkable.
+              What comes next.
             </h2>
           </div>
+          <p className="roadmap-intro">A roadmap for the whole ZEAL ecosystem. These workstreams can progress together; planned features are not live services or promised launch dates.</p>
           <div className="phases">
             {PHASES.map((p, i) => (
               <article className="phase" key={p.p} data-reveal="left" style={stagger(i, 90)}>
@@ -171,6 +213,7 @@ export function Close() {
                   </div>
                   <h3 className="h3">{p.t}</h3>
                   <p>{p.d}</p>
+                  <a className="roadmap-link" href={p.href} {...(p.href.startsWith('https:') ? { target: '_blank', rel: 'noreferrer' } : {})}>{p.label} →</a>
                 </div>
               </article>
             ))}
@@ -181,6 +224,8 @@ export function Close() {
               <p className="eyebrow">Build log</p>
               <p className="log-note mono">{LOG.filter((l) => l.d !== 'next').length} entries · dated · linked · nothing here is a promise</p>
             </div>
+            <div className="latest-updates">{LOG.filter(l => l.d !== 'next').slice(-3).reverse().map((l, i) => <article key={i}><span className="mono">{l.d}</span><p>{l.t}</p>{l.href && <a href={l.href}>{l.label} →</a>}</article>)}</div>
+            <details className="home-more"><summary>Full build archive · every update</summary>
             {(() => {
               const days: { d: string; rows: typeof LOG }[] = []
               for (const l of LOG) {
@@ -203,7 +248,7 @@ export function Close() {
                           <span className="log-day-caret" aria-hidden>&#8964;</span>
                         </button>
                         <div className="log-day-body"><div className="log-day-inner">
-                          {g.rows.map((l, i) => (
+                          {[...g.rows].reverse().map((l, i) => (
                             <div className="log-row" key={i}>
                               <span className="log-bullet" aria-hidden />
                               <span className="log-text">{l.t}</span>
@@ -227,7 +272,7 @@ export function Close() {
                   ))}
                 </>
               )
-            })()}
+            })()}</details>
           </div>
         </div>
       </section>
@@ -244,6 +289,7 @@ export function Close() {
               <br />
               hard ones.
             </h2>
+            <p className="faq-intro">Clear answers about the tokens, your funds, trading fees and what we’re building next.</p>
           </div>
           <Faq />
         </div>
@@ -259,7 +305,7 @@ export function Close() {
             on the chain.
           </h2>
           <p className="lede" data-reveal style={stagger(1)}>
-            Trades grow the reserve. Redemptions draw on it. Burns shrink the supply.
+            Join the ZEAL community. Explore zZEC, provide liquidity, and follow the ecosystem as it grows.
           </p>
           <div className="hero-btns" data-reveal style={stagger(2)}>
             <a className="btn btn-primary" href={LINKS.pons} target="_blank" rel="noreferrer">
@@ -288,6 +334,7 @@ export function Close() {
               <a href="#furnace">The Furnace</a>
               <a href="#proof">Proof</a>
               <a href="#phases">Roadmap</a>
+              <a href={LINKS.zealz} target="_blank" rel="noreferrer">zealz.fun</a>
               <a href="#lore">Lore</a>
               <a href={LINKS.x} target="_blank" rel="noreferrer">X</a>
               <a href={LINKS.telegram} target="_blank" rel="noreferrer">Telegram</a>
@@ -300,7 +347,7 @@ export function Close() {
             <p className="mono">
               {CHAIN.name} · chain id {CHAIN.id}
             </p>
-            <ContractAddress compact />
+            <div className="footer-contracts" aria-label="Token contracts on Robinhood Chain"><ContractAddress compact /><ContractAddress compact wrapper /></div>
             <p className="foot-legal">
               ${TOKEN.symbol} is a community token with no intrinsic value and no expectation of
               financial return. Nothing here is investment advice, an offer, or a solicitation.

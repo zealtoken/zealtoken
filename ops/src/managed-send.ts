@@ -4,7 +4,7 @@ import { atomicJson, readJson, stateDir, withLock } from './ops-lock.js'
 /** Serialize a wallet on a chain and persist the hash BEFORE broadcasting.
  * Uncertain submissions block further sends until the transaction is resolved.
  */
-export async function managedSend(wallet: ethers.Wallet, request: ethers.TransactionRequest) {
+export async function managedSend(wallet: ethers.Wallet, request: ethers.TransactionRequest, beforeBroadcast?: (hash: string) => void | Promise<void>) {
   const provider = wallet.provider!
   const chain = (await provider.getNetwork()).chainId
   const key = `wallet-${chain}-${wallet.address.toLowerCase()}`
@@ -22,6 +22,8 @@ export async function managedSend(wallet: ethers.Wallet, request: ethers.Transac
     const raw = await wallet.signTransaction(populated)
     const hash = ethers.keccak256(raw)
     atomicJson(file, { hash, nonce: pending, at: new Date().toISOString() })
+    // Bind the domain operation to this exact hash before any network submission.
+    if (beforeBroadcast) await beforeBroadcast(hash)
     const tx = await provider.broadcastTransaction(raw)
     const receipt = await tx.wait(1, 60_000)
     if (!receipt || receipt.status !== 1) throw new Error(`transaction did not succeed: ${hash}`)

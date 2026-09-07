@@ -7,3 +7,12 @@ deployments/*.local.json
 .env.*
 !.env.example
 .keystore.json
+
+.wrap-smoke-request.json*
+
+.wrap-v2-deployment.json
+
+.wrap-interim-owner.json
+.wrap-interim-owner.json.tmp
+
+.wrap-public-owner.json*

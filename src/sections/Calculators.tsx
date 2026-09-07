@@ -222,7 +222,7 @@ export function FurnaceCalc() {
 
       <VolumeInput label={`${TOKEN.wrapper} volume`} value={vol} onChange={setVol} />
 
-      <div className="calc-assume">
+      <details className="home-more"><summary>Adjust hypothetical fee assumptions</summary><div className="calc-assume">
         <SmallInput label="pool fee" value={feePct} onChange={setFeePct} suffix="%" />
         <SmallInput label="share to Furnace" value={sharePct} onChange={setSharePct} suffix="%" />
         <p className="calc-note">
@@ -232,7 +232,7 @@ export function FurnaceCalc() {
         </p>
       </div>
 
-      <div className="money-rows" aria-live="polite">
+      </details><div className="money-rows" aria-live="polite">
         <div className="money-row money-row-top">
           <span>Pool fee at {num(toNum(feePct), 2)}%</span>
           <span className="mono">{usd(fee)}</span>

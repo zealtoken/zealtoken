@@ -26,7 +26,11 @@
     "wrap:deploy": "hardhat run scripts/deploy-wrap.ts --network rhMainnet",
     "zzec:minter": "hardhat run scripts/set-minter.ts --network rhMainnet",
     "desk:admin": "hardhat run scripts/desk-admin.ts --network rhMainnet",
-    "zealz:deploy": "hardhat run scripts/deploy-zealz.ts --network rhMainnet"
+    "zealz:deploy": "hardhat run scripts/deploy-zealz.ts --network rhMainnet",
+    "wrap:smoke": "hardhat run scripts/wrap-smoke.ts --network rhMainnet",
+    "wrapv2:deploy": "hardhat run scripts/deploy-wrap-v2.ts --network rhMainnet",
+    "wrap:interim:stage": "hardhat run scripts/stage-wrap-interim.ts --network rhMainnet",
+    "wrap:public:open": "hardhat run scripts/open-wrap-public.ts --network rhMainnet"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",

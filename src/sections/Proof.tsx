@@ -16,7 +16,7 @@ const CHECKS: Check[] = [
   },
   {
     t: 'The Tap contract',
-    d: 'The Pons fee recipient. Anyone can call sweep() or pull(), and every wei goes to the Foundry. It cannot send anywhere else. Moving the recipient takes a 48-hour public timelock.',
+    d: 'The intended Pons fee recipient; activation is pending. Anyone can call sweep() or pull(), and every wei goes to the Foundry. It cannot send anywhere else. Moving the recipient takes a 48-hour public timelock.',
     v: PONS_V2.tap ?? 'deployed at launch',
     status: PONS_V2.tap ? 'verified' : 'pending',
     href: PONS_V2.tap ? src(PONS_V2.tap) : undefined,
@@ -30,7 +30,7 @@ const CHECKS: Check[] = [
   },
   {
     t: `The ${TOKEN.wrapper} contract`,
-    d: 'Attestor and minter are separate roles behind a 48-hour timelock. Minting can pause. Redemption never can.',
+    d: 'Attestor and minter are separate roles behind a 48-hour timelock. Minting and new redemption requests can pause. Unpaid escrow has a seven-day reclaim path.',
     v: CONTRACTS.zzec ?? 'deploys at reserve open',
     status: CONTRACTS.zzec ? 'verified' : 'pending',
     href: CONTRACTS.zzec ? src(CONTRACTS.zzec) : undefined,
@@ -55,7 +55,7 @@ const LIVE = CHECKS.filter((c) => c.status === 'verified').length
 const LIMITS = [
   {
     t: `${TOKEN.wrapper} v1 is reserve-backed, not trustless.`,
-    d: 'The contracts guarantee the split, the supply cap and the exit. A human attests the Zcash balance and the operator’s key holds it, at a published transparent address anyone can watch. Phase 04 hands that off to trust-minimized custody.',
+    d: 'Contracts enforce their fee split, minting checks and escrow rules; native ZEC payouts depend on operator custody and capacity. A human attests the Zcash balance and the operator’s key holds it, at a published transparent address anyone can watch. Trust-minimized custody is a future workstream.',
   },
   {
     t: `${TOKEN.wrapper} is exposure, not shielding.`,
@@ -120,7 +120,7 @@ export function Proof() {
               </h3>
               <p>
                 A wrapper nobody can leave is a trap. Burn {TOKEN.wrapper}, receive native ZEC to
-                an address you control, shield it. The exit opens with the mint and never closes.
+                an address you control, shield it. Automatic payouts have per-request and daily limits; unpaid escrow can be reclaimed after seven days.
               </p>
             </div>
           </div>

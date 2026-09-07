@@ -22,3 +22,7 @@ Validation: CloudFormation UPDATE_COMPLETE; three alarms OK; runtime monitoring 
 This monitors the explicit conditions above; it is not a guarantee of detecting every possible protocol failure. A full test of mail arrival in the recipient's inbox was not performed. The local hot float check uses the wallet's last synced balance and does not send or shield funds.
 
 Follow-on update (07:32 UTC): cloud health now covers the redemption payer, live synced float balance, encrypted wallet-backup freshness, and the dedicated burner gas balance. Float top-up alerts include the verified Zcash address. The Mac monitor now covers only daily burns. At the burner proposal ETA, the cloud monitor requests the one-time local `cloud:finish-burn` command by email. That command removes the laptop alarm only after verifying cloud burns; until then the laptop heartbeat remains necessary. See FINAL-MIGRATION.md.
+
+## September 7: persistent service alerts
+
+Routine cloud service, connectivity and status-read failures require five minutes continuously observed before affecting the Healthy metric and email delivery. Once reported, an issue must remain clear for five minutes before recovery; recurrence during that window stays in the same incident. Six-hour reminders remain unchanged. Funding, backing/capacity, deposit review and unexpected role changes are not delayed. Unknown issue keys default to immediate alerts. Raw systemd failures remain in journal logs. This changes notification policy only, not signing, transfer limits or fail-closed checks.

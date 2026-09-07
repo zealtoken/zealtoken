@@ -23,16 +23,8 @@ const eth = () => (window as unknown as { ethereum?: Eip1193 }).ethereum
 const sqrtAtTick = (t: number) => BigInt(Math.floor(Math.sqrt(1.0001 ** t) * 2 ** 96))
 const fmt = (n: number, d = 4) => n.toLocaleString('en-US', { maximumFractionDigits: d })
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
-const TIERS = [
-  { min: 25, name: 'Herd Leader', emoji: '👑', note: 'a quarter of the pool or more' },
-  { min: 10, name: 'Stallion', emoji: '🦓', note: '10% and up' },
-  { min: 1, name: 'Zebra', emoji: '🦓', note: '1% and up' },
-  { min: 0, name: 'Foal', emoji: '🐴', note: 'every herd starts here' },
-]
-const tierOf = (share: number) => TIERS.find((t) => share >= t.min)!
-
 type Pos = { id: bigint; owner: string; liq: bigint }
-type Pool = { sqrt: bigint; L: bigint; ethDepth: number; zzecDepth: number; priceEth: number; taken0: number; taken1: number }
+type Pool = { sqrt: bigint; L: bigint; ethDepth: number; zzecDepth: number; priceEth: number }
 
 export function LiquidityDesk() {
   const [pool, setPool] = useState<Pool | null>(null)
@@ -47,11 +39,11 @@ export function LiquidityDesk() {
 
   const load = useCallback(async () => {
     const id = ZZEC_MARKET.poolId.slice(2)
-    const [s0, lq, t0, t1] = await readBatchRaw([{ to: STATE_VIEW, data: SEL.slot0 + id }, { to: STATE_VIEW, data: SEL.liq + id }, { to: ZZEC_MARKET.hook, data: SEL.taken0 }, { to: ZZEC_MARKET.hook, data: SEL.taken1 }])
+    const [s0, lq] = await readBatchRaw([{ to: STATE_VIEW, data: SEL.slot0 + id }, { to: STATE_VIEW, data: SEL.liq + id }])
     const sqrt = hexToBig(word(s0, 0)), L = hexToBig(lq)
     const sp = Number(sqrt) / 2 ** 96, Ln = Number(L)
     const ethDepth = Ln / sp / 1e18, zzecDepth = (Ln * sp) / 1e8
-    setPool({ sqrt, L, ethDepth, zzecDepth, priceEth: zzecDepth > 0 ? ethDepth / zzecDepth : 0, taken0: Number(hexToBig(t0)) / 1e18, taken1: Number(hexToBig(t1)) / 1e8 })
+    setPool({ sqrt, L, ethDepth, zzecDepth, priceEth: zzecDepth > 0 ? ethDepth / zzecDepth : 0 })
     // every position ever touched in this pool: salt = PositionManager token id
     const logs = await getLogs(POOL_MANAGER, [T_MODIFY, ZZEC_MARKET.poolId])
     const ids = [...new Set(logs.map((l) => hexToBig(word(l.data, 3)).toString()))].map(BigInt)
@@ -64,19 +56,13 @@ export function LiquidityDesk() {
   useEffect(() => { const go = () => load().then(() => setReadErr(null)).catch((e: Error) => setReadErr(e.message)); void go(); const t = window.setInterval(go, 30_000); return () => window.clearInterval(t) }, [load])
   useEffect(() => { const spot = async (p: string) => Number(((await (await fetch(`https://api.coinbase.com/v2/prices/${p}/spot`)).json()) as { data: { amount: string } }).data.amount); Promise.all([spot('ZEC-USD'), spot('ETH-USD')]).then(([zec, eth]) => setPrices({ zec, eth })).catch(() => {}) }, [])
 
-  // leaderboard rows: aggregate by owner
-  const rows = useMemo(() => {
-    if (!positions || !pool || pool.L === 0n) return []
-    const by = new Map<string, bigint>()
-    for (const p of positions) by.set(p.owner.toLowerCase(), (by.get(p.owner.toLowerCase()) ?? 0n) + p.liq)
-    const total = Number(pool.L)
-    const volZec = (pool.taken0 / (pool.priceEth || 1) + pool.taken1) / (ZZEC_MARKET.hookFeePct / 100)
-    return [...by.entries()].map(([owner, liq]) => { const share = (Number(liq) / total) * 100; return { owner, share, tier: tierOf(share), burnsZec: volZec * (ZZEC_MARKET.hookFeePct / 100) * (share / 100), feesZec: volZec * (ZZEC_MARKET.lpFeePct / 100) * (share / 100) } }).sort((a, b) => b.share - a.share)
-  }, [positions, pool])
-  const mine = account ? rows.find((r) => r.owner === account.toLowerCase()) : undefined
+  // Show participation counts, never attribute historical earnings from current share.
+  const owners = [...new Set((positions ?? []).map((p) => p.owner.toLowerCase()))]
 
   // impact meter + mint math (full range), same formulas as the operator's pool script
-  const ethWei = BigInt(Math.round((Number(ethIn) || 0) * 1e18))
+  const validAmount = /^\d{1,9}(\.\d{0,18})?$/.test(ethIn)
+  const [whole, fraction = ''] = ethIn.split('.')
+  const ethWei = validAmount ? BigInt(whole) * 10n ** 18n + BigInt(fraction.padEnd(18, '0')) : 0n
   const quote = useMemo(() => {
     if (!pool || ethWei <= 0n || pool.sqrt === 0n) return null
     const sA = sqrtAtTick(-TICK), sB = sqrtAtTick(TICK), P = pool.sqrt
@@ -85,11 +71,8 @@ export function LiquidityDesk() {
     const ceil = (n: bigint, d: bigint) => (n + d - 1n) / d
     const need0 = ceil(liquidity * (sB - P) * Q96, P * sB), need1 = ceil(liquidity * (P - sA), Q96)
     const shareAfter = (Number(liquidity) / (Number(pool.L) + Number(liquidity))) * 100
-    const trade = 0.05 // ETH
-    const moveBefore = (trade / pool.ethDepth) * 100, moveAfter = (trade / (pool.ethDepth + Number(need0) / 1e18)) * 100
-    return { liquidity, need0, need1, amount0Max: (need0 * 1005n) / 1000n, amount1Max: (need1 * 1005n) / 1000n, shareAfter, moveBefore, moveAfter }
+    return { liquidity, need0, need1, amount0Max: (need0 * 1005n) / 1000n, amount1Max: (need1 * 1005n) / 1000n, shareAfter }
   }, [pool, ethWei])
-  const rankAfter = quote ? 1 + rows.filter((r) => r.owner !== account?.toLowerCase() && r.share > quote.shareAfter).length : null
   // the most ETH the wallet's zZEC can pair at the pool price (0.5% headroom for the maxima)
   const maxEthForZzec = pool && pool.priceEth > 0 ? (Number(bal.zzec) / 1e8) * pool.priceEth * 0.994 : 0
 
@@ -117,7 +100,7 @@ export function LiquidityDesk() {
       // 1 + 2: zZEC -> Permit2 -> PositionManager
       const [al, p2] = await readBatchRaw([{ to: CONTRACTS.zzec, data: SEL.allowance + encAddress(account) + encAddress(PERMIT2) }, { to: PERMIT2, data: SEL.p2allow + encAddress(account) + encAddress(CONTRACTS.zzec) + encAddress(POSM) }])
       if (hexToBig(al) < quote.amount1Max) { setBusy('1 of 3 · approve zZEC to Permit2'); await send(CONTRACTS.zzec, SEL.approve + encAddress(PERMIT2) + 'f'.repeat(64)) }
-      if (hexToBig(word(p2, 0)) < quote.amount1Max) { setBusy('2 of 3 · allow the PositionManager'); const exp = BigInt(Math.floor(Date.now() / 1000) + 30 * 86400); await send(PERMIT2, SEL.p2approve + encTuple([encAddr(CONTRACTS.zzec), encAddr(POSM), encUint((1n << 160n) - 1n), encUint(exp)])) }
+      if (hexToBig(word(p2, 0)) < quote.amount1Max || hexToBig(word(p2, 1)) <= BigInt(Math.floor(Date.now() / 1000) + 600)) { setBusy('2 of 3 · allow the PositionManager'); const exp = BigInt(Math.floor(Date.now() / 1000) + 30 * 86400); await send(PERMIT2, SEL.p2approve + encTuple([encAddr(CONTRACTS.zzec), encAddr(POSM), encUint((1n << 160n) - 1n), encUint(exp)])) }
       // 3: mint full-range position: MINT_POSITION, SETTLE_PAIR, SWEEP (refund unused ETH)
       setBusy('3 of 3 · mint your position')
       const mintParams = encTuple([...key, encUint(BigInt(-TICK)), encUint(BigInt(TICK)), encUint(quote.liquidity), encUint(quote.amount0Max), encUint(quote.amount1Max), encAddr(account), encBytes('0x')])
@@ -137,79 +120,65 @@ export function LiquidityDesk() {
         <div className="sec-head">
           <p className="eyebrow" data-reveal>Liquidity desk</p>
           <h2 className="h2" data-reveal style={stagger(1)}>
-            Join the herd.
+            Provide zZEC liquidity.
             <br />
-            <span className="green">Host the burn.</span>
+            <span className="green">Earn trading fees.</span>
           </h2>
           <p className="lede" data-reveal style={stagger(2)}>
-            Every trade in the {TOKEN.wrapper} market pays {ZZEC_MARKET.lpFeePct}% to the people providing liquidity and {ZZEC_MARKET.hookFeePct}% to the
-            burn. Liquidity providers are ranked in the open, earn on every trade pro rata, and can leave any time. Add it here in one flow.
+            Pair {TOKEN.wrapper} with ETH and earn your share of the {ZZEC_MARKET.lpFeePct}% LP trading fees.
+            Deeper liquidity helps the market trade more smoothly and supports the ${TOKEN.symbol} ecosystem.
+            Preview your contribution below before connecting.
           </p>
         </div>
 
         <div className="ld-grid">
-          {/* ---- leaderboard ---- */}
-          <div className="ld-board" data-reveal style={stagger(3)}>
-            <div className="ld-board-h">
-              <span className="mono">the herd · live from Uniswap v4</span>
-              <span className="mono">{pool ? `${fmt(pool.ethDepth, 3)} ETH + ${fmt(pool.zzecDepth, 3)} ${TOKEN.wrapper} in the pool` : 'reading…'}</span>
-            </div>
-            {rows.length === 0 && <div className="redeem-empty mono">{positions ? 'no positions yet · be the first' : readErr ? `could not read positions (${readErr.slice(0, 60)}) · retrying` : 'reading positions…'}</div>}
-            {rows.map((r, i) => (
-              <div className={`ld-row ${r.owner === account?.toLowerCase() ? 'me' : ''}`} key={r.owner}>
-                <span className="ld-rank mono">#{i + 1}</span>
-                <span className="ld-emoji">{r.tier.emoji}</span>
-                <span className="ld-who"><b>{r.owner === account?.toLowerCase() ? 'you' : short(r.owner)}</b><i className="mono">{r.tier.name}</i></span>
-                <span className="ld-share"><div className="ld-bar"><div style={{ width: `${Math.max(2, r.share)}%` }} /></div><b className="mono">{fmt(r.share, 1)}%</b></span>
-                <span className="ld-stat mono"><em>hosted</em>{fmt(r.burnsZec, 5)} ZEC → burn</span>
-                <span className="ld-stat mono"><em>earned</em>{fmt(r.feesZec, 5)} ZEC</span>
-              </div>
-            ))}
-            <div className="ld-tiers mono">
-              {TIERS.map((t) => <span key={t.name}>{t.emoji} <b>{t.name}</b> {t.note}</span>)}
-            </div>
-          </div>
-
           {/* ---- add liquidity ---- */}
           <div className="rd-form ld-form" data-reveal style={stagger(4)}>
-            {!account ? (
-              <div className="rd-connect"><button className="btn btn-primary btn-lg" type="button" onClick={connect}>Connect wallet</button><p className="mono">add liquidity without leaving this page · full-range position, yours as an NFT</p></div>
-            ) : (
-              <>
-                <div className="rd-acct mono"><span className="dot" />{short(account)}<em>{fmt(Number(bal.eth) / 1e18, 4)} ETH · {fmt(Number(bal.zzec) / 1e8, 4)} {TOKEN.wrapper}</em></div>
-                {mine && <div className="ld-mine mono">{mine.tier.emoji} you are a <b>{mine.tier.name}</b> with {fmt(mine.share, 1)}% of the pool</div>}
-                <label className="redeem-l mono">ETH to add</label>
-                <div className="rd-amt"><input className="mono" inputMode="decimal" value={ethIn} onChange={(e) => setEthIn(e.target.value)} placeholder="0.05" /><span className="mono rd-unit">ETH</span></div>
-                <div className="ld-chips">{['0.02', '0.05', '0.1', '0.25'].map((q) => <button key={q} type="button" className="rd-max mono" onClick={() => setEthIn(q)}>{q} ETH</button>)}{maxEthForZzec > 0 && <button type="button" className="rd-max mono hi" onClick={() => setEthIn(maxEthForZzec.toFixed(4))}>max for my {TOKEN.wrapper} · {fmt(maxEthForZzec, 4)}</button>}</div>
+            <h3 className="h4">Preview your deposit</h3>
+            <p className="participation-note">You need both ETH and {TOKEN.wrapper} on {CHAIN.name}. This creates a full-range position in your wallet.</p>
+            {account && <div className="rd-acct mono"><span className="dot" />{short(account)}<em>{fmt(Number(bal.eth) / 1e18, 4)} ETH · {fmt(Number(bal.zzec) / 1e8, 4)} {TOKEN.wrapper}</em></div>}
+                <label className="redeem-l mono" htmlFor="liquidity-eth">ETH to pair · matching zZEC is additional</label>
+                <div className="rd-amt"><input id="liquidity-eth" className="mono" disabled={!!busy} inputMode="decimal" value={ethIn} onChange={(e) => setEthIn(e.target.value)} placeholder="0.05" /><span className="mono rd-unit">ETH</span></div>
+                <div className="ld-chips">{['0.02', '0.05', '0.1', '0.25'].map((q) => <button key={q} type="button" disabled={!!busy} className="rd-max mono" onClick={() => setEthIn(q)}>{q} ETH</button>)}{maxEthForZzec > 0 && <button type="button" disabled={!!busy} className="rd-max mono hi" onClick={() => setEthIn(maxEthForZzec.toFixed(4))}>max for my {TOKEN.wrapper} · {fmt(maxEthForZzec, 4)}</button>}</div>
                 <div className="rd-sub mono">{quote ? <>pairs with <b>{fmt(Number(quote.need1) / 1e8, 6)} {TOKEN.wrapper}</b> at the pool price{prices ? ` · about $${((Number(quote.need0) / 1e18) * prices.eth * 2).toFixed(0)} total` : ''}</> : 'enter an amount'}</div>
-                {quote && (
-                  <div className="ld-impact">
-                    <div className="ld-impact-h mono">what your liquidity changes</div>
-                    <div className="ld-impact-grid mono">
-                      <div><span>your share</span><b>{fmt(quote.shareAfter, 1)}%</b><i>{tierOf(quote.shareAfter).emoji} {tierOf(quote.shareAfter).name} · rank #{rankAfter}</i></div>
-                      <div><span>a 0.05 ETH trade moves price</span><b>{fmt(quote.moveBefore, 2)}% → {fmt(quote.moveAfter, 2)}%</b><i>tighter peg for everyone</i></div>
-                      <div><span>you earn</span><b>{fmt(quote.shareAfter, 1)}% of {ZZEC_MARKET.lpFeePct}%</b><i>of every trade, from the next one</i></div>
-                      <div><span>you host</span><b>{fmt(quote.shareAfter, 1)}% of the burn</b><i>{ZZEC_MARKET.hookFeePct}% of every trade → Furnace</i></div>
-                    </div>
-                  </div>
-                )}
-                <button className="btn btn-primary btn-lg rd-go" type="button" disabled={!!busy || !quote} onClick={addLiquidity}>{busy ?? (quote ? `Add ${fmt(Number(quote.need0) / 1e18, 4)} ETH + ${fmt(Number(quote.need1) / 1e8, 4)} ${TOKEN.wrapper}` : 'enter an amount')}</button>
-                {quote && quote.amount1Max > bal.zzec && <p className="rd-sub ld-short">You hold {fmt(Number(bal.zzec) / 1e8, 4)} {TOKEN.wrapper}, this needs {fmt(Number(quote.amount1Max) / 1e8, 4)}. Use the max chip above, <a href="#wrap">wrap more ZEC</a>, or <a href={LINKS.uniswapSwap} target="_blank" rel="noreferrer">buy {TOKEN.wrapper} on Uniswap ↗</a>.</p>}
-              </>
-            )}
-            {msg && <p className={`rd-msg mono ${msg.kind}`}>{msg.text}</p>}
+                {quote && <p className="rd-sub mono">This new position would initially supply about {fmt(quote.shareAfter, 1)}% of active liquidity. This is not a return estimate.</p>}
+                <p className="rd-sub">0.5% amount tolerance · network fees apply · first deposit may require two approvals plus the deposit.</p>
+                <button className="btn btn-primary btn-lg rd-go" type="button" disabled={!!busy || !quote} onClick={account ? addLiquidity : connect}>{busy ?? (!account ? 'Connect wallet to continue' : quote ? `Add ${fmt(Number(quote.need0) / 1e18, 4)} ETH + ${fmt(Number(quote.need1) / 1e8, 4)} ${TOKEN.wrapper}` : 'enter an amount')}</button>
+                {account && quote && quote.amount1Max > bal.zzec && <p className="rd-sub ld-short">You hold {fmt(Number(bal.zzec) / 1e8, 4)} {TOKEN.wrapper}, this needs {fmt(Number(quote.amount1Max) / 1e8, 4)}. Use the max chip above, <a href="#wrap">wrap more ZEC</a>, or <a href={LINKS.uniswapSwap} target="_blank" rel="noreferrer">buy {TOKEN.wrapper} on Uniswap ↗</a>.</p>}
+            {msg && <p role="status" className={`rd-msg mono ${msg.kind}`}>{msg.text}</p>}
             <div className="rd-how mono">
               <div><b>01</b>full-range position minted to your wallet as an NFT</div>
-              <div><b>02</b>{ZZEC_MARKET.lpFeePct}% of every trade accrues to it, pro rata</div>
-              <div><b>03</b>remove it any time on Uniswap · nothing is locked</div>
-              <div><b>!</b>impermanent loss if {TOKEN.wrapper} and ETH diverge · contract risk · reserve custody as on every page</div>
+              <div><b>02</b>share the {ZZEC_MARKET.lpFeePct}% LP fees with other active providers</div>
+              <div><b>03</b>withdraw the position’s current assets through Uniswap</div>
+              <div><b>!</b>asset amounts and value change with prices; fees may not offset losses · contract and reserve custody risk</div>
             </div>
             <p className="redeem-fine mono"><a href={LINKS.uniswapAddLiquidity} target="_blank" rel="noreferrer">prefer a concentrated range? use Uniswap ↗</a> · <a href="/docs/#/market-and-keeper">how the market works ↗</a></p>
           </div>
-        </div>
-        <div className="ctb-soon mono" data-reveal style={stagger(5)}>
-          <span className="tag tag-wait"><span className="dot" /> under consideration</span>
-          <span>A {TOKEN.wrapper}-paid rewards program for the herd, weighted by share over time. Not live, not promised; if it ships, the budget and end date appear here first.</span>
+          <aside className="liquidity-guide">
+            <div className="liquidity-guide-card">
+              <p className="eyebrow">What you earn</p>
+              <h3 className="h3">Trading fees.<br /><span className="green">Your share, your position.</span></h3>
+              <p>The pool’s {ZZEC_MARKET.lpFeePct}% LP fee is shared among active providers. It is a fee on trades, not a daily yield or guaranteed return.</p>
+              <p>The separate {ZZEC_MARKET.hookFeePct}% hook charge funds ${TOKEN.symbol} buybacks and burns. It is not an extra LP reward.</p>
+            </div>
+            <div className="liquidity-guide-card">
+              <h3 className="h4">Need the other asset?</h3>
+              <p>Have ETH? Buy the matching {TOKEN.wrapper} on the market, or wrap native ZEC for it 1:1. Have native ZEC? Wrap it at the desk, no fee, then pair your {TOKEN.wrapper} with ETH.</p>
+              <div className="liquidity-links"><a href={LINKS.uniswapSwap} target="_blank" rel="noreferrer">Buy {TOKEN.wrapper} ↗</a><a href="#wrap">Wrap native ZEC →</a></div>
+            </div>
+            <div className="liquidity-guide-card">
+              <h3 className="h4">Already providing liquidity?</h3>
+              <p>Connect the wallet holding your position on Uniswap to view it, collect fees or remove liquidity.</p>
+              <a href="https://app.uniswap.org/positions" target="_blank" rel="noreferrer">Manage positions on Uniswap ↗</a>
+            </div>
+            <details className="liquidity-community">
+              <summary>The Herd · {positions ? `${owners.length} provider wallet${owners.length === 1 ? '' : 's'}` : 'provider activity'}</summary>
+              <p>Community participation, not an earnings leaderboard. Wallets may hold multiple positions.</p>
+              {readErr && <p role="status">Position data is unavailable. Retrying automatically.</p>}
+              {!positions && !readErr && <p>Reading positions…</p>}
+              {owners.map((owner) => <a key={owner} href={`${CONTRACTS.explorer}/address/${owner}`} target="_blank" rel="noreferrer">{short(owner)} ↗</a>)}
+            </details>
+          </aside>
         </div>
       </div>
     </section>
